@@ -18,7 +18,25 @@ async function request<T>(
     throw new Error(detail || `Request to ${path} failed with ${response.status}`);
   }
 
-  return (await response.json()) as T;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  if (contentType.includes("application/json")) {
+    return JSON.parse(text) as T;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as T;
+  }
 }
 
 export async function fetchPipelines(
