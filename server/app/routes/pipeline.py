@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from server.app.models import OptimizeResult, TaskStatus, OptimizeRequest, PipelineRequest
+from server.app.storage.pipeline_store import update_pipeline_run_status
 
 # Setup logging
 FORMAT = "%(message)s"
@@ -24,6 +25,24 @@ asyncio_tasks: dict[str, Task] = {}
 
 # Configuration
 COMPLETED_TASK_TTL = timedelta(hours=1)
+
+
+def _record_run_status(config: dict[str, Any] | PipelineRequest, status: str) -> None:
+    """Persist the last run status for a pipeline if identifiers are present."""
+    if isinstance(config, PipelineRequest):
+        pipeline_id = config.pipeline_id
+        namespace = config.namespace
+    else:
+        pipeline_id = config.get("pipeline_id")
+        namespace = config.get("namespace")
+
+    if not pipeline_id or not namespace:
+        return
+
+    try:
+        update_pipeline_run_status(namespace, pipeline_id, status)
+    except Exception as exc:  # pragma: no cover - avoid breaking runs on status failures
+        logging.warning("Failed to update pipeline status: %s", exc)
 
 async def cleanup_old_tasks():
     """Background task to clean up completed tasks"""
@@ -160,11 +179,13 @@ def run_pipeline(request: PipelineRequest) -> dict[str, Any]:
         runner = DSLRunner.from_yaml(request.yaml_config)
         cost = runner.load_run_save()
         runner.reset_env()
+        _record_run_status(request, "completed")
         return {"cost": cost, "message": "Pipeline executed successfully"}
     except Exception as e:
         import traceback
         error_traceback = traceback.format_exc()
         print(f"Error occurred:\n{e}\n{error_traceback}")
+        _record_run_status(request, "failed")
         raise HTTPException(status_code=500, detail=str(e) + "\n" + error_traceback)
 
 @router.websocket("/ws/run_pipeline/{client_id}")
@@ -192,6 +213,7 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
             async def run_pipeline():
                 return await asyncio.to_thread(runner.load_run_save)
 
+        _record_run_status(config, "running")
         pipeline_task = asyncio.create_task(run_pipeline())
 
         while not pipeline_task.done():
@@ -285,6 +307,7 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
                     },
                 }
             )
+        _record_run_status(config, "completed")
     except WebSocketDisconnect:
         if runner is not None:
             runner.reset_env()
@@ -295,6 +318,7 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
         error_traceback = traceback.format_exc()
         print(f"Error occurred:\n{error_traceback}")
         await websocket.send_json({"type": "error", "data": str(e), "traceback": error_traceback})
+        _record_run_status(config, "failed")
     finally:
         if runner is not None:
             runner.reset_env()

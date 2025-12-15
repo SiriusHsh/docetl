@@ -27,6 +27,10 @@ import {
   PipelineProvider,
   usePipelineContext,
 } from "@/contexts/PipelineContext";
+import {
+  PipelineStoreProvider,
+  usePipelineStore,
+} from "@/contexts/PipelineStoreContext";
 const FileExplorer = dynamic(
   () => import("@/components/FileExplorer").then((mod) => mod.FileExplorer),
   {
@@ -314,6 +318,7 @@ const CodeEditorPipelineApp: React.FC = () => {
     setOutput,
     defaultModel,
   } = usePipelineContext();
+  const { saveActivePipeline, saving: isSavingPipeline } = usePipelineStore();
   const hasWorkspaceContent =
     (operations?.length ?? 0) > 0 ||
     (files?.length ?? 0) > 0 ||
@@ -606,30 +611,36 @@ const CodeEditorPipelineApp: React.FC = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      saveProgress();
-                      toast({
-                        title: "Progress Saved",
-                        description:
-                          "Your pipeline progress has been saved to browser storage.",
-                        duration: 3000,
-                      });
+                    onClick={async () => {
+                      const saved = await saveActivePipeline();
+                      if (saved) {
+                        toast({
+                          title: "已保存",
+                          description: "当前 pipeline 状态已保存。",
+                          duration: 3000,
+                        });
+                      }
                     }}
                     className={saveButtonStyles}
+                    disabled={isSavingPipeline}
                   >
-                    <Save
-                      size={16}
-                      className={
-                        unsavedChanges ? "text-orange-500 mr-2" : "mr-2"
-                      }
-                    />
+                    {isSavingPipeline ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save
+                        size={16}
+                        className={
+                          unsavedChanges ? "text-orange-500 mr-2" : "mr-2"
+                        }
+                      />
+                    )}
                     {unsavedChanges ? "Quick Save" : "Quick Save"}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   {unsavedChanges
-                    ? "Save changes to browser storage (use File > Save As to save to disk)"
-                    : "No changes compared to the version in browser storage"}
+                    ? "保存当前 pipeline 状态（包括操作与配置）"
+                    : "没有待保存的变更"}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -962,9 +973,11 @@ const WrappedCodeEditorPipelineApp: React.FC = () => {
   return (
     <ThemeProvider>
       <PipelineProvider>
-        <WebSocketWrapper>
-          <CodeEditorPipelineApp />
-        </WebSocketWrapper>
+        <PipelineStoreProvider>
+          <WebSocketWrapper>
+            <CodeEditorPipelineApp />
+          </WebSocketWrapper>
+        </PipelineStoreProvider>
       </PipelineProvider>
     </ThemeProvider>
   );

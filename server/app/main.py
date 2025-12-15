@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from server.app.routes import pipeline, convert, filesystem
+from server.app.routes import pipeline, convert, filesystem, pipelines
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,6 +30,7 @@ app.add_middleware(
 app.include_router(pipeline.router)
 app.include_router(convert.router)
 app.include_router(filesystem.router, prefix="/fs")
+app.include_router(pipelines.router)
 
 @app.get("/")
 async def root():

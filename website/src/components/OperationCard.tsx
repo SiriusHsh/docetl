@@ -70,6 +70,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { usePipelineStore } from "@/contexts/PipelineStoreContext";
 
 // Separate components
 interface OperationHeaderProps {
@@ -737,6 +738,7 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
     systemPrompt,
     extraPipelineSettings,
   } = usePipelineContext();
+  const { activePipelineId } = usePipelineStore();
   const { toast } = useToast();
 
   const operationRef = useRef(operation);
@@ -849,6 +851,8 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
       sendMessage({
         yaml_config: filePath,
         optimize: true,
+        pipeline_id: activePipelineId,
+        namespace: namespace,
       });
     } catch (error) {
       console.error("Error optimizing operation:", error);
@@ -876,6 +880,7 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
     namespace,
     apiKeys,
     extraPipelineSettings,
+    activePipelineId,
   ]);
 
   const onShowOutput = useCallback(async () => {

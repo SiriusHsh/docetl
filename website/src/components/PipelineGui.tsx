@@ -25,8 +25,13 @@ import {
   Plus,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  Copy,
+  Trash2,
+  PlusCircle,
 } from "lucide-react";
 import { usePipelineContext } from "@/contexts/PipelineContext";
+import { usePipelineStore } from "@/contexts/PipelineStoreContext";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
@@ -240,7 +245,17 @@ const PipelineGUI: React.FC = () => {
     apiKeys,
     extraPipelineSettings,
     setExtraPipelineSettings,
+    unsavedChanges,
   } = usePipelineContext();
+  const {
+    pipelines,
+    activePipelineId,
+    createPipeline,
+    duplicatePipeline,
+    deletePipeline,
+    renamePipeline,
+    switchPipeline,
+  } = usePipelineStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { toast } = useToast();
   const { connect, sendMessage, lastMessage, readyState, disconnect } =
@@ -645,6 +660,8 @@ const PipelineGUI: React.FC = () => {
         sendMessage({
           yaml_config: filePath,
           clear_intermediate: clear_intermediate,
+          pipeline_id: activePipelineId,
+          namespace: namespace,
         });
       } catch (error) {
         console.error("Error writing pipeline config:", error);
@@ -673,6 +690,7 @@ const PipelineGUI: React.FC = () => {
       namespace,
       extraPipelineSettings,
       cost,
+      activePipelineId,
     ]
   );
 
@@ -737,6 +755,8 @@ const PipelineGUI: React.FC = () => {
       sendMessage({
         yaml_config: filePath,
         optimize: true,
+        pipeline_id: activePipelineId,
+        namespace: namespace,
       });
     } catch (error) {
       console.error("Error optimizing operation:", error);
@@ -750,6 +770,20 @@ const PipelineGUI: React.FC = () => {
     }
   };
 
+  const handleRenamePipeline = useCallback(async () => {
+    if (!activePipelineId) {
+      setIsEditingName(false);
+      return;
+    }
+
+    const nextName =
+      editedPipelineName.trim() === ""
+        ? "未命名管线"
+        : editedPipelineName.trim();
+    await renamePipeline(activePipelineId, nextName);
+    setIsEditingName(false);
+  }, [activePipelineId, editedPipelineName, renamePipeline]);
+
   return (
     <div className="flex flex-col h-full">
       <div
@@ -758,60 +792,117 @@ const PipelineGUI: React.FC = () => {
       >
         <div className="p-2">
           <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="flex items-center">
-                {isEditingName ? (
-                  <Input
-                    value={editedPipelineName}
-                    onChange={(e) => setEditedPipelineName(e.target.value)}
-                    onBlur={() => {
-                      setIsEditingName(false);
-                      setPipelineName(editedPipelineName);
-                    }}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        setIsEditingName(false);
-                        setPipelineName(editedPipelineName);
-                      }
-                    }}
-                    className="max-w-[200px] h-7 text-sm font-bold"
-                    autoFocus
-                  />
-                ) : (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <h2
-                          className="text-base font-bold cursor-pointer hover:text-primary/80 flex items-center gap-1.5 group"
-                          onClick={() => setIsEditingName(true)}
+            <div className="flex items-center gap-2">
+              {isEditingName ? (
+                <Input
+                  value={editedPipelineName}
+                  onChange={(e) => setEditedPipelineName(e.target.value)}
+                  onBlur={handleRenamePipeline}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      void handleRenamePipeline();
+                    }
+                  }}
+                  className="max-w-[240px] h-8 text-sm font-semibold"
+                  autoFocus
+                />
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 flex items-center gap-2"
+                    >
+                      <GitBranch size={14} />
+                      <span className="font-semibold max-w-[180px] truncate">
+                        {pipelineName}
+                      </span>
+                      {unsavedChanges && (
+                        <span className="h-2 w-2 rounded-full bg-orange-500" />
+                      )}
+                      <ChevronDown size={14} className="text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-72">
+                    <DropdownMenuLabel>选择 Pipeline</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {pipelines.length === 0 ? (
+                      <DropdownMenuItem disabled>暂无管线</DropdownMenuItem>
+                    ) : (
+                      pipelines.map((pipeline) => (
+                        <DropdownMenuItem
+                          key={pipeline.id}
+                          onSelect={() => switchPipeline(pipeline.id)}
+                          className="flex items-center justify-between gap-2"
                         >
-                          {pipelineName}
-                          <Pencil
-                            size={13}
-                            className="opacity-0 group-hover:opacity-70 transition-opacity"
-                          />
-                        </h2>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Click to rename pipeline</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
+                          <span className="truncate">{pipeline.name}</span>
+                          {pipeline.id === activePipelineId && (
+                            <span className="text-xs text-primary font-medium">
+                              当前
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => setIsEditingName(true)}
+                      disabled={!activePipelineId}
+                    >
+                      <Pencil size={14} className="mr-2" />
+                      重命名
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        activePipelineId &&
+                        duplicatePipeline(
+                          activePipelineId,
+                          `${pipelineName} 副本`
+                        )
+                      }
+                      disabled={!activePipelineId}
+                    >
+                      <Copy size={14} className="mr-2" />
+                      复制当前
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => createPipeline()}>
+                      <PlusCircle size={14} className="mr-2" />
+                      新建 Pipeline
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        if (activePipelineId) {
+                          const confirmed = window.confirm(
+                            "确定要删除当前 pipeline 吗？此操作不可恢复。"
+                          );
+                          if (confirmed) {
+                            void deletePipeline(activePipelineId);
+                          }
+                        }
+                      }}
+                      disabled={!activePipelineId}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 size={14} className="mr-2" />
+                      删除
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 flex-shrink-0"
-                  onClick={() => setIsLeftSideCollapsed(!isLeftSideCollapsed)}
-                >
-                  {isLeftSideCollapsed ? (
-                    <ChevronRight size={16} />
-                  ) : (
-                    <ChevronLeft size={16} />
-                  )}
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 flex-shrink-0"
+                onClick={() => setIsLeftSideCollapsed(!isLeftSideCollapsed)}
+              >
+                {isLeftSideCollapsed ? (
+                  <ChevronRight size={16} />
+                ) : (
+                  <ChevronLeft size={16} />
+                )}
+              </Button>
 
               <div
                 className={`flex items-center gap-2 transition-transform duration-200 origin-left ${isLeftSideCollapsed ? "scale-x-0 w-0" : "scale-x-100"

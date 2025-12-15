@@ -16,7 +16,8 @@ import {
 import * as localStorageKeys from "@/app/localStorageKeys";
 import { toast } from "@/hooks/use-toast";
 
-interface PipelineState {
+export interface PipelineState {
+  pipelineId: string | null;
   operations: Operation[];
   currentFile: File | null;
   output: OutputType | null;
@@ -42,6 +43,19 @@ interface PipelineState {
   namespace: string | null;
   apiKeys: APIKey[];
   extraPipelineSettings: Record<string, unknown> | null;
+}
+
+export type PipelineStateSnapshot = Omit<PipelineState, "apiKeys">;
+
+export interface PipelineMetadata {
+  id: string;
+  name: string;
+  namespace: string;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+  last_run_status?: string | null;
+  last_run_at?: string | null;
 }
 
 interface PipelineContextType extends PipelineState {
@@ -83,6 +97,11 @@ interface PipelineContextType extends PipelineState {
   setExtraPipelineSettings: React.Dispatch<
     React.SetStateAction<Record<string, unknown> | null>
   >;
+  getSerializableState: () => PipelineStateSnapshot;
+  loadPipelineSnapshot: (
+    snapshot: Partial<PipelineStateSnapshot>,
+    options?: { markSaved?: boolean }
+  ) => void;
 }
 
 const PipelineContext = createContext<PipelineContextType | undefined>(
@@ -96,6 +115,64 @@ const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
   }
   return defaultValue;
 };
+
+export const createDefaultPipelineState = (
+  namespace: string | null,
+  pipelineName: string = mockPipelineName
+): PipelineState => ({
+  pipelineId: null,
+  operations: initialOperations,
+  currentFile: null,
+  output: null,
+  terminalOutput: "",
+  optimizerProgress: null,
+  isLoadingOutputs: false,
+  numOpRun: 0,
+  pipelineName,
+  sampleSize: mockSampleSize,
+  files: mockFiles,
+  cost: 0,
+  defaultModel: "gpt-5-nano",
+  optimizerModel: "gpt-5-nano",
+  autoOptimizeCheck: false,
+  highLevelGoal: "",
+  systemPrompt: { datasetDescription: null, persona: null },
+  namespace,
+  apiKeys: [],
+  extraPipelineSettings: null,
+});
+
+const sanitizeFile = (file: File | null): File | null =>
+  file ? { ...file, blob: undefined } : null;
+
+const sanitizeFiles = (files: File[]): File[] =>
+  files
+    .map((file) => sanitizeFile(file))
+    .filter((file): file is File => Boolean(file));
+
+export const buildPipelineSnapshot = (
+  state: PipelineState
+): PipelineStateSnapshot => ({
+  pipelineId: state.pipelineId,
+  operations: state.operations,
+  currentFile: sanitizeFile(state.currentFile),
+  output: state.output,
+  terminalOutput: state.terminalOutput,
+  optimizerProgress: state.optimizerProgress,
+  isLoadingOutputs: state.isLoadingOutputs,
+  numOpRun: state.numOpRun,
+  pipelineName: state.pipelineName,
+  sampleSize: state.sampleSize,
+  files: sanitizeFiles(state.files),
+  cost: state.cost,
+  defaultModel: state.defaultModel,
+  optimizerModel: state.optimizerModel,
+  autoOptimizeCheck: state.autoOptimizeCheck,
+  highLevelGoal: state.highLevelGoal,
+  systemPrompt: state.systemPrompt,
+  namespace: state.namespace,
+  extraPipelineSettings: state.extraPipelineSettings,
+});
 
 const serializeState = async (state: PipelineState): Promise<string> => {
   const bookmarks = loadFromLocalStorage(localStorageKeys.BOOKMARKS_KEY, []);
@@ -274,33 +351,36 @@ ${outputSample}`
 export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [state, setState] = useState<PipelineState>(() => ({
-    operations: loadFromLocalStorage(
-      localStorageKeys.OPERATIONS_KEY,
-      initialOperations
-    ),
-    currentFile: loadFromLocalStorage(localStorageKeys.CURRENT_FILE_KEY, null),
-    output: loadFromLocalStorage(localStorageKeys.OUTPUT_KEY, null),
-    terminalOutput: loadFromLocalStorage(
-      localStorageKeys.TERMINAL_OUTPUT_KEY,
-      ""
-    ),
-    optimizerProgress: null,
-    isLoadingOutputs: loadFromLocalStorage(
-      localStorageKeys.IS_LOADING_OUTPUTS_KEY,
-      false
-    ),
-    numOpRun: loadFromLocalStorage(localStorageKeys.NUM_OP_RUN_KEY, 0),
-    pipelineName: loadFromLocalStorage(
-      localStorageKeys.PIPELINE_NAME_KEY,
-      mockPipelineName
-    ),
-    sampleSize: loadFromLocalStorage(
-      localStorageKeys.SAMPLE_SIZE_KEY,
-      mockSampleSize
-    ),
-    files: loadFromLocalStorage(localStorageKeys.FILES_KEY, mockFiles),
-    cost: loadFromLocalStorage(localStorageKeys.COST_KEY, 0),
+  const buildInitialState = (): PipelineState => {
+    const namespace = loadFromLocalStorage(localStorageKeys.NAMESPACE_KEY, null);
+    const snapshot = {
+      pipelineId: loadFromLocalStorage(localStorageKeys.PIPELINE_ID_KEY, null),
+      operations: loadFromLocalStorage(
+        localStorageKeys.OPERATIONS_KEY,
+        initialOperations
+      ),
+      currentFile: loadFromLocalStorage(localStorageKeys.CURRENT_FILE_KEY, null),
+      output: loadFromLocalStorage(localStorageKeys.OUTPUT_KEY, null),
+      terminalOutput: loadFromLocalStorage(
+        localStorageKeys.TERMINAL_OUTPUT_KEY,
+        ""
+      ),
+      optimizerProgress: null,
+      isLoadingOutputs: loadFromLocalStorage(
+        localStorageKeys.IS_LOADING_OUTPUTS_KEY,
+        false
+      ),
+      numOpRun: loadFromLocalStorage(localStorageKeys.NUM_OP_RUN_KEY, 0),
+      pipelineName: loadFromLocalStorage(
+        localStorageKeys.PIPELINE_NAME_KEY,
+        mockPipelineName
+      ),
+      sampleSize: loadFromLocalStorage(
+        localStorageKeys.SAMPLE_SIZE_KEY,
+        mockSampleSize
+      ),
+      files: loadFromLocalStorage(localStorageKeys.FILES_KEY, mockFiles),
+      cost: loadFromLocalStorage(localStorageKeys.COST_KEY, 0),
       defaultModel: loadFromLocalStorage(
         localStorageKeys.DEFAULT_MODEL_KEY,
         "gpt-5-nano"
@@ -309,29 +389,33 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorageKeys.OPTIMIZER_MODEL_KEY,
         "gpt-5-nano"
       ),
-    autoOptimizeCheck: loadFromLocalStorage(
-      localStorageKeys.AUTO_OPTIMIZE_CHECK_KEY,
-      false
-    ),
-    highLevelGoal: loadFromLocalStorage(
-      localStorageKeys.HIGH_LEVEL_GOAL_KEY,
-      ""
-    ),
-    systemPrompt: loadFromLocalStorage(localStorageKeys.SYSTEM_PROMPT_KEY, {
-      datasetDescription: null,
-      persona: null,
-    }),
-    namespace: loadFromLocalStorage(localStorageKeys.NAMESPACE_KEY, null),
-    apiKeys: [],
-    extraPipelineSettings: loadFromLocalStorage(
-      localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
-      null
-    ),
-  }));
+      autoOptimizeCheck: loadFromLocalStorage(
+        localStorageKeys.AUTO_OPTIMIZE_CHECK_KEY,
+        false
+      ),
+      highLevelGoal: loadFromLocalStorage(
+        localStorageKeys.HIGH_LEVEL_GOAL_KEY,
+        ""
+      ),
+      systemPrompt: loadFromLocalStorage(localStorageKeys.SYSTEM_PROMPT_KEY, {
+        datasetDescription: null,
+        persona: null,
+      }),
+      namespace,
+      apiKeys: [],
+      extraPipelineSettings: loadFromLocalStorage(
+        localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
+        null
+      ),
+    };
 
+    return { ...createDefaultPipelineState(namespace), ...snapshot };
+  };
+
+  const [state, setState] = useState<PipelineState>(buildInitialState);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
-  const stateRef = useRef(state);
   const [isMounted, setIsMounted] = useState(false);
+  const stateRef = useRef(state);
 
   useEffect(() => {
     stateRef.current = state;
@@ -341,102 +425,109 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsMounted(true);
   }, []);
 
+  const persistSnapshotToLocalStorage = useCallback(
+    (snapshot: PipelineStateSnapshot) => {
+      localStorage.setItem(
+        localStorageKeys.PIPELINE_ID_KEY,
+        JSON.stringify(snapshot.pipelineId)
+      );
+      localStorage.setItem(
+        localStorageKeys.OPERATIONS_KEY,
+        JSON.stringify(snapshot.operations)
+      );
+      localStorage.setItem(
+        localStorageKeys.CURRENT_FILE_KEY,
+        JSON.stringify(snapshot.currentFile)
+      );
+      localStorage.setItem(
+        localStorageKeys.OUTPUT_KEY,
+        JSON.stringify(snapshot.output)
+      );
+      localStorage.setItem(
+        localStorageKeys.TERMINAL_OUTPUT_KEY,
+        JSON.stringify(snapshot.terminalOutput)
+      );
+      localStorage.setItem(
+        localStorageKeys.IS_LOADING_OUTPUTS_KEY,
+        JSON.stringify(snapshot.isLoadingOutputs)
+      );
+      localStorage.setItem(
+        localStorageKeys.NUM_OP_RUN_KEY,
+        JSON.stringify(snapshot.numOpRun)
+      );
+      localStorage.setItem(
+        localStorageKeys.PIPELINE_NAME_KEY,
+        JSON.stringify(snapshot.pipelineName)
+      );
+      localStorage.setItem(
+        localStorageKeys.SAMPLE_SIZE_KEY,
+        JSON.stringify(snapshot.sampleSize)
+      );
+      localStorage.setItem(
+        localStorageKeys.FILES_KEY,
+        JSON.stringify(snapshot.files)
+      );
+      localStorage.setItem(
+        localStorageKeys.COST_KEY,
+        JSON.stringify(snapshot.cost)
+      );
+      localStorage.setItem(
+        localStorageKeys.DEFAULT_MODEL_KEY,
+        JSON.stringify(snapshot.defaultModel)
+      );
+      localStorage.setItem(
+        localStorageKeys.OPTIMIZER_MODEL_KEY,
+        JSON.stringify(snapshot.optimizerModel)
+      );
+      localStorage.setItem(
+        localStorageKeys.AUTO_OPTIMIZE_CHECK_KEY,
+        JSON.stringify(snapshot.autoOptimizeCheck)
+      );
+      localStorage.setItem(
+        localStorageKeys.HIGH_LEVEL_GOAL_KEY,
+        JSON.stringify(snapshot.highLevelGoal)
+      );
+      localStorage.setItem(
+        localStorageKeys.SYSTEM_PROMPT_KEY,
+        JSON.stringify(snapshot.systemPrompt)
+      );
+      localStorage.setItem(
+        localStorageKeys.NAMESPACE_KEY,
+        JSON.stringify(snapshot.namespace)
+      );
+      localStorage.setItem(
+        localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
+        JSON.stringify(snapshot.extraPipelineSettings)
+      );
+
+      if (snapshot.pipelineId) {
+        const cache = loadFromLocalStorage<
+          Record<string, PipelineStateSnapshot>
+        >(localStorageKeys.PIPELINE_CACHE_KEY, {});
+        cache[snapshot.pipelineId] = snapshot;
+        localStorage.setItem(
+          localStorageKeys.PIPELINE_CACHE_KEY,
+          JSON.stringify(cache)
+        );
+      }
+    },
+    []
+  );
+
   const saveProgress = useCallback(() => {
-    localStorage.setItem(
-      localStorageKeys.OPERATIONS_KEY,
-      JSON.stringify(stateRef.current.operations)
-    );
-    localStorage.setItem(
-      localStorageKeys.CURRENT_FILE_KEY,
-      JSON.stringify(stateRef.current.currentFile)
-    );
-    localStorage.setItem(
-      localStorageKeys.OUTPUT_KEY,
-      JSON.stringify(stateRef.current.output)
-    );
-    localStorage.setItem(
-      localStorageKeys.TERMINAL_OUTPUT_KEY,
-      JSON.stringify(stateRef.current.terminalOutput)
-    );
-    localStorage.setItem(
-      localStorageKeys.IS_LOADING_OUTPUTS_KEY,
-      JSON.stringify(stateRef.current.isLoadingOutputs)
-    );
-    localStorage.setItem(
-      localStorageKeys.NUM_OP_RUN_KEY,
-      JSON.stringify(stateRef.current.numOpRun)
-    );
-    localStorage.setItem(
-      localStorageKeys.PIPELINE_NAME_KEY,
-      JSON.stringify(stateRef.current.pipelineName)
-    );
-    localStorage.setItem(
-      localStorageKeys.SAMPLE_SIZE_KEY,
-      JSON.stringify(stateRef.current.sampleSize)
-    );
-    localStorage.setItem(
-      localStorageKeys.FILES_KEY,
-      JSON.stringify(stateRef.current.files)
-    );
-    localStorage.setItem(
-      localStorageKeys.COST_KEY,
-      JSON.stringify(stateRef.current.cost)
-    );
-    localStorage.setItem(
-      localStorageKeys.DEFAULT_MODEL_KEY,
-      JSON.stringify(stateRef.current.defaultModel)
-    );
-    localStorage.setItem(
-      localStorageKeys.OPTIMIZER_MODEL_KEY,
-      JSON.stringify(stateRef.current.optimizerModel)
-    );
-    localStorage.setItem(
-      localStorageKeys.AUTO_OPTIMIZE_CHECK_KEY,
-      JSON.stringify(stateRef.current.autoOptimizeCheck)
-    );
-    localStorage.setItem(
-      localStorageKeys.HIGH_LEVEL_GOAL_KEY,
-      JSON.stringify(stateRef.current.highLevelGoal)
-    );
-    localStorage.setItem(
-      localStorageKeys.SYSTEM_PROMPT_KEY,
-      JSON.stringify(stateRef.current.systemPrompt)
-    );
-    localStorage.setItem(
-      localStorageKeys.NAMESPACE_KEY,
-      JSON.stringify(stateRef.current.namespace)
-    );
-    localStorage.setItem(
-      localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
-      JSON.stringify(stateRef.current.extraPipelineSettings)
-    );
+    const snapshot = buildPipelineSnapshot(stateRef.current);
+    persistSnapshotToLocalStorage(snapshot);
     setUnsavedChanges(false);
-  }, []);
+  }, [persistSnapshotToLocalStorage]);
 
   const clearPipelineState = useCallback(() => {
     Object.values(localStorageKeys).forEach((key) => {
       localStorage.removeItem(key);
     });
+    const defaults = createDefaultPipelineState(null);
     setState({
-      operations: initialOperations,
-      currentFile: null,
-      output: null,
-      terminalOutput: "",
-      isLoadingOutputs: false,
-      numOpRun: 0,
-      pipelineName: mockPipelineName,
-      sampleSize: mockSampleSize,
-      files: mockFiles,
-      cost: 0,
-        defaultModel: "gpt-5-nano",
-        optimizerModel: "gpt-5-nano",
-      optimizerProgress: null,
-      autoOptimizeCheck: false,
-      highLevelGoal: "",
-      systemPrompt: { datasetDescription: null, persona: null },
-      namespace: null,
+      ...defaults,
       apiKeys: stateRef.current.apiKeys,
-      extraPipelineSettings: null,
     });
     setUnsavedChanges(false);
   }, []);
@@ -462,9 +553,9 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
               localStorageKeys.NAMESPACE_KEY,
               JSON.stringify(newValue)
             );
-            return { ...prevState, [key]: newValue };
+            return { ...prevState, [key]: newValue, pipelineId: null };
           } else {
-            if (key !== "apiKeys") {
+            if (key !== "apiKeys" && key !== "pipelineId") {
               setUnsavedChanges(true);
             }
             return { ...prevState, [key]: newValue };
@@ -474,6 +565,42 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     },
     [clearPipelineState]
+  );
+
+  const loadPipelineSnapshot = useCallback(
+    (
+      snapshot: Partial<PipelineStateSnapshot>,
+      options?: { markSaved?: boolean }
+    ) => {
+      const mergedNamespace =
+        snapshot.namespace ?? stateRef.current.namespace ?? null;
+      const mergedPipelineId =
+        snapshot.pipelineId ?? stateRef.current.pipelineId ?? null;
+      const mergedState: PipelineState = {
+        ...createDefaultPipelineState(
+          mergedNamespace,
+          snapshot.pipelineName ?? stateRef.current.pipelineName
+        ),
+        ...snapshot,
+        currentFile: snapshot.currentFile ?? null,
+        files: snapshot.files ?? stateRef.current.files,
+        apiKeys: stateRef.current.apiKeys,
+        namespace: mergedNamespace,
+        pipelineId: mergedPipelineId,
+      };
+
+      setState(mergedState);
+      persistSnapshotToLocalStorage(buildPipelineSnapshot(mergedState));
+      if (options?.markSaved) {
+        setUnsavedChanges(false);
+      }
+    },
+    [persistSnapshotToLocalStorage]
+  );
+
+  const getSerializableState = useCallback(
+    () => buildPipelineSnapshot(stateRef.current),
+    []
   );
 
   useEffect(() => {
@@ -506,6 +633,7 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     }
   }, [isMounted, state.apiKeys]);
+
 
   const contextValue: PipelineContextType = {
     ...state,
@@ -589,6 +717,8 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
       (value) => setStateAndUpdate("extraPipelineSettings", value),
       [setStateAndUpdate]
     ),
+    getSerializableState,
+    loadPipelineSnapshot,
   };
 
   return (

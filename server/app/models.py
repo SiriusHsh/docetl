@@ -6,6 +6,8 @@ from enum import Enum
 
 class PipelineRequest(BaseModel):
     yaml_config: str
+    pipeline_id: str | None = None
+    namespace: str | None = None
 
 class PipelineConfigRequest(BaseModel):
     namespace: str
@@ -36,3 +38,39 @@ class OptimizeRequest(BaseModel):
     yaml_config: str
     step_name: str
     op_name: str
+
+
+# Pipeline persistence models
+class PipelineMetadata(BaseModel):
+    id: str
+    name: str
+    namespace: str
+    description: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    last_run_status: str | None = None
+    last_run_at: datetime | None = None
+
+
+class PipelineRecord(PipelineMetadata):
+    state: dict[str, Any] = {}
+
+
+class PipelineCreateRequest(BaseModel):
+    namespace: str
+    name: str
+    state: dict[str, Any] = {}
+    description: str | None = None
+
+
+class PipelineUpdateRequest(BaseModel):
+    namespace: str
+    name: str | None = None
+    state: dict[str, Any] | None = None
+    description: str | None = None
+    expected_updated_at: datetime | None = None
+
+
+class PipelineDuplicateRequest(BaseModel):
+    namespace: str
+    name: str | None = None

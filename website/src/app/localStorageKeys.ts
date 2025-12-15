@@ -20,3 +20,6 @@ export const SYSTEM_PROMPT_KEY = "docetl_systemPrompt";
 export const NAMESPACE_KEY = "docetl_namespace";
 export const EXTRA_PIPELINE_SETTINGS_KEY = "docetl_extraPipelineSettings";
 export const BOOKMARKS_KEY = "docetl_bookmarks";
+export const PIPELINE_ID_KEY = "docetl_pipelineId";
+export const PIPELINE_CACHE_KEY = "docetl_pipelineCache";
+export const ACTIVE_PIPELINE_ID_KEY = "docetl_activePipelineId";
