@@ -244,7 +244,7 @@ const LoadingScreen: React.FC = () => (
       <div className="flex items-center gap-2">
         <Scroll className="h-6 w-6 text-primary" />
         <h2 className="text-2xl font-bold text-primary tracking-tight">
-          DocWrangler
+          Zhongjing DataFlow
         </h2>
       </div>
       <div className="text-muted-foreground text-lg">
@@ -508,7 +508,7 @@ const CodeEditorPipelineApp: React.FC = () => {
             <div className="flex items-center gap-2 min-w-0">
               <Scroll className="text-primary" size={18} />
               <span className="text-sm font-semibold text-foreground">
-                DocWrangler
+                Zhongjing DataFlow
               </span>
               {isMounted && (
                 <span className="text-xs text-muted-foreground truncate">
