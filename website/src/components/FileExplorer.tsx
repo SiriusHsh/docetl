@@ -69,6 +69,7 @@ interface FileExplorerProps {
   currentFile: File | null;
   setCurrentFile: (file: File | null) => void;
   namespace: string;
+  embedded?: boolean;
 }
 
 function mergeFileList(
@@ -232,6 +233,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   currentFile,
   setCurrentFile,
   namespace,
+  embedded,
 }) => {
   const { toast } = useToast();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -594,23 +596,115 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col p-4 bg-background">
-      <div className="flex justify-between items-center mb-4 border-b pb-3">
-        <h2 className="text-base font-bold flex items-center">
-          <Folder className="mr-2" size={14} />
-          FILES
-        </h2>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" className="h-8 w-8">
-              <Upload size={14} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              <div className="flex items-center w-full">
-                <Input
-                  type="file"
+    <div className={embedded ? "h-full flex flex-col bg-transparent" : "h-full flex flex-col bg-background"}>
+      {!embedded && (
+        <div className="px-4 pt-4">
+          <div className="flex justify-between items-center mb-4 border-b pb-3">
+            <h2 className="text-base font-bold flex items-center">
+              <Folder className="mr-2" size={14} />
+              FILES
+            </h2>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  <Upload size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <div className="flex items-center w-full">
+                    <Input
+                      type="file"
+                      accept=".json,.csv"
+                      onChange={(e) => {
+                        handleFileUpload(e);
+                        e.currentTarget.value = "";
+                      }}
+                      className="hidden"
+                      id="file-upload"
+                      disabled={uploadingFiles.size > 0}
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className={`flex items-center w-full cursor-pointer ${
+                        uploadingFiles.size > 0
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      {uploadingFiles.size > 0 ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Database className="mr-2 h-4 w-4" />
+                      )}
+                      <span>
+                        {uploadingFiles.size > 0
+                          ? "Uploading dataset..."
+                          : "Upload Local Dataset"}
+                      </span>
+                    </label>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsRemoteDatasetDialogOpen(true)}
+                  disabled={uploadingFiles.size > 0}
+                  className={`flex items-center w-full cursor-pointer ${
+                    uploadingFiles.size > 0
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  {uploadingFiles.size > 0 ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Globe className="mr-2 h-4 w-4" />
+                  )}
+                  <span>
+                    {uploadingFiles.size > 0
+                      ? "Uploading dataset..."
+                      : "Upload Remote Dataset"}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsUploadDialogOpen(true)}
+                  disabled={uploadingFiles.size > 0}
+                  className={`flex items-center w-full cursor-pointer ${
+                    uploadingFiles.size > 0
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  {uploadingFiles.size > 0 ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FolderUp className="mr-2 h-4 w-4" />
+                  )}
+                  <span>
+                    {uploadingFiles.size > 0
+                      ? "Uploading files..."
+                      : "Upload Files or Folder"}
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      )}
+
+      <div className={embedded ? "px-4 pt-4" : "px-4"}>
+        {embedded && (
+          <div className="flex justify-end mb-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  <Upload size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <div className="flex items-center w-full">
+                    <Input
+                      type="file"
                   accept=".json,.csv"
                   onChange={(e) => {
                     handleFileUpload(e);
@@ -638,12 +732,12 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                       ? "Uploading dataset..."
                       : "Upload Local Dataset"}
                   </span>
-                </label>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setIsRemoteDatasetDialogOpen(true)}
-              disabled={uploadingFiles.size > 0}
+                    </label>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsRemoteDatasetDialogOpen(true)}
+                  disabled={uploadingFiles.size > 0}
               className={`flex items-center w-full cursor-pointer ${
                 uploadingFiles.size > 0 ? "opacity-50 cursor-not-allowed" : ""
               }`}
@@ -658,14 +752,14 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   ? "Uploading dataset..."
                   : "Upload Remote Dataset"}
               </span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setIsUploadDialogOpen(true)}
-              disabled={uploadingFiles.size > 0}
-              className={`flex items-center w-full cursor-pointer ${
-                uploadingFiles.size > 0 ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-            >
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsUploadDialogOpen(true)}
+                  disabled={uploadingFiles.size > 0}
+                  className={`flex items-center w-full cursor-pointer ${
+                    uploadingFiles.size > 0 ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
               {uploadingFiles.size > 0 ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -676,22 +770,24 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   ? "Uploading files..."
                   : "Upload Files or Folder"}
               </span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
+        <div className="text-xs mb-4 bg-muted/50 p-2 rounded-md">
+          <span className="text-muted-foreground font-medium">Tip: </span>
+          Right-click files to view, download or delete them
+        </div>
       </div>
 
-      <div className="text-xs mb-4 bg-muted/50 p-2 rounded-md">
-        <span className="text-muted-foreground font-medium">Tip: </span>
-        Right-click files to view, download or delete them
-      </div>
-
-      <div className="overflow-y-auto flex-grow">
+      <div className={embedded ? "px-2 pb-4 overflow-y-auto flex-grow" : "px-4 pb-4 overflow-y-auto flex-grow"}>
         {Object.entries(groupedFiles).map(([folder, folderFiles]) => (
           <div key={folder}>
             {folder !== "root" && (
               <ContextMenu>
-                <ContextMenuTrigger className="flex items-center p-2 text-sm text-gray-600 relative hover:bg-gray-100 rounded-md">
+                <ContextMenuTrigger className="flex items-center p-2 text-sm text-muted-foreground relative hover:bg-accent rounded-md">
                   <div className="absolute left-2">
                     <Folder className="h-4 w-4" />
                   </div>

@@ -33,7 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const BookmarksPanel: React.FC = () => {
+const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const { bookmarks, removeBookmark } = useBookmarkContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedBookmarkId, setExpandedBookmarkId] = useState<string | null>(
@@ -96,30 +96,33 @@ const BookmarksPanel: React.FC = () => {
   };
 
   return (
-    <div className="h-full p-4 flex flex-col bg-background">
-      <div className="flex justify-between items-center mb-4 border-b pb-3">
-        <h2 className="text-base font-bold flex items-center">
-          <Bookmark className="mr-2" size={14} />
-          NOTES
-        </h2>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleClearAll}
-                className="h-8 w-8 text-gray-500 hover:text-gray-700"
-              >
-                <X size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Clear all notes</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+    <div className={embedded ? "h-full flex flex-col bg-transparent" : "h-full flex flex-col bg-background"}>
+      <div className={embedded ? "px-4 pt-4" : ""}>
+      {!embedded && (
+        <div className="flex justify-between items-center px-4 pt-4 mb-4 border-b pb-3">
+          <h2 className="text-base font-bold flex items-center">
+            <Bookmark className="mr-2" size={14} />
+            NOTES
+          </h2>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleClearAll}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Clear all notes</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
       <div className="text-xs mb-2 bg-muted/50 p-2 rounded-md">
         <span className="text-muted-foreground font-medium">Tip: </span>
         Click <Maximize2 className="h-3 w-3 inline-block mx-0.5 text-primary" />{" "}
@@ -131,7 +134,10 @@ const BookmarksPanel: React.FC = () => {
         <Wand2 className="h-3 w-3 inline-block mx-0.5 text-primary" /> Improve
         Prompt, not in operation prompts
       </div>
-      <div className="flex mb-2">
+      </div>
+
+      <div className={embedded ? "px-4" : "px-0"}>
+        <div className="flex mb-2">
         <Input
           type="text"
           placeholder="Search..."
@@ -177,7 +183,8 @@ const BookmarksPanel: React.FC = () => {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="overflow-y-auto flex-grow">
+      </div>
+      <div className={embedded ? "px-4 pb-4 overflow-y-auto flex-grow" : "overflow-y-auto flex-grow"}>
         {filteredBookmarks.map((bookmark) => (
           <div
             key={bookmark.id}

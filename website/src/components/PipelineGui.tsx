@@ -807,6 +807,7 @@ const PipelineGUI: React.FC = () => {
                   autoFocus
                 />
               ) : (
+                <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -821,7 +822,10 @@ const PipelineGUI: React.FC = () => {
                       {unsavedChanges && (
                         <span className="h-2 w-2 rounded-full bg-orange-500" />
                       )}
-                      <ChevronDown size={14} className="text-muted-foreground" />
+                      <ChevronDown
+                        size={14}
+                        className="text-muted-foreground"
+                      />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-72">
@@ -889,6 +893,10 @@ const PipelineGUI: React.FC = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <span className="text-xs text-muted-foreground">
+                  共 {pipelines.length} 条
+                </span>
+                </>
               )}
 
               <Button
@@ -1190,11 +1198,14 @@ const PipelineGUI: React.FC = () => {
             </div>
           </div>
         </div>
+
       </div>
       <div className="flex-1 overflow-y-auto min-h-0 p-2">
         <div className="space-y-2">
           {operations.map((op, index) => (
-            <OperationCard key={op.id} index={index} id={op.id} />
+            <div key={op.id} id={`op-${op.id}`} className="scroll-mt-28">
+              <OperationCard index={index} id={op.id} />
+            </div>
           ))}
           <AddOperationDropdown
             onAddOperation={handleAddOperation}

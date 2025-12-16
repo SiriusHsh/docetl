@@ -8,7 +8,8 @@ export type Theme =
   | "majestic"
   | "sunset"
   | "ruby"
-  | "monochrome";
+  | "monochrome"
+  | "midnight";
 
 interface ThemeContextType {
   theme: Theme;
@@ -173,6 +174,32 @@ const themes = {
     chart3: "0 0% 50%",
     chart4: "0 0% 65%",
     chart5: "0 0% 80%",
+  },
+  midnight: {
+    background: "222 25% 8%",
+    foreground: "210 40% 98%",
+    card: "222 20% 10%",
+    "card-foreground": "210 40% 98%",
+    popover: "222 20% 10%",
+    "popover-foreground": "210 40% 98%",
+    primary: "211 100% 65%",
+    "primary-foreground": "222 25% 8%",
+    secondary: "222 14% 20%",
+    "secondary-foreground": "210 40% 98%",
+    muted: "222 14% 18%",
+    "muted-foreground": "215 20% 70%",
+    accent: "222 14% 22%",
+    "accent-foreground": "210 40% 98%",
+    destructive: "0 72% 51%",
+    "destructive-foreground": "210 40% 98%",
+    border: "222 14% 20%",
+    input: "222 14% 20%",
+    ring: "211 100% 65%",
+    chart1: "211 100% 65%",
+    chart2: "173 58% 45%",
+    chart3: "43 74% 60%",
+    chart4: "270 70% 65%",
+    chart5: "12 76% 60%",
   },
 };
 

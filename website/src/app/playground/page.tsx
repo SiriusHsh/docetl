@@ -9,6 +9,10 @@ import {
   Monitor,
   AlertCircle,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +20,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import type { ImperativePanelHandle } from "react-resizable-panels";
 const Output = dynamic(
   () => import("../../components/Output").then((mod) => mod.Output),
   {
@@ -31,12 +36,6 @@ import {
   PipelineStoreProvider,
   usePipelineStore,
 } from "@/contexts/PipelineStoreContext";
-const FileExplorer = dynamic(
-  () => import("@/components/FileExplorer").then((mod) => mod.FileExplorer),
-  {
-    ssr: false,
-  }
-);
 const DatasetView = dynamic(
   () => import("@/components/DatasetView").then((mod) => mod.default),
   {
@@ -54,8 +53,11 @@ const PipelineGUI = dynamic(
     ssr: false,
   }
 );
-const BookmarksPanel = dynamic(
-  () => import("@/components/BookmarksPanel").then((mod) => mod.default),
+const WorkspaceSidebar = dynamic(
+  () =>
+    import("@/components/WorkspaceSidebar").then(
+      (mod) => mod.WorkspaceSidebar
+    ),
   {
     ssr: false,
   }
@@ -68,24 +70,33 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarSub,
-  MenubarSubContent,
-  MenubarSubTrigger,
-  MenubarRadioGroup,
-  MenubarRadioItem,
-} from "@/components/ui/menubar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -95,7 +106,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   saveToFile,
@@ -286,7 +296,10 @@ const CodeEditorPipelineApp: React.FC = () => {
   const [showFileExplorer, setShowFileExplorer] = useState(true);
   const [showOutput, setShowOutput] = useState(true);
   const [showDatasetView, setShowDatasetView] = useState(false);
+  const outputPanelRef = useRef<ImperativePanelHandle>(null);
+  const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showClearPipelineDialog, setShowClearPipelineDialog] = useState(false);
   const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
   const [showAPIKeysDialog, setShowAPIKeysDialog] = useState(false);
   const [showTutorialsDialog, setShowTutorialsDialog] = useState(false);
@@ -467,150 +480,148 @@ const CodeEditorPipelineApp: React.FC = () => {
   };
 
   const topBarStyles =
-    "p-2 flex justify-between items-center border-b bg-white shadow-sm";
+    "sticky top-0 z-30 h-12 px-3 flex justify-between items-center border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60";
   const controlGroupStyles = "flex items-center gap-2";
-  const panelControlsStyles = "flex items-center gap-1 px-2 border-l";
-  const saveButtonStyles = `relative h-8 px-3 ${
+  const panelControlsStyles =
+    "flex items-center gap-1 px-2 border-l border-border/50";
+  const saveButtonStyles = `relative h-8 w-8 p-0 ${
     unsavedChanges
-      ? "bg-orange-100 border-orange-500 hover:bg-orange-200"
-      : "hover:bg-gray-100"
+      ? "bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/15"
+      : "hover:bg-accent"
   }`;
   const costDisplayStyles =
-    "px-3 py-1.5 text-sm text-gray-600 flex items-center gap-1";
+    "rounded-md border bg-card px-2.5 py-1.5 text-sm text-muted-foreground flex items-center gap-1";
   const panelToggleStyles =
-    "flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors duration-200";
-  const mainContentStyles = "flex-grow overflow-hidden bg-gray-50";
+    "h-8 w-9 p-0 rounded-md transition-colors duration-200";
+  const mainContentStyles =
+    "flex-1 min-h-0 overflow-hidden bg-muted/20 p-3";
   const resizeHandleStyles = `
-    w-2 bg-gray-100 hover:bg-blue-200 transition-colors duration-200
-    data-[dragging=true]:bg-blue-400
+    w-2 bg-transparent transition-colors duration-200
+    after:bg-border/60 hover:after:bg-border data-[dragging=true]:after:bg-primary/50
   `;
 
   return (
     <BookmarkProvider>
-      <div className="h-screen flex flex-col bg-gray-50">
+      <div className="h-screen flex flex-col bg-background">
         <div className={topBarStyles}>
-          <div className={controlGroupStyles}>
-            <Menubar className="border-none bg-transparent shadow-none">
-              <MenubarMenu>
-                <MenubarTrigger>File</MenubarTrigger>
-                <MenubarContent>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <MenubarItem onSelect={(e) => e.preventDefault()}>
-                        New
-                      </MenubarItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Clear Pipeline State
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to clear the pipeline state?
-                          This will take you to a default pipeline and clear all
-                          notes and outputs. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleNew}>
-                          Clear
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <MenubarItem onSelect={() => setShowNLPipelineDialog(true)}>
-                    New from Natural Language
-                  </MenubarItem>
-                  {/* <MenubarItem onSelect={handleOpen}>Open</MenubarItem> */}
-                  {/* <MenubarItem onSelect={handleSaveAs}>Save As</MenubarItem> */}
-                </MenubarContent>
-              </MenubarMenu>
-              <MenubarMenu>
-                <MenubarTrigger>Edit</MenubarTrigger>
-                <MenubarContent>
-                  <MenubarItem onSelect={() => setShowNamespaceDialog(true)}>
-                    Change Namespace
-                  </MenubarItem>
-                  <MenubarItem onSelect={() => setShowAPIKeysDialog(true)}>
-                    Edit API Keys
-                  </MenubarItem>
-                  <MenubarSub>
-                    <MenubarSubTrigger>Change Theme</MenubarSubTrigger>
-                    <MenubarSubContent>
-                      <MenubarRadioGroup
-                        value={theme}
-                        onValueChange={(value) => setTheme(value as Theme)}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Scroll className="text-primary" size={18} />
+              <span className="text-sm font-semibold text-foreground">
+                DocWrangler
+              </span>
+              {isMounted && (
+                <span className="text-xs text-muted-foreground truncate">
+                  ({namespace})
+                </span>
+              )}
+            </div>
+
+            <Separator orientation="vertical" className="h-6" />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Menu className="h-4 w-4" />
+                  <span className="sr-only">Menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-72">
+                <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+                <DropdownMenuItem onSelect={() => setShowClearPipelineDialog(true)}>
+                  New (Clear Pipeline)
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setShowNLPipelineDialog(true)}>
+                  New from Natural Language
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setShowNamespaceDialog(true)}>
+                  Change Namespace
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setShowAPIKeysDialog(true)}>
+                  Edit API Keys
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Theme</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      value={theme}
+                      onValueChange={(value) => setTheme(value as Theme)}
+                    >
+                      <DropdownMenuRadioItem value="default">
+                        Default
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="forest">
+                        Forest
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="majestic">
+                        Majestic
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="sunset">
+                        Sunset
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="ruby">
+                        Ruby
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="monochrome">
+                        Monochrome
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="midnight">
+                        Midnight
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={() =>
+                    window.open("https://ucbepic.github.io/docetl/", "_blank")
+                  }
+                >
+                  Documentation
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() =>
+                    window.open(
+                      "https://discord.com/invite/fHp7B2X3xx",
+                      "_blank"
+                    )
+                  }
+                >
+                  Discord
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Tutorials</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-80">
+                    {TUTORIALS.map((tutorial) => (
+                      <DropdownMenuItem
+                        key={tutorial.id}
+                        onSelect={() => {
+                          setSelectedTutorial(tutorial);
+                          setShowTutorialsDialog(true);
+                        }}
                       >
-                        <MenubarRadioItem value="default">
-                          Default
-                        </MenubarRadioItem>
-                        <MenubarRadioItem value="forest">
-                          Forest
-                        </MenubarRadioItem>
-                        <MenubarRadioItem value="majestic">
-                          Majestic
-                        </MenubarRadioItem>
-                        <MenubarRadioItem value="sunset">
-                          Sunset
-                        </MenubarRadioItem>
-                        <MenubarRadioItem value="ruby">Ruby</MenubarRadioItem>
-                        <MenubarRadioItem value="monochrome">
-                          Monochrome
-                        </MenubarRadioItem>
-                      </MenubarRadioGroup>
-                    </MenubarSubContent>
-                  </MenubarSub>
-                </MenubarContent>
-              </MenubarMenu>
-              <MenubarMenu>
-                <MenubarTrigger>Help</MenubarTrigger>
-                <MenubarContent>
-                  <MenubarItem
-                    onSelect={() =>
-                      window.open("https://ucbepic.github.io/docetl/", "_blank")
-                    }
-                  >
-                    Show Documentation
-                  </MenubarItem>
-                  <MenubarItem
-                    onSelect={() =>
-                      window.open(
-                        "https://discord.com/invite/fHp7B2X3xx",
-                        "_blank"
-                      )
-                    }
-                  >
-                    Ask a Question on Discord
-                  </MenubarItem>
-                  <MenubarSub>
-                    <MenubarSubTrigger>Tutorials</MenubarSubTrigger>
-                    <MenubarSubContent>
-                      {TUTORIALS.map((tutorial) => (
-                        <MenubarItem
-                          key={tutorial.id}
-                          onSelect={() => {
-                            setSelectedTutorial(tutorial);
-                            setShowTutorialsDialog(true);
-                          }}
-                        >
-                          {tutorial.title}
-                        </MenubarItem>
-                      ))}
-                    </MenubarSubContent>
-                  </MenubarSub>
-                  <MenubarItem onSelect={() => setShowChat(!showChat)}>
-                    Show Chat
-                  </MenubarItem>
-                </MenubarContent>
-              </MenubarMenu>
-            </Menubar>
+                        {tutorial.title}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={showChat}
+                  onCheckedChange={(checked) => setShowChat(Boolean(checked))}
+                >
+                  AI Chat
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={async () => {
                       const saved = await saveActivePipeline();
                       if (saved) {
@@ -625,16 +636,14 @@ const CodeEditorPipelineApp: React.FC = () => {
                     disabled={isSavingPipeline}
                   >
                     {isSavingPipeline ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Save
                         size={16}
-                        className={
-                          unsavedChanges ? "text-orange-500 mr-2" : "mr-2"
-                        }
+                        className={unsavedChanges ? "text-amber-600" : ""}
                       />
                     )}
-                    {unsavedChanges ? "Quick Save" : "Quick Save"}
+                    <span className="sr-only">Quick Save</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -644,11 +653,12 @@ const CodeEditorPipelineApp: React.FC = () => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="px-2">
-                  <Info size={16} className="mr-2" />
-                  Info
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Info size={16} />
+                  <span className="sr-only">Info</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[32rem]">
@@ -726,17 +736,10 @@ const CodeEditorPipelineApp: React.FC = () => {
               </PopoverContent>
             </Popover>
           </div>
-          <div className="flex items-center gap-2">
-            <Scroll className="text-primary" size={20} />
-            <h1 className="text-lg font-bold text-primary">DocWrangler</h1>
-            {isMounted && (
-              <span className="text-sm text-gray-600">({namespace})</span>
-            )}
-          </div>
           <div className={controlGroupStyles}>
             {isMounted && (
               <div className={costDisplayStyles}>
-                <span className="text-gray-500">Cost:</span>
+                <span>Cost:</span>
                 <span className="font-medium">${cost.toFixed(2)}</span>
               </div>
             )}
@@ -750,7 +753,7 @@ const CodeEditorPipelineApp: React.FC = () => {
                       className={panelToggleStyles}
                     >
                       <LeftPanelIcon isActive={showFileExplorer} />
-                      Files
+                      <span className="sr-only">Files</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Toggle File Explorer</TooltipContent>
@@ -764,7 +767,7 @@ const CodeEditorPipelineApp: React.FC = () => {
                       className={panelToggleStyles}
                     >
                       <BottomPanelIcon isActive={showOutput} />
-                      Output
+                      <span className="sr-only">Output</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Toggle Output Panel</TooltipContent>
@@ -778,7 +781,7 @@ const CodeEditorPipelineApp: React.FC = () => {
                       className={panelToggleStyles}
                     >
                       <RightPanelIcon isActive={showDatasetView} />
-                      Dataset
+                      <span className="sr-only">Dataset</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Toggle Dataset View</TooltipContent>
@@ -787,6 +790,32 @@ const CodeEditorPipelineApp: React.FC = () => {
             </div>
           </div>
         </div>
+        <AlertDialog
+          open={showClearPipelineDialog}
+          onOpenChange={setShowClearPipelineDialog}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Clear Pipeline State</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to clear the pipeline state? This will
+                take you to a default pipeline and clear all notes and outputs.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  setShowClearPipelineDialog(false);
+                  handleNew();
+                }}
+              >
+                Clear
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         {showChat && <AIChatPanel onClose={() => setShowChat(false)} />}
         {/* Main content */}
         <ResizablePanelGroup
@@ -796,46 +825,25 @@ const CodeEditorPipelineApp: React.FC = () => {
           onDragEnd={() => (document.body.style.cursor = "default")}
         >
           {showFileExplorer && (
-            <ResizablePanel defaultSize={15} minSize={6} className="h-full">
-              <ResizablePanelGroup
-                direction="vertical"
-                className="h-full"
-                onDragStart={() => (document.body.style.cursor = "row-resize")}
-                onDragEnd={() => (document.body.style.cursor = "default")}
-              >
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="overflow-auto"
-                >
-                  <FileExplorer
-                    files={files}
-                    onFileClick={(file) => {
-                      setCurrentFile(file);
-                      setShowDatasetView(true);
-                    }}
-                    onFileUpload={(file: File) =>
-                      setFiles((prevFiles) => [...prevFiles, file])
-                    }
-                    onFileDelete={(file: File) => {
-                      setFiles((prevFiles) =>
-                        prevFiles.filter((f) => f.name !== file.name)
-                      );
-                    }}
-                    setCurrentFile={setCurrentFile}
-                    currentFile={currentFile}
-                    namespace={namespace}
-                  />
-                </ResizablePanel>
-                <ResizableHandle withHandle className={resizeHandleStyles} />
-                <ResizablePanel
-                  defaultSize={50}
-                  minSize={20}
-                  className="overflow-auto"
-                >
-                  <BookmarksPanel />
-                </ResizablePanel>
-              </ResizablePanelGroup>
+            <ResizablePanel defaultSize={22} minSize={14} className="h-full">
+              <WorkspaceSidebar
+                files={files}
+                onFileClick={(file) => {
+                  setCurrentFile(file);
+                  setShowDatasetView(true);
+                }}
+                onFileUpload={(file: File) =>
+                  setFiles((prevFiles) => [...prevFiles, file])
+                }
+                onFileDelete={(file: File) => {
+                  setFiles((prevFiles) =>
+                    prevFiles.filter((f) => f.name !== file.name)
+                  );
+                }}
+                setCurrentFile={setCurrentFile}
+                currentFile={currentFile}
+                namespace={namespace}
+              />
             </ResizablePanel>
           )}
           {showFileExplorer && (
@@ -843,65 +851,113 @@ const CodeEditorPipelineApp: React.FC = () => {
           )}
 
           <ResizablePanel
-            defaultSize={showDatasetView ? 65 : 85}
+            defaultSize={showFileExplorer ? 78 : 100}
             minSize={30}
             className="h-full"
           >
-            <ResizablePanelGroup
-              direction="vertical"
-              className="h-full"
-              onDragStart={() => (document.body.style.cursor = "row-resize")}
-              onDragEnd={() => (document.body.style.cursor = "default")}
-            >
-              <ResizablePanel
-                defaultSize={60}
-                minSize={5}
-                className="overflow-auto"
+            <div className="h-full overflow-hidden rounded-xl border bg-card shadow-sm">
+              <ResizablePanelGroup
+                direction="vertical"
+                className="h-full"
+                onDragStart={() => (document.body.style.cursor = "row-resize")}
+                onDragEnd={() => (document.body.style.cursor = "default")}
               >
-                <PerformanceWrapper className="h-full">
-                  <PipelineGUI />
-                </PerformanceWrapper>
-              </ResizablePanel>
-              {showOutput && (
-                <ResizableHandle withHandle className={resizeHandleStyles} />
-              )}
-              {showOutput && (
-                <ResizablePanel
-                  defaultSize={40}
-                  minSize={20}
-                  className="overflow-auto"
-                >
+                <ResizablePanel defaultSize={68} minSize={20} className="min-h-0">
                   <PerformanceWrapper className="h-full">
-                    <Output />
+                    <PipelineGUI />
                   </PerformanceWrapper>
                 </ResizablePanel>
-              )}
-            </ResizablePanelGroup>
-          </ResizablePanel>
 
-          {showDatasetView && (
-            <>
-              <ResizableHandle withHandle className={resizeHandleStyles} />
-              <ResizablePanel
-                defaultSize={20}
-                minSize={10}
-                className="h-full overflow-auto"
-              >
-                <PerformanceWrapper className="h-full">
-                  <Suspense
-                    fallback={
-                      <div className="h-full flex items-center justify-center">
-                        <div className="animate-spin h-6 w-6 border-2 border-primary border-r-transparent rounded-full" />
-                      </div>
-                    }
+                {showOutput && (
+                  <ResizableHandle withHandle className={resizeHandleStyles} />
+                )}
+
+                {showOutput && (
+                  <ResizablePanel
+                    ref={outputPanelRef}
+                    defaultSize={32}
+                    minSize={10}
+                    collapsible
+                    collapsedSize={5}
+                    onCollapse={() => setIsOutputCollapsed(true)}
+                    onExpand={() => setIsOutputCollapsed(false)}
+                    className="min-h-0"
                   >
-                    <DatasetView file={currentFile} />
-                  </Suspense>
-                </PerformanceWrapper>
-              </ResizablePanel>
-            </>
-          )}
+                    <div className="h-full flex flex-col">
+                      <div className="flex items-center justify-between border-b bg-card/60 px-3 py-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <BottomPanelIcon isActive />
+                          <span>Output</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const panel = outputPanelRef.current;
+                              if (!panel) return;
+                              if (panel.isCollapsed()) {
+                                panel.expand();
+                              } else {
+                                panel.collapse();
+                              }
+                            }}
+                          >
+                            {isOutputCollapsed ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Separator orientation="vertical" className="h-5 mx-1" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setShowOutput(false)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className={isOutputCollapsed ? "hidden flex-1 min-h-0" : "flex-1 min-h-0"}>
+                        <PerformanceWrapper className="h-full">
+                          <Output />
+                        </PerformanceWrapper>
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                )}
+              </ResizablePanelGroup>
+            </div>
+          </ResizablePanel>
         </ResizablePanelGroup>
+
+        <Sheet open={showDatasetView} onOpenChange={setShowDatasetView}>
+          <SheetContent side="right" className="w-[42rem] sm:max-w-[42rem] p-0">
+            <SheetHeader className="border-b bg-card/60">
+              <SheetTitle>Dataset</SheetTitle>
+              {currentFile?.name && (
+                <div className="text-xs text-muted-foreground truncate">
+                  {currentFile.name}
+                </div>
+              )}
+            </SheetHeader>
+            <div className="h-[calc(100vh-3.25rem)]">
+              <Suspense
+                fallback={
+                  <div className="h-full flex items-center justify-center">
+                    <div className="animate-spin h-6 w-6 border-2 border-primary border-r-transparent rounded-full" />
+                  </div>
+                }
+              >
+                <DatasetView file={currentFile} />
+              </Suspense>
+            </div>
+          </SheetContent>
+        </Sheet>
         <NamespaceDialog
           open={showNamespaceDialog}
           onOpenChange={setShowNamespaceDialog}
