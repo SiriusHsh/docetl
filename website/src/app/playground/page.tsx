@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React, { useEffect, useState, useRef, Suspense } from "react";
+import React, { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import {
   Scroll,
   Info,
@@ -299,6 +299,7 @@ const CodeEditorPipelineApp: React.FC = () => {
   const outputPanelRef = useRef<ImperativePanelHandle>(null);
   const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [showClearPipelineDialog, setShowClearPipelineDialog] = useState(false);
   const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
   const [showAPIKeysDialog, setShowAPIKeysDialog] = useState(false);
@@ -309,6 +310,10 @@ const CodeEditorPipelineApp: React.FC = () => {
   const [hasAutoOpenedNLPipelineDialog, setHasAutoOpenedNLPipelineDialog] =
     useState(false);
   const { theme, setTheme } = useTheme();
+  const openDialogFromMenu = useCallback((openDialog: () => void) => {
+    setWorkspaceMenuOpen(false);
+    requestAnimationFrame(openDialog);
+  }, []);
 
   const {
     currentFile,
@@ -519,7 +524,11 @@ const CodeEditorPipelineApp: React.FC = () => {
 
             <Separator orientation="vertical" className="h-6" />
 
-            <DropdownMenu>
+            <DropdownMenu
+              open={workspaceMenuOpen}
+              onOpenChange={setWorkspaceMenuOpen}
+              modal={false}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Menu className="h-4 w-4" />
@@ -528,17 +537,37 @@ const CodeEditorPipelineApp: React.FC = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-72">
                 <DropdownMenuLabel>Workspace</DropdownMenuLabel>
-                <DropdownMenuItem onSelect={() => setShowClearPipelineDialog(true)}>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    openDialogFromMenu(() => setShowClearPipelineDialog(true));
+                  }}
+                >
                   New (Clear Pipeline)
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setShowNLPipelineDialog(true)}>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    openDialogFromMenu(() => setShowNLPipelineDialog(true));
+                  }}
+                >
                   New from Natural Language
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => setShowNamespaceDialog(true)}>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    openDialogFromMenu(() => setShowNamespaceDialog(true));
+                  }}
+                >
                   Change Namespace
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setShowAPIKeysDialog(true)}>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    openDialogFromMenu(() => setShowAPIKeysDialog(true));
+                  }}
+                >
                   Edit API Keys
                 </DropdownMenuItem>
                 <DropdownMenuSub>
@@ -596,9 +625,12 @@ const CodeEditorPipelineApp: React.FC = () => {
                     {TUTORIALS.map((tutorial) => (
                       <DropdownMenuItem
                         key={tutorial.id}
-                        onSelect={() => {
-                          setSelectedTutorial(tutorial);
-                          setShowTutorialsDialog(true);
+                        onSelect={(event) => {
+                          event.preventDefault();
+                          openDialogFromMenu(() => {
+                            setSelectedTutorial(tutorial);
+                            setShowTutorialsDialog(true);
+                          });
                         }}
                       >
                         {tutorial.title}
