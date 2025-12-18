@@ -494,8 +494,6 @@ const CodeEditorPipelineApp: React.FC = () => {
       ? "bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/15"
       : "hover:bg-accent"
   }`;
-  const costDisplayStyles =
-    "rounded-md border bg-card px-2.5 py-1.5 text-sm text-muted-foreground flex items-center gap-1";
   const panelToggleStyles =
     "h-8 w-9 p-0 rounded-md transition-colors duration-200";
   const mainContentStyles =
@@ -769,12 +767,6 @@ const CodeEditorPipelineApp: React.FC = () => {
             </Popover>
           </div>
           <div className={controlGroupStyles}>
-            {isMounted && (
-              <div className={costDisplayStyles}>
-                <span>Cost:</span>
-                <span className="font-medium">${cost.toFixed(2)}</span>
-              </div>
-            )}
             <div className={panelControlsStyles}>
               <TooltipProvider>
                 <Tooltip>
