@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildFastApiProxyHeaders, getFastApiUrl } from "@/lib/fastApiProxy";
 
-const FASTAPI_URL = `${
-  process.env.NEXT_PUBLIC_BACKEND_HTTPS ? "https" : "http"
-}://${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
-  process.env.NEXT_PUBLIC_BACKEND_PORT
-}`;
+const FASTAPI_URL = getFastApiUrl();
 const CHUNK_SIZE = 1000000; // Number of characters to read at a time (roughly 1MB of text)
 
 export async function GET(req: NextRequest) {
@@ -19,7 +16,8 @@ export async function GET(req: NextRequest) {
     const response = await fetch(
       `${FASTAPI_URL}/fs/read-file-page?path=${encodeURIComponent(
         filePath
-      )}&page=${page}&chunk_size=${CHUNK_SIZE}`
+      )}&page=${page}&chunk_size=${CHUNK_SIZE}`,
+      { headers: buildFastApiProxyHeaders(req) }
     );
 
     if (!response.ok) {

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { usePipelineContext } from "@/contexts/PipelineContext";
 import { usePipelineStore } from "@/contexts/PipelineStoreContext";
+import { backendFetch } from "@/lib/backendFetch";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
@@ -525,7 +526,7 @@ const PipelineGUI: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const response = await fetch("/api/getPipelineConfig", {
+      const response = await backendFetch("/api/getPipelineConfig", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -621,7 +622,7 @@ const PipelineGUI: React.FC = () => {
         // Get the latest API keys from context
         const currentApiKeys = apiKeys;
 
-        const response = await fetch("/api/writePipelineConfig", {
+        const response = await backendFetch("/api/writePipelineConfig", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -724,7 +725,7 @@ const PipelineGUI: React.FC = () => {
       setTerminalOutput("");
       setIsLoadingOutputs(true);
 
-      const response = await fetch("/api/writePipelineConfig", {
+      const response = await backendFetch("/api/writePipelineConfig", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

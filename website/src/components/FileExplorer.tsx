@@ -59,6 +59,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useDatasetUpload } from "@/hooks/useDatasetUpload";
 import { getBackendUrl } from "@/lib/api-config";
 import { isDocWranglerHosted } from "@/lib/utils";
+import { backendFetch } from "@/lib/backendFetch";
 
 interface FileExplorerProps {
   files: File[];
@@ -378,7 +379,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
 
     try {
       // Step 1: Save original documents (necessary for conversion endpoint)
-      const saveDocsResponse = await fetch(
+      const saveDocsResponse = await backendFetch(
         `${getBackendUrl()}/fs/save-documents`,
         {
           method: "POST",
@@ -416,7 +417,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         targetUrl = `${getBackendUrl()}/api/convert-documents?use_docetl_server=true`;
       }
 
-      const response = await fetch(targetUrl, {
+      const response = await backendFetch(targetUrl, {
         method: "POST",
         body: formData,
         headers,
@@ -493,7 +494,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
       jsonFormData.append("file", jsonFile);
       jsonFormData.append("namespace", namespace);
 
-      const uploadResponse = await fetch(`${getBackendUrl()}/fs/upload-file`, {
+      const uploadResponse = await backendFetch(`${getBackendUrl()}/fs/upload-file`, {
         method: "POST",
         body: jsonFormData,
       });
@@ -539,7 +540,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
 
   const handleFileDownload = async (file: File) => {
     try {
-      const response = await fetch(
+      const response = await backendFetch(
         `${getBackendUrl()}/fs/read-file?path=${encodeURIComponent(file.path)}`
       );
       if (!response.ok) {

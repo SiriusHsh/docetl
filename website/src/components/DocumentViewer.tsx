@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import "@cyntler/react-doc-viewer/dist/index.css";
+import { getAuthToken } from "@/lib/auth";
 
 interface DocumentViewerProps {
   isOpen: boolean;
@@ -28,7 +29,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     if (isOpen && filePath) {
       // Convert the full file path to a URL-safe format
       const encodedPath = encodeURIComponent(filePath);
-      const url = `/api/serveDocument/${encodedPath}`;
+      const token = getAuthToken();
+      const url = `/api/serveDocument/${encodedPath}${
+        token ? `?token=${encodeURIComponent(token)}` : ""
+      }`;
       setDocumentUrl(url);
     }
   }, [isOpen, filePath]);

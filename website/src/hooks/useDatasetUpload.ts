@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { File } from "@/app/types";
 import { getBackendUrl } from "@/lib/api-config";
+import { backendFetch } from "@/lib/backendFetch";
 
 interface UseDatasetUploadOptions {
   namespace: string;
@@ -47,7 +48,7 @@ export function useDatasetUpload({
       formData.append("file", file.blob, file.name);
       formData.append("namespace", namespace);
 
-      const response = await fetch(`${getBackendUrl()}/fs/upload-file`, {
+      const response = await backendFetch(`${getBackendUrl()}/fs/upload-file`, {
         method: "POST",
         body: formData,
       });
@@ -104,7 +105,7 @@ export function useDatasetUpload({
       formData.append("url", url);
       formData.append("namespace", namespace);
 
-      const response = await fetch(`${getBackendUrl()}/fs/upload-file`, {
+      const response = await backendFetch(`${getBackendUrl()}/fs/upload-file`, {
         method: "POST",
         body: formData,
       });

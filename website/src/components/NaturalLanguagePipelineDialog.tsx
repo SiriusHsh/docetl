@@ -31,6 +31,7 @@ import { File as FileType, Operation, OutputType } from "@/app/types";
 import { toast } from "@/hooks/use-toast";
 import { useDatasetUpload } from "@/hooks/useDatasetUpload";
 import { useRestorePipeline } from "@/hooks/useRestorePipeline";
+import { backendFetch } from "@/lib/backendFetch";
 
 // Extract content from XML-style tags
 function extractTagContent(text: string, tag: string): string | null {
@@ -367,7 +368,7 @@ const NaturalLanguagePipelineDialog: React.FC<
         datasetFile?.path
       ) {
         try {
-          const response = await fetch(
+          const response = await backendFetch(
             `/api/readFile?path=${encodeURIComponent(datasetFile.path)}`
           );
           if (response.ok) {
@@ -449,7 +450,7 @@ Format your response exactly as follows:
 </pipeline>`;
 
       // Call the new API endpoint
-      const response = await fetch("/api/generate", {
+      const response = await backendFetch("/api/generate", {
         method: "POST",
         headers: getRequestHeaders,
         body: JSON.stringify({ prompt: promptText }),

@@ -5,6 +5,7 @@ import React, {
   useState,
   useCallback,
 } from "react";
+import { getAuthToken } from "@/lib/auth";
 
 // Define message types
 interface WebSocketMessage {
@@ -53,7 +54,10 @@ export const WebSocketProvider: React.FC<{
           process.env.NEXT_PUBLIC_BACKEND_HTTPS === "true" ? "wss://" : "ws://"
         }${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
           process.env.NEXT_PUBLIC_BACKEND_PORT
-        }/ws/run_pipeline/${namespace}`
+        }/ws/run_pipeline/${namespace}${(() => {
+          const token = getAuthToken();
+          return token ? `?token=${encodeURIComponent(token)}` : "";
+        })()}`
       );
 
       ws.current.onopen = () => {

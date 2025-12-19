@@ -22,6 +22,7 @@ import { ChevronRight } from "lucide-react";
 import { Database } from "lucide-react";
 import { File } from "@/app/types";
 import { cn } from "@/lib/utils";
+import { backendFetch } from "@/lib/backendFetch";
 
 interface FileChunk {
   content: string;
@@ -73,7 +74,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
 
   const fetchFileContent = async ({ pageParam = 0 }): Promise<FileChunk> => {
     if (!file?.path) throw new Error("No file selected");
-    const response = await fetch(
+    const response = await backendFetch(
       `/api/readFilePage?path=${encodeURIComponent(
         file.path
       )}&page=${pageParam}`

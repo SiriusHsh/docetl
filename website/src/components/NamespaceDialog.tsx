@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { FolderKanban } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { backendFetch } from "@/lib/backendFetch";
 
 const adjectives = [
   "swift",
@@ -109,7 +110,7 @@ export function NamespaceDialog({
 
     setIsChecking(true);
     try {
-      const response = await fetch("/api/checkNamespace", {
+      const response = await backendFetch("/api/checkNamespace", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

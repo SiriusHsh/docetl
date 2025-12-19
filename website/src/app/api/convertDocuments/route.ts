@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildFastApiProxyHeaders, getFastApiUrl } from "@/lib/fastApiProxy";
 
-const FASTAPI_URL = `${
-  process.env.NEXT_PUBLIC_BACKEND_HTTPS ? "https" : "http"
-}://${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
-  process.env.NEXT_PUBLIC_BACKEND_PORT
-}`;
+const FASTAPI_URL = getFastApiUrl();
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,15 +18,15 @@ export async function POST(request: NextRequest) {
     const azureKey = request.headers.get("azure-key");
     const customDoclingUrl = request.headers.get("custom-docling-url");
 
-    // Prepare headers for the backend request
-    const headers: HeadersInit = {};
+    // Prepare headers for the backend request (forward auth/cookies)
+    const headers = buildFastApiProxyHeaders(request);
     if (azureEndpoint && azureKey) {
-      headers["azure-endpoint"] = azureEndpoint;
-      headers["azure-key"] = azureKey;
-      headers["is-read"] = "true";
+      headers.set("azure-endpoint", azureEndpoint);
+      headers.set("azure-key", azureKey);
+      headers.set("is-read", "true");
     }
     if (customDoclingUrl) {
-      headers["custom-docling-url"] = customDoclingUrl;
+      headers.set("custom-docling-url", customDoclingUrl);
     }
 
     // Create FormData since FastAPI expects multipart/form-data

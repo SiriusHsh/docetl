@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBackendUrl } from "@/lib/api-config";
+import { buildFastApiProxyHeaders } from "@/lib/fastApiProxy";
 
 export async function POST(
   request: Request,
@@ -20,7 +21,9 @@ export async function POST(
       `${getBackendUrl()}/pipelines/${params.id}/duplicate`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildFastApiProxyHeaders(request, {
+          "Content-Type": "application/json",
+        }),
         body: JSON.stringify({ namespace, name }),
       }
     );

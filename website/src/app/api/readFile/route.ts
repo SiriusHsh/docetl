@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildFastApiProxyHeaders, getFastApiUrl } from "@/lib/fastApiProxy";
 
-const FASTAPI_URL = `${
-  process.env.NEXT_PUBLIC_BACKEND_HTTPS ? "https" : "http"
-}://${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
-  process.env.NEXT_PUBLIC_BACKEND_PORT
-}`;
+const FASTAPI_URL = getFastApiUrl();
 
 export async function GET(req: NextRequest) {
   const filePath = req.nextUrl.searchParams.get("path");
@@ -15,7 +12,8 @@ export async function GET(req: NextRequest) {
 
   try {
     const response = await fetch(
-      `${FASTAPI_URL}/fs/read-file?path=${encodeURIComponent(filePath)}`
+      `${FASTAPI_URL}/fs/read-file?path=${encodeURIComponent(filePath)}`,
+      { headers: buildFastApiProxyHeaders(req) }
     );
 
     if (!response.ok) {

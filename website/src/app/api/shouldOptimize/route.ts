@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildFastApiProxyHeaders, getFastApiUrl } from "@/lib/fastApiProxy";
 
-const FASTAPI_URL = `${
-  process.env.NEXT_PUBLIC_BACKEND_HTTPS ? "https" : "http"
-}://${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
-  process.env.NEXT_PUBLIC_BACKEND_PORT
-}`;
+const FASTAPI_URL = getFastApiUrl();
 
 // Helper to handle errors consistently
 const handleError = (error: unknown, status = 500) => {
@@ -14,13 +11,15 @@ const handleError = (error: unknown, status = 500) => {
 };
 
 // Helper to proxy requests to FastAPI
-async function proxyRequest(path: string, init?: RequestInit) {
+async function proxyRequest(request: NextRequest, path: string, init?: RequestInit) {
+  const headers = buildFastApiProxyHeaders(request, init?.headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${FASTAPI_URL}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (taskId) {
       if (isCancel) {
         // Cancel task
-        const data = await proxyRequest(`/should_optimize/${taskId}/cancel`, {
+        const data = await proxyRequest(request, `/should_optimize/${taskId}/cancel`, {
           method: "POST",
         });
         return NextResponse.json(data);
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Submit new task
     const body = await request.json();
-    const data = await proxyRequest("/should_optimize", {
+    const data = await proxyRequest(request, "/should_optimize", {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return handleError(new Error("Task ID is required"), 400);
     }
 
-    const data = await proxyRequest(`/should_optimize/${taskId}`);
+    const data = await proxyRequest(request, `/should_optimize/${taskId}`);
     return NextResponse.json(data);
   } catch (error) {
     return handleError(error);

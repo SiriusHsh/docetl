@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBackendUrl } from "@/lib/api-config";
+import { buildFastApiProxyHeaders } from "@/lib/fastApiProxy";
 
 export async function GET(request: Request) {
   try {
@@ -14,7 +15,8 @@ export async function GET(request: Request) {
     }
 
     const res = await fetch(
-      `${getBackendUrl()}/pipelines?namespace=${encodeURIComponent(namespace)}`
+      `${getBackendUrl()}/pipelines?namespace=${encodeURIComponent(namespace)}`,
+      { headers: buildFastApiProxyHeaders(request) }
     );
 
     if (!res.ok) {
@@ -50,7 +52,9 @@ export async function POST(request: Request) {
 
     const res = await fetch(`${getBackendUrl()}/pipelines`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildFastApiProxyHeaders(request, {
+        "Content-Type": "application/json",
+      }),
       body: JSON.stringify({ namespace, name, state, description }),
     });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import {
   Scroll,
@@ -21,6 +22,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import type { ImperativePanelHandle } from "react-resizable-panels";
+import { getAuthExpiresAt, getAuthToken } from "@/lib/auth";
 const Output = dynamic(
   () => import("../../components/Output").then((mod) => mod.Output),
   {
@@ -290,6 +292,7 @@ const PerformanceWrapper: React.FC<{
 };
 
 const CodeEditorPipelineApp: React.FC = () => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -341,6 +344,15 @@ const CodeEditorPipelineApp: React.FC = () => {
     (operations?.length ?? 0) > 0 ||
     (files?.length ?? 0) > 0 ||
     Boolean(currentFile);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    const expiresAt = getAuthExpiresAt();
+    const now = Math.floor(Date.now() / 1000);
+    if (!token || (expiresAt !== null && expiresAt <= now)) {
+      router.replace("/login");
+    }
+  }, [router]);
 
   useEffect(() => {
     const checkScreenSize = () => {

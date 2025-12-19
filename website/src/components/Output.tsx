@@ -16,6 +16,7 @@ import {
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import AnsiRenderer from "./AnsiRenderer";
 import clsx from "clsx";
+import { backendFetch } from "@/lib/backendFetch";
 import {
   BarChart,
   Bar,
@@ -574,8 +575,8 @@ export const Output = memo(() => {
           operation?.otherKwargs?.prompts?.[0]?.output_keys;
         try {
           // Fetch output data
-          const outputResponse = await fetch(
-            `/api/readFile?path=${output.path}`
+          const outputResponse = await backendFetch(
+            `/api/readFile?path=${encodeURIComponent(output.path)}`
           );
           if (!outputResponse.ok) {
             throw new Error("Failed to fetch output file");
@@ -624,8 +625,8 @@ export const Output = memo(() => {
           if (isFirstOperation && sampleSize !== null) {
             setInputCount(sampleSize);
           } else if (output.inputPath) {
-            const inputResponse = await fetch(
-              `/api/readFile?path=${output.inputPath}`
+            const inputResponse = await backendFetch(
+              `/api/readFile?path=${encodeURIComponent(output.inputPath)}`
             );
             if (!inputResponse.ok) {
               throw new Error("Failed to fetch input file");

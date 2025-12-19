@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBackendUrl } from "@/lib/api-config";
+import { buildFastApiProxyHeaders } from "@/lib/fastApiProxy";
 
 async function forward(
   request: Request,
@@ -33,7 +34,7 @@ async function forward(
 
   const res = await fetch(targetUrl, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: buildFastApiProxyHeaders(request, { "Content-Type": "application/json" }),
     body:
       method === "PUT" || method === "PATCH"
         ? JSON.stringify(body)

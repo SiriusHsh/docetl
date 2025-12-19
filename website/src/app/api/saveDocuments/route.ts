@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildFastApiProxyHeaders, getFastApiUrl } from "@/lib/fastApiProxy";
 
-const FASTAPI_URL = `${
-  process.env.NEXT_PUBLIC_BACKEND_HTTPS ? "https" : "http"
-}://${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
-  process.env.NEXT_PUBLIC_BACKEND_PORT
-}`;
+const FASTAPI_URL = getFastApiUrl();
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +24,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${FASTAPI_URL}/fs/save-documents`, {
       method: "POST",
       body: backendFormData,
+      headers: buildFastApiProxyHeaders(request),
     });
 
     if (!response.ok) {

@@ -38,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { debounce } from "lodash";
 import { Guardrails, GleaningConfig } from "./operations/args";
+import { backendFetch } from "@/lib/backendFetch";
 import createOperationComponent from "./operations/components";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { Badge } from "./ui/badge";
@@ -816,7 +817,7 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
       setIsLoadingOutputs(true);
 
       // Write pipeline config
-      const response = await fetch("/api/writePipelineConfig", {
+      const response = await backendFetch("/api/writePipelineConfig", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -887,7 +888,7 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
     if (!operation) return;
 
     try {
-      const response = await fetch("/api/getInputOutput", {
+      const response = await backendFetch("/api/getInputOutput", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -939,7 +940,7 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
       if (!operation) return;
 
       try {
-        const response = await fetch("/api/edit", {
+        const response = await backendFetch("/api/edit", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

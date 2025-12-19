@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Header
+from fastapi import APIRouter, Depends, UploadFile, File, Header
 import tempfile
 import os
 import aiohttp
@@ -17,6 +17,7 @@ from docling.datamodel.base_models import InputFormat
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+from server.app.security import CurrentUser, get_current_user
 
 # Load environment variables
 load_dotenv()
@@ -117,8 +118,10 @@ def process_document_with_azure_layout(file_path: str, endpoint: str, key: str) 
 async def convert_documents(
     files: list[UploadFile] = File(...), 
     use_docetl_server: str = "false",
-    custom_docling_url: str | None = Header(None)
+    custom_docling_url: str | None = Header(None),
+    current_user: CurrentUser = Depends(get_current_user),
 ):
+    _ = current_user
     use_docetl_server = use_docetl_server.lower() == "true" # TODO: make this a boolean
 
     # TODO: Clean up deprecated docling-serve legacy API support
@@ -396,4 +399,3 @@ def try_read_file_with_encodings(file_path: str) -> str:
     # If all encodings fail, try with the most permissive one and replace errors
     with open(file_path, 'r', encoding='latin1', errors='replace') as f:
         return f.read()
-

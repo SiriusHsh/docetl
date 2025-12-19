@@ -1,6 +1,7 @@
 import { PipelineStateSnapshot } from "@/contexts/PipelineContext";
 import { PipelineMetadata, PipelineRecord } from "@/types/pipelines";
 import { getBackendUrl } from "./api-config";
+import { clearAuthSession, getAuthToken } from "@/lib/auth";
 
 const backendUrl = getBackendUrl();
 
@@ -8,10 +9,25 @@ async function request<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
+  const headers = new Headers(options?.headers ?? {});
+  headers.set("Content-Type", "application/json");
+  const token = getAuthToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   const response = await fetch(`${backendUrl}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers,
+    credentials: options?.credentials ?? "include",
   });
+
+  if (response.status === 401 && typeof window !== "undefined") {
+    clearAuthSession();
+    if (window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
+  }
 
   if (!response.ok) {
     const detail = await response.text();

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildFastApiProxyHeaders, getFastApiUrl } from "@/lib/fastApiProxy";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,11 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Construct FastAPI URL from environment variables
-    const FASTAPI_URL = `${
-      process.env.NEXT_PUBLIC_BACKEND_HTTPS ? "https" : "http"
-    }://${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
-      process.env.NEXT_PUBLIC_BACKEND_PORT
-    }`;
+    const FASTAPI_URL = getFastApiUrl();
     const apiFormData = new FormData();
     apiFormData.append("file", file);
     apiFormData.append("namespace", namespace);
@@ -22,6 +19,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${FASTAPI_URL}/fs/upload-file`, {
       method: "POST",
       body: apiFormData,
+      headers: buildFastApiProxyHeaders(request),
     });
 
     if (!response.ok) {

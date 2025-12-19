@@ -1,5 +1,6 @@
 import { getBackendUrl } from "@/lib/api-config";
 import type { File } from "@/app/types";
+import { backendFetch } from "@/lib/backendFetch";
 
 interface SaveFileOptions {
   currentFile: File | null;
@@ -44,7 +45,7 @@ export const saveToFile = async (
 
     if (options?.currentFile && options.namespace) {
       try {
-        const fileResponse = await fetch(
+        const fileResponse = await backendFetch(
           `${getBackendUrl()}/fs/read-file?path=${encodeURIComponent(
             options.currentFile.path
           )}`
@@ -139,7 +140,7 @@ export const saveToFileClassic = async (
 
   if (options?.currentFile && options.namespace) {
     try {
-      const fileResponse = await fetch(
+      const fileResponse = await backendFetch(
         `${getBackendUrl()}/fs/read-file?path=${encodeURIComponent(
           options.currentFile.path
         )}`
@@ -237,7 +238,7 @@ async function processFileContents(
       formData.append("namespace", fileData.metadata.parentFolder || "root");
 
       // Upload to server
-      const response = await fetch(`${getBackendUrl()}/fs/upload-file`, {
+      const response = await backendFetch(`${getBackendUrl()}/fs/upload-file`, {
         method: "POST",
         body: formData,
       });

@@ -23,6 +23,13 @@ class TaskStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+class RunStatus(str, Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
 class OptimizeResult(BaseModel):
     task_id: str
     status: TaskStatus
@@ -38,6 +45,37 @@ class OptimizeRequest(BaseModel):
     yaml_config: str
     step_name: str
     op_name: str
+
+
+class RunRecord(BaseModel):
+    id: str
+    namespace: str
+    pipeline_id: str | None = None
+    pipeline_name: str | None = None
+    trigger: str
+    deployment_id: str | None = None
+    status: RunStatus
+    created_at: int
+    started_at: int | None = None
+    ended_at: int | None = None
+    cost: float | None = None
+    output_path: str | None = None
+    log_path: str | None = None
+    error: str | None = None
+    metadata: dict[str, Any] | None = None
+    scheduled_for: int | None = None
+    attempt: int = 1
+    max_attempts: int | None = None
+    triggered_by_user_id: str | None = None
+
+
+class RunSummary(BaseModel):
+    total: int
+    running: int
+    failed: int
+    completed: int
+    cancelled: int
+    last_run_at: int | None = None
 
 
 # Pipeline persistence models
@@ -74,3 +112,91 @@ class PipelineUpdateRequest(BaseModel):
 class PipelineDuplicateRequest(BaseModel):
     namespace: str
     name: str | None = None
+
+
+# Auth/RBAC models
+class PlatformRole(str, Enum):
+    PLATFORM_ADMIN = "platform_admin"
+    USER = "user"
+
+
+class NamespaceRole(str, Enum):
+    NAMESPACE_ADMIN = "namespace_admin"
+    EDITOR = "editor"
+    VIEWER = "viewer"
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    email: str | None = None
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class UserPublic(BaseModel):
+    id: str
+    username: str
+    email: str | None = None
+    is_active: bool
+    platform_role: PlatformRole
+    created_at: int
+    updated_at: int
+    last_login_at: int | None = None
+
+
+class MembershipRecord(BaseModel):
+    namespace: str
+    role: NamespaceRole
+    created_at: int
+    updated_at: int
+
+
+class AuthResponse(BaseModel):
+    user: UserPublic
+    token: str
+    expires_at: int
+
+
+class MeResponse(BaseModel):
+    user: UserPublic
+    memberships: list[MembershipRecord]
+
+
+class UserCreateRequest(BaseModel):
+    username: str
+    password: str
+    email: str | None = None
+    platform_role: PlatformRole = PlatformRole.USER
+
+
+class UserUpdateRequest(BaseModel):
+    is_active: bool | None = None
+    platform_role: PlatformRole | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    password: str
+
+
+class SetMembershipRequest(BaseModel):
+    role: NamespaceRole
+
+
+class AuditLogEntry(BaseModel):
+    id: str
+    occurred_at: int
+    actor_user_id: str | None = None
+    actor_username: str | None = None
+    action: str
+    resource_type: str | None = None
+    resource_id: str | None = None
+    namespace: str | None = None
+    success: bool
+    ip: str | None = None
+    user_agent: str | None = None
+    request_id: str | None = None
+    detail: dict[str, Any] | None = None

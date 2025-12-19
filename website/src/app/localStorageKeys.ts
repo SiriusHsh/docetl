@@ -23,3 +23,8 @@ export const BOOKMARKS_KEY = "docetl_bookmarks";
 export const PIPELINE_ID_KEY = "docetl_pipelineId";
 export const PIPELINE_CACHE_KEY = "docetl_pipelineCache";
 export const ACTIVE_PIPELINE_ID_KEY = "docetl_activePipelineId";
+
+// Auth
+export const AUTH_TOKEN_KEY = "docetl_auth_token";
+export const AUTH_EXPIRES_AT_KEY = "docetl_auth_expires_at";
+export const AUTH_USER_KEY = "docetl_auth_user";

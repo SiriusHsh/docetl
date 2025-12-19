@@ -15,6 +15,7 @@ import {
 } from "@/mocks/mockData";
 import * as localStorageKeys from "@/app/localStorageKeys";
 import { toast } from "@/hooks/use-toast";
+import { backendFetch } from "@/lib/backendFetch";
 
 export interface PipelineState {
   pipelineId: string | null;
@@ -184,8 +185,8 @@ const serializeState = async (state: PipelineState): Promise<string> => {
 
   if (state.output?.path) {
     try {
-      const outputResponse = await fetch(
-        `/api/readFile?path=${state.output.path}`
+      const outputResponse = await backendFetch(
+        `/api/readFile?path=${encodeURIComponent(state.output.path)}`
       );
       if (!outputResponse.ok) {
         throw new Error("Failed to fetch output file");
@@ -522,6 +523,8 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const clearPipelineState = useCallback(() => {
     Object.values(localStorageKeys).forEach((key) => {
+      if (typeof key !== "string") return;
+      if (key.startsWith("docetl_auth_")) return;
       localStorage.removeItem(key);
     });
     const defaults = createDefaultPipelineState(null);

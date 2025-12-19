@@ -1,4 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 import os
 import yaml
@@ -9,8 +11,58 @@ import csv
 from io import StringIO
 from pathlib import Path
 from server.app.models import PipelineConfigRequest
+from server.app.deps import get_db
+from server.app.models import NamespaceRole
+from server.app.security import (
+    CurrentUser,
+    assert_namespace_role,
+    get_current_user,
+    require_namespace_role,
+    resolve_docetl_namespace_for_path,
+    validate_namespace,
+)
 
 router = APIRouter()
+
+def _authorize_namespace(
+    *,
+    conn,
+    current_user: CurrentUser,
+    namespace: str,
+    min_role: NamespaceRole,
+) -> str:
+    namespace_value = validate_namespace(namespace)
+    assert_namespace_role(
+        conn=conn,
+        current_user=current_user,
+        namespace=namespace_value,
+        min_role=min_role,
+    )
+    return namespace_value
+
+
+def _authorize_docetl_path(
+    *,
+    conn,
+    current_user: CurrentUser,
+    path: str,
+    min_role: NamespaceRole,
+) -> Path:
+    namespace, resolved = resolve_docetl_namespace_for_path(path)
+    assert_namespace_role(
+        conn=conn,
+        current_user=current_user,
+        namespace=namespace,
+        min_role=min_role,
+    )
+    return resolved
+
+
+def _validate_pipeline_name_for_paths(name: str) -> None:
+    if not name:
+        raise HTTPException(status_code=400, detail="Pipeline name is required")
+    if any(token in name for token in ("..", "/", "\\")):
+        raise HTTPException(status_code=400, detail="Invalid pipeline name")
 
 
 def get_home_dir() -> str:
@@ -23,10 +75,16 @@ def get_namespace_dir(namespace: str) -> Path:
     return Path(home_dir) / ".docetl" / namespace
 
 @router.post("/check-namespace")
-async def check_namespace(namespace: str):
+async def check_namespace(
+    namespace: str,
+    ctx: tuple[CurrentUser, str, NamespaceRole] = Depends(
+        require_namespace_role(min_role=NamespaceRole.VIEWER)
+    ),
+):
     """Check if namespace exists and create if it doesn't"""
     try:
-        namespace_dir = get_namespace_dir(namespace)
+        _, namespace_value, _ = ctx
+        namespace_dir = get_namespace_dir(namespace_value)
         exists = namespace_dir.exists()
         
         if not exists:
@@ -34,6 +92,8 @@ async def check_namespace(namespace: str):
             
         return {"exists": exists}
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Failed to check/create namespace: {str(e)}")
 
 def validate_json_content(content: bytes) -> None:
@@ -83,19 +143,28 @@ def is_likely_csv(content: bytes, filename: str) -> bool:
 async def upload_file(
     file: UploadFile | None = File(None),
     url: str | None = Form(None),
-    namespace: str = Form(...)
+    namespace: str = Form(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
 ):
     """Upload a file to the namespace files directory, either from a direct upload or a URL"""
     try:
+        namespace_value = _authorize_namespace(
+            conn=conn,
+            current_user=current_user,
+            namespace=namespace,
+            min_role=NamespaceRole.EDITOR,
+        )
         if not file and not url:
             raise HTTPException(status_code=400, detail="Either file or url must be provided")
             
-        upload_dir = get_namespace_dir(namespace) / "files"
+        upload_dir = get_namespace_dir(namespace_value) / "files"
         upload_dir.mkdir(parents=True, exist_ok=True)
         
         if url:
             # Get filename from URL or default to dataset.json
-            filename = url.split("/")[-1] or "dataset.json"
+            filename = url.split("/")[-1].split("?")[0] or "dataset.json"
+            filename = "".join(c if c.isalnum() or c in "._-" else "_" for c in filename)
             
             file_path = upload_dir / filename.replace('.csv', '.json')
             
@@ -140,9 +209,12 @@ async def upload_file(
         else:
             # Handle direct file upload
             file_content = await file.read()
+            safe_filename = "".join(
+                c if c.isalnum() or c in "._-" else "_" for c in (file.filename or "dataset.json")
+            )
             
             # Check if content is CSV and convert if needed
-            if file.filename.lower().endswith('.csv'):
+            if safe_filename.lower().endswith('.csv'):
                 try:
                     file_content = convert_csv_to_json(file_content)
                 except HTTPException as e:
@@ -155,7 +227,7 @@ async def upload_file(
             validate_json_content(file_content)
             
             # Always save as .json
-            file_path = upload_dir / file.filename.replace('.csv', '.json')
+            file_path = upload_dir / safe_filename.replace(".csv", ".json")
             with file_path.open("wb") as f:
                 f.write(file_content)
             
@@ -166,10 +238,21 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 @router.post("/save-documents")
-async def save_documents(files: list[UploadFile] = File(...), namespace: str = Form(...)):
+async def save_documents(
+    files: list[UploadFile] = File(...),
+    namespace: str = Form(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     """Save multiple documents to the namespace documents directory"""
     try:
-        uploads_dir = get_namespace_dir(namespace) / "documents"
+        namespace_value = _authorize_namespace(
+            conn=conn,
+            current_user=current_user,
+            namespace=namespace,
+            min_role=NamespaceRole.EDITOR,
+        )
+        uploads_dir = get_namespace_dir(namespace_value) / "documents"
         uploads_dir.mkdir(parents=True, exist_ok=True)
         
         saved_files = []
@@ -188,14 +271,27 @@ async def save_documents(files: list[UploadFile] = File(...), namespace: str = F
             
         return {"files": saved_files}
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Failed to save documents: {str(e)}")
 
 @router.post("/write-pipeline-config")
-async def write_pipeline_config(request: PipelineConfigRequest):
+async def write_pipeline_config(
+    request: PipelineConfigRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     """Write pipeline configuration YAML file"""
     try:
+        namespace_value = _authorize_namespace(
+            conn=conn,
+            current_user=current_user,
+            namespace=request.namespace,
+            min_role=NamespaceRole.EDITOR,
+        )
+        _validate_pipeline_name_for_paths(request.name)
         home_dir = get_home_dir()
-        pipeline_dir = Path(home_dir) / ".docetl" / request.namespace / "pipelines"
+        pipeline_dir = Path(home_dir) / ".docetl" / namespace_value / "pipelines"
         config_dir = pipeline_dir / "configs"
         name_dir = pipeline_dir / request.name / "intermediates"
         
@@ -212,29 +308,53 @@ async def write_pipeline_config(request: PipelineConfigRequest):
             "outputPath": request.output_path
         }
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Failed to write pipeline configuration: {str(e)}")
 
 @router.get("/read-file")
-async def read_file(path: str):
+async def read_file(
+    path: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     """Read file contents"""
     try:
         if path.startswith(("http://", "https://")):
             # For HTTP URLs, we'll need to implement request handling
             raise HTTPException(status_code=400, detail="HTTP URLs not supported in this endpoint")
             
-        file_path = Path(path)
+        file_path = _authorize_docetl_path(
+            conn=conn,
+            current_user=current_user,
+            path=path,
+            min_role=NamespaceRole.VIEWER,
+        )
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
             
-        return FileResponse(path)
+        return FileResponse(str(file_path))
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
 
 @router.get("/read-file-page")
-async def read_file_page(path: str, page: int = 0, chunk_size: int = 500000):
+async def read_file_page(
+    path: str,
+    page: int = 0,
+    chunk_size: int = 500000,
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     """Read file contents by page"""
     try:
-        file_path = Path(path)
+        file_path = _authorize_docetl_path(
+            conn=conn,
+            current_user=current_user,
+            path=path,
+            min_role=NamespaceRole.VIEWER,
+        )
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
             
@@ -252,34 +372,54 @@ async def read_file_page(path: str, page: int = 0, chunk_size: int = 500000):
             "hasMore": start + len(content) < file_size
         }
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
 
 @router.get("/serve-document/{path:path}")
-async def serve_document(path: str):
+async def serve_document(
+    path: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     """Serve document files"""
     try:
-        # Security check for path traversal
-        if ".." in path:
-            raise HTTPException(status_code=400, detail="Invalid file path")
-            
-        file_path = Path(path)
+        file_path = _authorize_docetl_path(
+            conn=conn,
+            current_user=current_user,
+            path=path,
+            min_role=NamespaceRole.VIEWER,
+        )
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
             
         return FileResponse(
-            path=file_path,
+            path=str(file_path),
             filename=file_path.name,
             headers={"Cache-Control": "public, max-age=3600"}
         )
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Failed to serve file: {str(e)}")
 
 @router.get("/check-file")
-async def check_file(path: str):
+async def check_file(
+    path: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+):
     """Check if a file exists without reading it"""
     try:
-        file_path = Path(path)
+        file_path = _authorize_docetl_path(
+            conn=conn,
+            current_user=current_user,
+            path=path,
+            min_role=NamespaceRole.VIEWER,
+        )
         exists = file_path.exists()
         return {"exists": exists}
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=f"Failed to check file: {str(e)}")

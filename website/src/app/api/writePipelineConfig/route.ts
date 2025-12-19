@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { generatePipelineConfig } from "@/app/api/utils";
 import os from "os";
+import { buildFastApiProxyHeaders, getFastApiUrl } from "@/lib/fastApiProxy";
 
-const FASTAPI_URL = `${
-  process.env.NEXT_PUBLIC_BACKEND_HTTPS ? "https" : "http"
-}://${process.env.NEXT_PUBLIC_BACKEND_HOST}:${
-  process.env.NEXT_PUBLIC_BACKEND_PORT
-}`;
+const FASTAPI_URL = getFastApiUrl();
 
 export async function POST(request: Request) {
   try {
@@ -65,9 +62,9 @@ export async function POST(request: Request) {
     // Use the FastAPI endpoint to write the pipeline config
     const response = await fetch(`${FASTAPI_URL}/fs/write-pipeline-config`, {
       method: "POST",
-      headers: {
+      headers: buildFastApiProxyHeaders(request, {
         "Content-Type": "application/json",
-      },
+      }),
       body: JSON.stringify({
         namespace,
         name,
