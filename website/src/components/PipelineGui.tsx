@@ -246,6 +246,8 @@ const PipelineGUI: React.FC = () => {
     apiKeys,
     extraPipelineSettings,
     setExtraPipelineSettings,
+    saveOutputToDataCenter,
+    setSaveOutputToDataCenter,
     unsavedChanges,
   } = usePipelineContext();
   const {
@@ -663,6 +665,7 @@ const PipelineGUI: React.FC = () => {
           clear_intermediate: clear_intermediate,
           pipeline_id: activePipelineId,
           namespace: namespace,
+          save_output_to_data_center: saveOutputToDataCenter,
         });
       } catch (error) {
         console.error("Error writing pipeline config:", error);
@@ -690,6 +693,7 @@ const PipelineGUI: React.FC = () => {
       systemPrompt,
       namespace,
       extraPipelineSettings,
+      saveOutputToDataCenter,
       cost,
       activePipelineId,
     ]
@@ -758,6 +762,7 @@ const PipelineGUI: React.FC = () => {
         optimize: true,
         pipeline_id: activePipelineId,
         namespace: namespace,
+        save_output_to_data_center: saveOutputToDataCenter,
       });
     } catch (error) {
       console.error("Error optimizing operation:", error);
@@ -1225,6 +1230,7 @@ const PipelineGUI: React.FC = () => {
       <PipelineSettings
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
+        namespace={namespace}
         pipelineName={pipelineName}
         setPipelineName={setPipelineName}
         currentFile={currentFile}
@@ -1239,6 +1245,8 @@ const PipelineGUI: React.FC = () => {
         apiKeys={apiKeys}
         extraPipelineSettings={extraPipelineSettings}
         setExtraPipelineSettings={setExtraPipelineSettings}
+        saveOutputToDataCenter={saveOutputToDataCenter}
+        setSaveOutputToDataCenter={setSaveOutputToDataCenter}
       />
       <OptimizationDialog
         isOpen={optimizationDialog.isOpen}

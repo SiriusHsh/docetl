@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -21,6 +24,7 @@ import { Switch } from "@/components/ui/switch";
 import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import yaml from "js-yaml";
+import { backendFetch } from "@/lib/backendFetch";
 
 const PREDEFINED_MODELS = [
   "gpt-4o-mini",
@@ -91,6 +95,7 @@ export const ModelInput: React.FC<ModelInputProps> = ({
 interface PipelineSettingsProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  namespace: string | null;
   pipelineName: string;
   setPipelineName: (name: string) => void;
   currentFile: File | null;
@@ -105,7 +110,19 @@ interface PipelineSettingsProps {
   apiKeys: Array<{ name: string; value: string }>;
   extraPipelineSettings: Record<string, unknown> | null;
   setExtraPipelineSettings: (settings: Record<string, unknown> | null) => void;
+  saveOutputToDataCenter: boolean;
+  setSaveOutputToDataCenter: (value: boolean) => void;
 }
+
+type DataCenterDataset = {
+  id: string;
+  name: string;
+  path: string;
+  source: string;
+  format: string;
+  row_count?: number | null;
+  created_at: number;
+};
 
 const SAMPLE_YAML = `# Example configuration - delete or modify as needed
 rate_limits:
@@ -121,6 +138,7 @@ rate_limits:
 const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   isOpen,
   onOpenChange,
+  namespace,
   pipelineName,
   setPipelineName,
   currentFile,
@@ -135,6 +153,8 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   apiKeys,
   extraPipelineSettings,
   setExtraPipelineSettings,
+  saveOutputToDataCenter,
+  setSaveOutputToDataCenter,
 }) => {
   const [tempPipelineName, setTempPipelineName] = useState(pipelineName);
   const [tempCurrentFile, setTempCurrentFile] = useState<File | null>(
@@ -144,7 +164,14 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   const [tempOptimizerModel, setTempOptimizerModel] = useState(optimizerModel);
   const [tempAutoOptimizeCheck, setTempAutoOptimizeCheck] =
     useState(autoOptimizeCheck);
+  const [tempSaveOutputToDataCenter, setTempSaveOutputToDataCenter] =
+    useState(saveOutputToDataCenter);
   const [isLocalMode, setIsLocalMode] = useState(false);
+  const [dataCenterDatasets, setDataCenterDatasets] = useState<
+    DataCenterDataset[]
+  >([]);
+  const [dataCenterLoading, setDataCenterLoading] = useState(false);
+  const [dataCenterError, setDataCenterError] = useState<string | null>(null);
 
   // Convert extraPipelineSettings to YAML string
   const initialYamlString = useMemo(() => {
@@ -166,6 +193,97 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
     return apiKeys.some((key) => key.name === "OPENAI_API_KEY");
   }, [apiKeys]);
 
+  const loadDataCenterDatasets = useCallback(async () => {
+    if (!namespace) {
+      setDataCenterDatasets([]);
+      return;
+    }
+    setDataCenterLoading(true);
+    setDataCenterError(null);
+    try {
+      const response = await backendFetch(
+        `/api/data-center/datasets?namespace=${encodeURIComponent(namespace)}`
+      );
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "Failed to load Data Center datasets");
+      }
+      const data = (await response.json()) as DataCenterDataset[];
+      const normalized = data
+        .filter((dataset) => dataset.format === "json")
+        .sort((a, b) => b.created_at - a.created_at);
+      setDataCenterDatasets(normalized);
+    } catch (err) {
+      setDataCenterDatasets([]);
+      setDataCenterError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load Data Center datasets"
+      );
+    } finally {
+      setDataCenterLoading(false);
+    }
+  }, [namespace]);
+
+  const workspaceOptions = useMemo(
+    () =>
+      files
+        .filter((file) => file.type === "json")
+        .map((file) => ({
+          value: file.path,
+          label: file.name,
+          file,
+          origin: "workspace" as const,
+        })),
+    [files]
+  );
+
+  const dataCenterOptions = useMemo(
+    () =>
+      dataCenterDatasets.map((dataset) => ({
+        value: dataset.path,
+        label: dataset.name,
+        file: {
+          name: dataset.name,
+          path: dataset.path,
+          type: "json" as const,
+          parentFolder: "Data Center",
+        },
+        origin: "data-center" as const,
+        source: dataset.source,
+      })),
+    [dataCenterDatasets]
+  );
+
+  const fallbackOption = useMemo(() => {
+    if (!tempCurrentFile?.path) {
+      return null;
+    }
+    const inWorkspace = workspaceOptions.some(
+      (option) => option.value === tempCurrentFile.path
+    );
+    const inDataCenter = dataCenterOptions.some(
+      (option) => option.value === tempCurrentFile.path
+    );
+    if (inWorkspace || inDataCenter) {
+      return null;
+    }
+    return {
+      value: tempCurrentFile.path,
+      label: tempCurrentFile.name,
+      file: tempCurrentFile,
+      origin: "workspace" as const,
+    };
+  }, [tempCurrentFile, workspaceOptions, dataCenterOptions]);
+
+  const datasetOptions = useMemo(() => {
+    const options = [...workspaceOptions, ...dataCenterOptions];
+    if (fallbackOption) {
+      options.push(fallbackOption);
+    }
+    return options;
+  }, [workspaceOptions, dataCenterOptions, fallbackOption]);
+
   // Update local state when props change
   React.useEffect(() => {
     setTempPipelineName(pipelineName);
@@ -173,6 +291,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
     setTempDefaultModel(defaultModel);
     setTempOptimizerModel(optimizerModel);
     setTempAutoOptimizeCheck(autoOptimizeCheck);
+    setTempSaveOutputToDataCenter(saveOutputToDataCenter);
 
     // Update YAML when extraPipelineSettings changes
     if (extraPipelineSettings) {
@@ -191,7 +310,13 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
     optimizerModel,
     autoOptimizeCheck,
     extraPipelineSettings,
+    saveOutputToDataCenter,
   ]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    void loadDataCenterDatasets();
+  }, [isOpen, loadDataCenterDatasets]);
 
   const validateYaml = useCallback((yamlString: string) => {
     if (!yamlString.trim()) {
@@ -224,6 +349,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
     setDefaultModel(tempDefaultModel);
     setOptimizerModel(tempOptimizerModel);
     setAutoOptimizeCheck(tempAutoOptimizeCheck);
+    setSaveOutputToDataCenter(tempSaveOutputToDataCenter);
 
     // Process and save YAML settings
     if (tempYamlSettings.trim()) {
@@ -259,25 +385,80 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
             <Label htmlFor="currentFile">Dataset JSON</Label>
             <Select
               value={tempCurrentFile?.path || ""}
-              onValueChange={(value) =>
-                setTempCurrentFile(
-                  files.find((file) => file.path === value) || null
-                )
-              }
+              onValueChange={(value) => {
+                const selected = datasetOptions.find(
+                  (option) => option.value === value
+                );
+                setTempCurrentFile(selected?.file ?? null);
+              }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a file" />
+                <SelectValue placeholder="Select a dataset" />
               </SelectTrigger>
               <SelectContent>
-                {files
-                  .filter((file) => file.type === "json")
-                  .map((file) => (
-                    <SelectItem key={file.path} value={file.path}>
-                      {file.name}
-                    </SelectItem>
-                  ))}
+                {workspaceOptions.length > 0 ? (
+                  <SelectGroup>
+                    <SelectLabel>Workspace</SelectLabel>
+                    {workspaceOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ) : null}
+                {dataCenterOptions.length > 0 ? (
+                  <>
+                    {workspaceOptions.length > 0 ? <SelectSeparator /> : null}
+                    <SelectGroup>
+                      <SelectLabel>Data Center</SelectLabel>
+                      {dataCenterOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <span className="flex items-center justify-between gap-2">
+                            <span>{option.label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {option.source === "pipeline_generated"
+                                ? "Generated"
+                                : "Uploaded"}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </>
+                ) : null}
+                {fallbackOption ? (
+                  <>
+                    {workspaceOptions.length > 0 || dataCenterOptions.length > 0 ? (
+                      <SelectSeparator />
+                    ) : null}
+                    <SelectGroup>
+                      <SelectLabel>Selected</SelectLabel>
+                      <SelectItem value={fallbackOption.value}>
+                        {fallbackOption.label}
+                      </SelectItem>
+                    </SelectGroup>
+                  </>
+                ) : null}
+                {dataCenterLoading ? (
+                  <div className="px-2 py-1 text-xs text-muted-foreground">
+                    Loading Data Center datasets...
+                  </div>
+                ) : null}
+                {!dataCenterLoading &&
+                workspaceOptions.length === 0 &&
+                dataCenterOptions.length === 0 ? (
+                  <div className="px-2 py-1 text-xs text-muted-foreground">
+                    No datasets available.
+                  </div>
+                ) : null}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Choose a workspace JSON file or a Data Center dataset.
+            </p>
+            {dataCenterError ? (
+              <div className="text-xs text-rose-300">{dataCenterError}</div>
+            ) : null}
           </div>
 
           <div className="flex flex-col space-y-1.5">
@@ -350,6 +531,20 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
               onCheckedChange={(checked) => setTempAutoOptimizeCheck(checked)}
               disabled={!hasOpenAIKey && !isLocalMode}
             />
+          </div>
+
+          <div className="flex flex-col space-y-1.5">
+            <Label htmlFor="saveOutputToDataCenter">
+              Save Output to Data Center
+            </Label>
+            <Switch
+              id="saveOutputToDataCenter"
+              checked={tempSaveOutputToDataCenter}
+              onCheckedChange={(checked) => setTempSaveOutputToDataCenter(checked)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Registers pipeline output as a generated dataset with lineage.
+            </p>
           </div>
 
           <div className="flex flex-col space-y-1.5">

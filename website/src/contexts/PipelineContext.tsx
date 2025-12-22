@@ -44,6 +44,7 @@ export interface PipelineState {
   namespace: string | null;
   apiKeys: APIKey[];
   extraPipelineSettings: Record<string, unknown> | null;
+  saveOutputToDataCenter: boolean;
 }
 
 export type PipelineStateSnapshot = Omit<PipelineState, "apiKeys">;
@@ -98,6 +99,7 @@ interface PipelineContextType extends PipelineState {
   setExtraPipelineSettings: React.Dispatch<
     React.SetStateAction<Record<string, unknown> | null>
   >;
+  setSaveOutputToDataCenter: React.Dispatch<React.SetStateAction<boolean>>;
   getSerializableState: () => PipelineStateSnapshot;
   loadPipelineSnapshot: (
     snapshot: Partial<PipelineStateSnapshot>,
@@ -141,6 +143,7 @@ export const createDefaultPipelineState = (
   namespace,
   apiKeys: [],
   extraPipelineSettings: null,
+  saveOutputToDataCenter: false,
 });
 
 const sanitizeFile = (file: File | null): File | null =>
@@ -173,6 +176,7 @@ export const buildPipelineSnapshot = (
   systemPrompt: state.systemPrompt,
   namespace: state.namespace,
   extraPipelineSettings: state.extraPipelineSettings,
+  saveOutputToDataCenter: state.saveOutputToDataCenter,
 });
 
 const serializeState = async (state: PipelineState): Promise<string> => {
@@ -408,6 +412,10 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
         null
       ),
+      saveOutputToDataCenter: loadFromLocalStorage(
+        localStorageKeys.SAVE_OUTPUT_TO_DATA_CENTER_KEY,
+        false
+      ),
     };
 
     return { ...createDefaultPipelineState(namespace), ...snapshot };
@@ -499,6 +507,10 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.setItem(
         localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
         JSON.stringify(snapshot.extraPipelineSettings)
+      );
+      localStorage.setItem(
+        localStorageKeys.SAVE_OUTPUT_TO_DATA_CENTER_KEY,
+        JSON.stringify(snapshot.saveOutputToDataCenter)
       );
 
       if (snapshot.pipelineId) {
@@ -718,6 +730,10 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     ),
     setExtraPipelineSettings: useCallback(
       (value) => setStateAndUpdate("extraPipelineSettings", value),
+      [setStateAndUpdate]
+    ),
+    setSaveOutputToDataCenter: useCallback(
+      (value) => setStateAndUpdate("saveOutputToDataCenter", value),
       [setStateAndUpdate]
     ),
     getSerializableState,

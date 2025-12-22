@@ -8,6 +8,7 @@ class PipelineRequest(BaseModel):
     yaml_config: str
     pipeline_id: str | None = None
     namespace: str | None = None
+    save_output_to_data_center: bool | None = None
 
 class PipelineConfigRequest(BaseModel):
     namespace: str
@@ -76,6 +77,43 @@ class RunSummary(BaseModel):
     completed: int
     cancelled: int
     last_run_at: int | None = None
+
+
+class DatasetSource(str, Enum):
+    USER_UPLOAD = "user_upload"
+    PIPELINE_GENERATED = "pipeline_generated"
+
+
+class DatasetFormat(str, Enum):
+    JSON = "json"
+
+
+class DatasetIngestStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
+
+
+class DatasetRecord(BaseModel):
+    id: str
+    namespace: str
+    name: str
+    source: DatasetSource
+    format: DatasetFormat
+    original_format: str | None = None
+    raw_path: str | None = None
+    path: str
+    ingest_status: DatasetIngestStatus
+    ingest_config: dict[str, Any] | None = None
+    created_at: int
+    updated_at: int
+    schema: dict[str, Any] | None = None
+    row_count: int | None = None
+    lineage: dict[str, Any] | None = None
+    tags: list[str] | None = None
+    description: str | None = None
+    error: str | None = None
 
 
 # Pipeline persistence models

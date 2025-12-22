@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import json
 import uuid
 from pathlib import Path
 
@@ -15,6 +16,9 @@ import yaml
 
 from server.app.deps import get_db
 from server.app.models import (
+    DatasetFormat,
+    DatasetIngestStatus,
+    DatasetSource,
     NamespaceRole,
     OptimizeResult,
     OptimizeRequest,
@@ -35,6 +39,7 @@ from server.app.storage import paths as storage_paths
 from server.app.storage import metadata_db
 from server.app.run_manager import register_run, unregister_run
 from server.app.storage.pipeline_store import load_pipeline, update_pipeline_run_status
+from server.app.storage.paths import get_data_center_dataset_dir
 
 # Setup logging
 FORMAT = "%(message)s"
@@ -148,6 +153,96 @@ def _resolve_pipeline_name(namespace: str, pipeline_id: str | None, yaml_path: P
 
 def _now_ts() -> int:
     return metadata_db.utc_now_ts()
+
+
+def _parse_json_content(content: bytes) -> list[dict[str, Any]]:
+    try:
+        payload = json.loads(content.decode("utf-8"))
+    except Exception as exc:
+        raise ValueError("Invalid JSON output") from exc
+    if isinstance(payload, list):
+        if not all(isinstance(item, dict) for item in payload):
+            raise ValueError("JSON output must contain objects")
+        return payload
+    if isinstance(payload, dict):
+        return [payload]
+    raise ValueError("JSON output must be an object or list of objects")
+
+
+def _parse_csv_content(content: bytes) -> list[dict[str, Any]]:
+    import csv
+    from io import StringIO
+
+    try:
+        csv_string = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("Invalid CSV encoding") from exc
+    reader = csv.DictReader(StringIO(csv_string))
+    return list(reader)
+
+
+def _infer_schema(records: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not records:
+        return None
+    sample = records[0]
+    if not isinstance(sample, dict):
+        return None
+    fields = [{"name": key, "type": type(value).__name__} for key, value in sample.items()]
+    return {"fields": fields}
+
+
+def _register_generated_dataset(
+    *,
+    conn,
+    namespace: str,
+    output_path: str,
+    pipeline_id: str | None,
+    pipeline_name: str | None,
+    run_id: str | None,
+) -> str | None:
+    path = Path(output_path)
+    if not path.exists():
+        raise ValueError("Pipeline output file not found")
+
+    suffix = path.suffix.lower()
+    content = path.read_bytes()
+    if suffix == ".json":
+        records = _parse_json_content(content)
+        original_format = "json"
+    elif suffix == ".csv":
+        records = _parse_csv_content(content)
+        original_format = "csv"
+    else:
+        raise ValueError("Unsupported output format")
+
+    dataset_id = str(uuid.uuid4())
+    dataset_path = get_data_center_dataset_dir(namespace, DatasetSource.PIPELINE_GENERATED.value) / f"{dataset_id}.json"
+    dataset_path.parent.mkdir(parents=True, exist_ok=True)
+    with dataset_path.open("w", encoding="utf-8") as handle:
+        json.dump(records, handle, ensure_ascii=True, indent=2)
+
+    schema = _infer_schema(records)
+    metadata_db.create_dataset(
+        conn,
+        dataset_id=dataset_id,
+        namespace=namespace,
+        name=f"{pipeline_name or 'pipeline'}_run_{run_id or dataset_id}",
+        source=DatasetSource.PIPELINE_GENERATED.value,
+        format=DatasetFormat.JSON.value,
+        original_format=original_format,
+        raw_path=str(path),
+        path=str(dataset_path),
+        ingest_status=DatasetIngestStatus.READY.value,
+        schema=schema,
+        row_count=len(records),
+        lineage={
+            "pipeline_id": pipeline_id,
+            "pipeline_name": pipeline_name,
+            "run_id": run_id,
+            "output_path": output_path,
+        },
+    )
+    return dataset_id
 
 async def cleanup_old_tasks():
     """Background task to clean up completed tasks"""
@@ -323,6 +418,7 @@ def run_pipeline(
     runner: DSLRunner | None = None
     run_id: str | None = None
     pipeline_name = _resolve_pipeline_name(namespace, request.pipeline_id, yaml_path)
+    save_output_to_data_center = bool(request.save_output_to_data_center)
     try:
         _record_run_status(
             {"pipeline_id": request.pipeline_id, "namespace": namespace}, "running"
@@ -357,6 +453,7 @@ def run_pipeline(
             logging.warning("Failed to record run metadata: %s", exc)
         runner = DSLRunner.from_yaml(str(yaml_path))
         cost = runner.load_run_save()
+        output_path = runner.get_output_path()
         _record_run_status(
             {"pipeline_id": request.pipeline_id, "namespace": namespace}, "completed"
         )
@@ -368,6 +465,7 @@ def run_pipeline(
                     status="completed",
                     ended_at=_now_ts(),
                     cost=cost,
+                    output_path=output_path,
                 )
                 metadata_db.insert_audit_log(
                     conn,
@@ -385,6 +483,32 @@ def run_pipeline(
                 )
             except Exception as exc:
                 logging.warning("Failed to update run metadata: %s", exc)
+        if save_output_to_data_center and output_path:
+            try:
+                dataset_id = _register_generated_dataset(
+                    conn=conn,
+                    namespace=namespace,
+                    output_path=output_path,
+                    pipeline_id=request.pipeline_id,
+                    pipeline_name=pipeline_name,
+                    run_id=run_id,
+                )
+                metadata_db.insert_audit_log(
+                    conn,
+                    actor_user_id=current_user.id,
+                    actor_username=current_user.username,
+                    action="dataset.generated",
+                    resource_type="dataset",
+                    resource_id=dataset_id,
+                    namespace=namespace,
+                    success=True,
+                    ip=meta["ip"],
+                    user_agent=meta["user_agent"],
+                    request_id=meta["request_id"],
+                    detail={"output_path": output_path},
+                )
+            except Exception as exc:
+                logging.warning("Failed to register generated dataset: %s", exc)
         return {"cost": cost, "message": "Pipeline executed successfully", "run_id": run_id}
     except Exception as e:
         import traceback
@@ -560,7 +684,10 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
         if config.get("clear_intermediate", False):
             runner.clear_intermediate()
 
-        if config.get("optimize", False):
+        optimize_requested = bool(config.get("optimize", False))
+        save_output_to_data_center = bool(config.get("save_output_to_data_center"))
+
+        if optimize_requested:
             logging.info(f"Optimizing pipeline with model {config.get('optimizer_model', 'gpt-4o')}")
 
             # Set the runner config to the optimizer config
@@ -642,7 +769,7 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
         await asyncio.sleep(3)
 
         # If optimize is true, send back the optimized operations
-        if config.get("optimize", False):
+        if optimize_requested:
             optimized_config, cost = result
 
             # Send the operations back in order
@@ -666,7 +793,13 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
                     },
                 }
             )
-            _update_run_record(status="completed", ended_at=_now_ts(), cost=cost)
+            output_path = runner.get_output_path() if runner is not None else None
+            _update_run_record(
+                status="completed",
+                ended_at=_now_ts(),
+                cost=cost,
+                output_path=output_path,
+            )
             _audit_run("run.complete", True, detail={"cost": cost})
         else:
             await websocket.send_json(
@@ -680,8 +813,43 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
                     },
                 }
             )
-            _update_run_record(status="completed", ended_at=_now_ts(), cost=result)
+            output_path = runner.get_output_path() if runner is not None else None
+            _update_run_record(
+                status="completed",
+                ended_at=_now_ts(),
+                cost=result,
+                output_path=output_path,
+            )
             _audit_run("run.complete", True, detail={"cost": result})
+            if save_output_to_data_center and output_path:
+                try:
+                    dataset_id = _with_conn(
+                        lambda conn: _register_generated_dataset(
+                            conn=conn,
+                            namespace=namespace_value,
+                            output_path=output_path,
+                            pipeline_id=str(config.get("pipeline_id"))
+                            if config.get("pipeline_id")
+                            else None,
+                            pipeline_name=pipeline_name,
+                            run_id=run_id,
+                        )
+                    )
+                    _with_conn(
+                        lambda conn: metadata_db.insert_audit_log(
+                            conn,
+                            actor_user_id=current_user.id,
+                            actor_username=current_user.username,
+                            action="dataset.generated",
+                            resource_type="dataset",
+                            resource_id=dataset_id,
+                            namespace=namespace_value,
+                            success=True,
+                            detail={"output_path": output_path},
+                        )
+                    )
+                except Exception as exc:
+                    logging.warning("Failed to register generated dataset: %s", exc)
         _record_run_status(config, "completed")
     except WebSocketDisconnect:
         if runner is not None:

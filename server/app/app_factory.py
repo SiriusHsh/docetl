@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
 
     from server.app.routes import audit as audit_routes
     from server.app.routes import auth as auth_routes
+    from server.app.routes import data_center as data_center_routes
     from server.app.routes import runs as runs_routes
     from server.app.routes import users as users_routes
 
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(users_routes.router)
     app.include_router(audit_routes.router)
     app.include_router(runs_routes.router)
+    app.include_router(data_center_routes.router)
 
     from server.app.routes import convert, filesystem, pipeline, pipelines
 

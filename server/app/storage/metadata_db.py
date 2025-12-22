@@ -132,6 +132,31 @@ def init_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);
         CREATE INDEX IF NOT EXISTS idx_runs_created_at ON runs(created_at);
         CREATE INDEX IF NOT EXISTS idx_runs_pipeline_id ON runs(pipeline_id);
+
+        CREATE TABLE IF NOT EXISTS datasets (
+          id TEXT PRIMARY KEY,
+          namespace TEXT NOT NULL,
+          name TEXT NOT NULL,
+          source TEXT NOT NULL,
+          format TEXT NOT NULL,
+          original_format TEXT,
+          raw_path TEXT,
+          path TEXT NOT NULL,
+          ingest_status TEXT NOT NULL,
+          ingest_config_json TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          schema_json TEXT,
+          row_count INTEGER,
+          lineage_json TEXT,
+          tags_json TEXT,
+          description TEXT,
+          error TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_datasets_namespace ON datasets(namespace);
+        CREATE INDEX IF NOT EXISTS idx_datasets_source ON datasets(source);
+        CREATE INDEX IF NOT EXISTS idx_datasets_name ON datasets(name);
         """
     )
 
@@ -246,6 +271,28 @@ class RunRow:
     triggered_by_user_id: str | None
 
 
+@dataclass(frozen=True)
+class DatasetRow:
+    id: str
+    namespace: str
+    name: str
+    source: str
+    format: str
+    original_format: str | None
+    raw_path: str | None
+    path: str
+    ingest_status: str
+    ingest_config: dict[str, Any] | None
+    created_at: int
+    updated_at: int
+    schema: dict[str, Any] | None
+    row_count: int | None
+    lineage: dict[str, Any] | None
+    tags: list[str] | None
+    description: str | None
+    error: str | None
+
+
 def _row_to_user(row: sqlite3.Row) -> UserRow:
     return UserRow(
         id=str(row["id"]),
@@ -283,10 +330,39 @@ def _row_to_run(row: sqlite3.Row) -> RunRow:
     )
 
 
+def _row_to_dataset(row: sqlite3.Row) -> DatasetRow:
+    return DatasetRow(
+        id=str(row["id"]),
+        namespace=str(row["namespace"]),
+        name=str(row["name"]),
+        source=str(row["source"]),
+        format=str(row["format"]),
+        original_format=str(row["original_format"]) if row["original_format"] is not None else None,
+        raw_path=str(row["raw_path"]) if row["raw_path"] is not None else None,
+        path=str(row["path"]),
+        ingest_status=str(row["ingest_status"]),
+        ingest_config=json.loads(row["ingest_config_json"]) if row["ingest_config_json"] else None,
+        created_at=int(row["created_at"]),
+        updated_at=int(row["updated_at"]),
+        schema=json.loads(row["schema_json"]) if row["schema_json"] else None,
+        row_count=int(row["row_count"]) if row["row_count"] is not None else None,
+        lineage=json.loads(row["lineage_json"]) if row["lineage_json"] else None,
+        tags=json.loads(row["tags_json"]) if row["tags_json"] else None,
+        description=str(row["description"]) if row["description"] is not None else None,
+        error=str(row["error"]) if row["error"] is not None else None,
+    )
+
+
 _RUN_COLUMNS = (
     "id, namespace, pipeline_id, pipeline_name, trigger, deployment_id, status, "
     "created_at, started_at, ended_at, cost, output_path, log_path, error, "
     "metadata_json, scheduled_for, attempt, max_attempts, triggered_by_user_id"
+)
+
+_DATASET_COLUMNS = (
+    "id, namespace, name, source, format, original_format, raw_path, path, "
+    "ingest_status, ingest_config_json, created_at, updated_at, schema_json, "
+    "row_count, lineage_json, tags_json, description, error"
 )
 
 
@@ -835,3 +911,158 @@ def get_run_summary(conn: sqlite3.Connection, *, namespace: str) -> dict[str, in
         "cancelled": int(row["cancelled"] or 0),
         "last_run_at": int(row["last_run_at"]) if row["last_run_at"] is not None else None,
     }
+
+
+def create_dataset(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    name: str,
+    source: str,
+    format: str,
+    original_format: str | None,
+    raw_path: str | None,
+    path: str,
+    ingest_status: str,
+    ingest_config: dict[str, Any] | None = None,
+    schema: dict[str, Any] | None = None,
+    row_count: int | None = None,
+    lineage: dict[str, Any] | None = None,
+    tags: list[str] | None = None,
+    description: str | None = None,
+    error: str | None = None,
+    dataset_id: str | None = None,
+) -> DatasetRow:
+    dataset_id = dataset_id or str(uuid.uuid4())
+    now = utc_now_ts()
+    conn.execute(
+        f"""
+        INSERT INTO datasets (
+          id, namespace, name, source, format, original_format, raw_path, path,
+          ingest_status, ingest_config_json, created_at, updated_at, schema_json,
+          row_count, lineage_json, tags_json, description, error
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            dataset_id,
+            namespace,
+            name,
+            source,
+            format,
+            original_format,
+            raw_path,
+            path,
+            ingest_status,
+            json.dumps(ingest_config) if ingest_config is not None else None,
+            now,
+            now,
+            json.dumps(schema) if schema is not None else None,
+            row_count,
+            json.dumps(lineage) if lineage is not None else None,
+            json.dumps(tags) if tags is not None else None,
+            description,
+            error,
+        ),
+    )
+    row = conn.execute(
+        f"SELECT {_DATASET_COLUMNS} FROM datasets WHERE id = ?",
+        (dataset_id,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError("Failed to load created dataset")
+    return _row_to_dataset(row)
+
+
+def update_dataset(
+    conn: sqlite3.Connection,
+    dataset_id: str,
+    *,
+    ingest_status: str | None | Any = _UNSET,
+    ingest_config: dict[str, Any] | None | Any = _UNSET,
+    schema: dict[str, Any] | None | Any = _UNSET,
+    row_count: int | None | Any = _UNSET,
+    lineage: dict[str, Any] | None | Any = _UNSET,
+    tags: list[str] | None | Any = _UNSET,
+    description: str | None | Any = _UNSET,
+    error: str | None | Any = _UNSET,
+) -> DatasetRow:
+    updates: list[str] = ["updated_at = ?"]
+    params: list[Any] = [utc_now_ts()]
+
+    if ingest_status is not _UNSET:
+        updates.append("ingest_status = ?")
+        params.append(ingest_status)
+    if ingest_config is not _UNSET:
+        updates.append("ingest_config_json = ?")
+        params.append(json.dumps(ingest_config) if ingest_config is not None else None)
+    if schema is not _UNSET:
+        updates.append("schema_json = ?")
+        params.append(json.dumps(schema) if schema is not None else None)
+    if row_count is not _UNSET:
+        updates.append("row_count = ?")
+        params.append(row_count)
+    if lineage is not _UNSET:
+        updates.append("lineage_json = ?")
+        params.append(json.dumps(lineage) if lineage is not None else None)
+    if tags is not _UNSET:
+        updates.append("tags_json = ?")
+        params.append(json.dumps(tags) if tags is not None else None)
+    if description is not _UNSET:
+        updates.append("description = ?")
+        params.append(description)
+    if error is not _UNSET:
+        updates.append("error = ?")
+        params.append(error)
+
+    params.append(dataset_id)
+    conn.execute(
+        f"UPDATE datasets SET {', '.join(updates)} WHERE id = ?",
+        params,
+    )
+
+    row = conn.execute(
+        f"SELECT {_DATASET_COLUMNS} FROM datasets WHERE id = ?",
+        (dataset_id,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("dataset_not_found")
+    return _row_to_dataset(row)
+
+
+def get_dataset(conn: sqlite3.Connection, dataset_id: str) -> DatasetRow | None:
+    row = conn.execute(
+        f"SELECT {_DATASET_COLUMNS} FROM datasets WHERE id = ?",
+        (dataset_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return _row_to_dataset(row)
+
+
+def list_datasets(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    source: str | None = None,
+    limit: int = 200,
+    offset: int = 0,
+) -> list[DatasetRow]:
+    where: list[str] = ["namespace = ?"]
+    params: list[Any] = [namespace]
+    if source is not None:
+        where.append("source = ?")
+        params.append(source)
+
+    where_sql = " AND ".join(where)
+    rows = conn.execute(
+        f"""
+        SELECT {_DATASET_COLUMNS}
+        FROM datasets
+        WHERE {where_sql}
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (*params, limit, offset),
+    ).fetchall()
+    return [_row_to_dataset(row) for row in rows]
