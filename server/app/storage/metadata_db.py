@@ -28,7 +28,6 @@ def _utc_ts_from_timedelta(delta: timedelta) -> int:
 
 
 def _connect(db_path: Path) -> sqlite3.Connection:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(
         str(db_path),
         timeout=30,
@@ -42,7 +41,9 @@ def _connect(db_path: Path) -> sqlite3.Connection:
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
-    return _connect(db_path or get_platform_db_path())
+    resolved_path = db_path or get_platform_db_path()
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    return _connect(resolved_path)
 
 
 def init_schema(conn: sqlite3.Connection) -> None:
