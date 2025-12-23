@@ -17,6 +17,8 @@ import * as localStorageKeys from "@/app/localStorageKeys";
 import { toast } from "@/hooks/use-toast";
 import { backendFetch } from "@/lib/backendFetch";
 
+const DEFAULT_NAMESPACE = "default";
+
 export interface PipelineState {
   pipelineId: string | null;
   operations: Operation[];
@@ -433,6 +435,17 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted || state.namespace) {
+      return;
+    }
+    localStorage.setItem(
+      localStorageKeys.NAMESPACE_KEY,
+      JSON.stringify(DEFAULT_NAMESPACE)
+    );
+    setState((prev) => ({ ...prev, namespace: DEFAULT_NAMESPACE }));
+  }, [isMounted, state.namespace]);
 
   const persistSnapshotToLocalStorage = useCallback(
     (snapshot: PipelineStateSnapshot) => {

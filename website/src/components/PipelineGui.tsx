@@ -19,6 +19,7 @@ import {
   FileUp,
   Loader2,
   StopCircle,
+  Square,
   Brain,
   GitBranch,
   Pencil,
@@ -65,6 +66,10 @@ import {
   DOCWRANGLER_HOSTED_COST_LIMIT,
   isDocWranglerHosted,
 } from "@/lib/utils";
+
+interface PipelineGUIProps {
+  variant?: "default" | "execute";
+}
 
 interface OperationMenuItemProps {
   name: string;
@@ -212,7 +217,7 @@ const AddOperationDropdown: React.FC<AddOperationDropdownProps> = ({
   );
 };
 
-const PipelineGUI: React.FC = () => {
+const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const {
@@ -794,419 +799,474 @@ const PipelineGUI: React.FC = () => {
     <div className="flex flex-col h-full">
       <div
         ref={headerRef}
-        className="flex-none relative bg-background border-b sticky top-0 z-10 shadow-sm"
+        className={`flex-none relative sticky top-0 z-10 ${
+          variant === "execute"
+            ? "border-b border-slate-800"
+            : "bg-background border-b shadow-sm"
+        }`}
       >
-        <div className="p-2">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              {isEditingName ? (
-                <Input
-                  value={editedPipelineName}
-                  onChange={(e) => setEditedPipelineName(e.target.value)}
-                  onBlur={handleRenamePipeline}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      void handleRenamePipeline();
-                    }
-                  }}
-                  className="max-w-[240px] h-8 text-sm font-semibold"
-                  autoFocus
-                />
-              ) : (
-                <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 flex items-center gap-2"
-                    >
-                      <GitBranch size={14} />
-                      <span className="font-semibold max-w-[180px] truncate">
-                        {pipelineName}
-                      </span>
-                      {unsavedChanges && (
-                        <span className="h-2 w-2 rounded-full bg-orange-500" />
-                      )}
-                      <ChevronDown
-                        size={14}
-                        className="text-muted-foreground"
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-72">
-                    <DropdownMenuLabel>选择 Pipeline</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {pipelines.length === 0 ? (
-                      <DropdownMenuItem disabled>暂无管线</DropdownMenuItem>
-                    ) : (
-                      pipelines.map((pipeline) => (
-                        <DropdownMenuItem
-                          key={pipeline.id}
-                          onSelect={() => switchPipeline(pipeline.id)}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <span className="truncate">{pipeline.name}</span>
-                          {pipeline.id === activePipelineId && (
-                            <span className="text-xs text-primary font-medium">
-                              当前
-                            </span>
-                          )}
-                        </DropdownMenuItem>
-                      ))
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={() => setIsEditingName(true)}
-                      disabled={!activePipelineId}
-                    >
-                      <Pencil size={14} className="mr-2" />
-                      重命名
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        activePipelineId &&
-                        duplicatePipeline(
-                          activePipelineId,
-                          `${pipelineName} 副本`
-                        )
-                      }
-                      disabled={!activePipelineId}
-                    >
-                      <Copy size={14} className="mr-2" />
-                      复制当前
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => createPipeline()}>
-                      <PlusCircle size={14} className="mr-2" />
-                      新建 Pipeline
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => {
-                        if (activePipelineId) {
-                          const confirmed = window.confirm(
-                            "确定要删除当前 pipeline 吗？此操作不可恢复。"
-                          );
-                          if (confirmed) {
-                            void deletePipeline(activePipelineId);
-                          }
-                        }
-                      }}
-                      disabled={!activePipelineId}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 size={14} className="mr-2" />
-                      删除
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <span className="text-xs text-muted-foreground">
-                  共 {pipelines.length} 条
-                </span>
-                </>
-              )}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 flex-shrink-0"
-                onClick={() => setIsLeftSideCollapsed(!isLeftSideCollapsed)}
+        {variant === "execute" ? (
+          <div className="flex items-center justify-between px-6 py-4 bg-[#0B0E14]">
+            <div className="flex items-center gap-4">
+              <h3 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+                执行流程
+              </h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                onClick={handleStop}
+                disabled={!isLoadingOutputs}
               >
-                {isLeftSideCollapsed ? (
-                  <ChevronRight size={16} />
+                <Square className="w-3 h-3 fill-current" />
+                停止
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-[#1e2330] rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                onClick={() => onRunAll(true)}
+                disabled={isLoadingOutputs}
+              >
+                {isLoadingOutputs ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <ChevronLeft size={16} />
+                  <RefreshCw className="w-3.5 h-3.5" />
                 )}
-              </Button>
-
-              <div
-                className={`flex items-center gap-2 transition-transform duration-200 origin-left ${isLeftSideCollapsed ? "scale-x-0 w-0" : "scale-x-100"
-                  }`}
+                重新运行
+              </button>
+              <button
+                type="button"
+                className="flex items-center gap-2 px-4 py-1.5 text-white bg-blue-600 hover:bg-blue-500 rounded-md text-xs font-medium shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 disabled:bg-slate-700"
+                onClick={() => onRunAll(false)}
+                disabled={isLoadingOutputs}
               >
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 whitespace-nowrap"
-                      >
-                        <GitBranch size={14} className="mr-2" />
-                        Overview
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      side="bottom"
-                      align="start"
-                      className="w-96 p-4"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">Pipeline Flow</h4>
-                          <span className="text-xs text-muted-foreground">
-                            {operations.filter((op) => op.visibility).length}{" "}
-                            operations
+                {isLoadingOutputs ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                )}
+                运行
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                {isEditingName ? (
+                  <Input
+                    value={editedPipelineName}
+                    onChange={(e) => setEditedPipelineName(e.target.value)}
+                    onBlur={handleRenamePipeline}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        void handleRenamePipeline();
+                      }
+                    }}
+                    className="max-w-[240px] h-8 text-sm font-semibold"
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 flex items-center gap-2"
+                        >
+                          <GitBranch size={14} />
+                          <span className="font-semibold max-w-[180px] truncate">
+                            {pipelineName}
                           </span>
-                        </div>
-                        <div className="bg-muted p-3 rounded-md space-y-2">
-                          {operations.length > 0 ? (
-                            operations
-                              .filter((op) => op.visibility)
-                              .map((op, index, arr) => (
-                                <div key={op.id} className="flex items-center">
-                                  <div className="flex-1 bg-background p-2 rounded-md text-sm">
-                                    <div className="font-medium">{op.name}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {op.type}
-                                    </div>
-                                  </div>
-                                  {index < arr.length - 1 && (
-                                    <div className="mx-2 text-muted-foreground">
-                                      ↓
-                                    </div>
-                                  )}
-                                </div>
-                              ))
-                          ) : (
-                            <div className="text-sm text-muted-foreground">
-                              No operations in the pipeline
-                            </div>
+                          {unsavedChanges && (
+                            <span className="h-2 w-2 rounded-full bg-orange-500" />
                           )}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                          <ChevronDown
+                            size={14}
+                            className="text-muted-foreground"
+                          />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-72">
+                        <DropdownMenuLabel>选择 Pipeline</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {pipelines.length === 0 ? (
+                          <DropdownMenuItem disabled>暂无管线</DropdownMenuItem>
+                        ) : (
+                          pipelines.map((pipeline) => (
+                            <DropdownMenuItem
+                              key={pipeline.id}
+                              onSelect={() => switchPipeline(pipeline.id)}
+                              className="flex items-center justify-between gap-2"
+                            >
+                              <span className="truncate">{pipeline.name}</span>
+                              {pipeline.id === activePipelineId && (
+                                <span className="text-xs text-primary font-medium">
+                                  当前
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onSelect={() => setIsEditingName(true)}
+                          disabled={!activePipelineId}
+                        >
+                          <Pencil size={14} className="mr-2" />
+                          重命名
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            activePipelineId &&
+                            duplicatePipeline(
+                              activePipelineId,
+                              `${pipelineName} 副本`
+                            )
+                          }
+                          disabled={!activePipelineId}
+                        >
+                          <Copy size={14} className="mr-2" />
+                          复制当前
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => createPipeline()}>
+                          <PlusCircle size={14} className="mr-2" />
+                          新建 Pipeline
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            if (activePipelineId) {
+                              const confirmed = window.confirm(
+                                "确定要删除当前 pipeline 吗？此操作不可恢复。"
+                              );
+                              if (confirmed) {
+                                void deletePipeline(activePipelineId);
+                              }
+                            }
+                          }}
+                          disabled={!activePipelineId}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 size={14} className="mr-2" />
+                          删除
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <span className="text-xs text-muted-foreground">
+                      共 {pipelines.length} 条
+                    </span>
+                  </>
+                )}
 
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 whitespace-nowrap"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 flex-shrink-0"
+                  onClick={() => setIsLeftSideCollapsed(!isLeftSideCollapsed)}
+                >
+                  {isLeftSideCollapsed ? (
+                    <ChevronRight size={16} />
+                  ) : (
+                    <ChevronLeft size={16} />
+                  )}
+                </Button>
+
+                <div
+                  className={`flex items-center gap-2 transition-transform duration-200 origin-left ${
+                    isLeftSideCollapsed ? "scale-x-0 w-0" : "scale-x-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 whitespace-nowrap"
+                        >
+                          <GitBranch size={14} className="mr-2" />
+                          Overview
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        side="bottom"
+                        align="start"
+                        className="w-96 p-4"
                       >
-                        <Brain size={14} className="mr-2" />
-                        System Prompts
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-88">
-                      <div className="grid gap-3">
-                        <div className="space-y-1">
-                          <h4 className="text-lg font-semibold">
-                            System Configuration
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            This will be in the system prompt for <b>every</b>{" "}
-                            operation!
-                          </p>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium">Pipeline Flow</h4>
+                            <span className="text-xs text-muted-foreground">
+                              {operations.filter((op) => op.visibility).length}{" "}
+                              operations
+                            </span>
+                          </div>
+                          <div className="bg-muted p-3 rounded-md space-y-2">
+                            {operations.length > 0 ? (
+                              operations
+                                .filter((op) => op.visibility)
+                                .map((op, index, arr) => (
+                                  <div key={op.id} className="flex items-center">
+                                    <div className="flex-1 bg-background p-2 rounded-md text-sm">
+                                      <div className="font-medium">{op.name}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {op.type}
+                                      </div>
+                                    </div>
+                                    {index < arr.length - 1 && (
+                                      <div className="mx-2 text-muted-foreground">
+                                        ↓
+                                      </div>
+                                    )}
+                                  </div>
+                                ))
+                            ) : (
+                              <div className="text-sm text-muted-foreground">
+                                No operations in the pipeline
+                              </div>
+                            )}
+                          </div>
                         </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 whitespace-nowrap"
+                        >
+                          <Brain size={14} className="mr-2" />
+                          System Prompts
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-88">
                         <div className="grid gap-3">
                           <div className="space-y-1">
-                            <Label
-                              htmlFor="datasetDescription"
-                              className="text-sm font-medium"
-                            >
-                              Dataset Description
-                            </Label>
-                            <Textarea
-                              id="datasetDescription"
-                              placeholder="a collection of documents"
-                              defaultValue={systemPrompt.datasetDescription}
-                              onBlur={(e) => {
-                                const value = e.target.value;
-                                setTimeout(() => {
-                                  setSystemPrompt((prev) => ({
-                                    ...prev,
-                                    datasetDescription: value,
-                                  }));
-                                }, 0);
-                              }}
-                              className="h-[3.5rem]"
-                            />
+                            <h4 className="text-lg font-semibold">
+                              System Configuration
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              This will be in the system prompt for <b>every</b>{" "}
+                              operation!
+                            </p>
                           </div>
-                          <div className="space-y-1">
-                            <Label
-                              htmlFor="persona"
-                              className="text-sm font-medium"
-                            >
-                              Persona
-                            </Label>
-                            <Textarea
-                              id="persona"
-                              placeholder="a helpful assistant"
-                              defaultValue={systemPrompt.persona}
-                              onBlur={(e) => {
-                                const value = e.target.value;
-                                setTimeout(() => {
-                                  setSystemPrompt((prev) => ({
-                                    ...prev,
-                                    persona: value,
-                                  }));
-                                }, 0);
-                              }}
-                              className="h-[3.5rem]"
-                            />
+                          <div className="grid gap-3">
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor="datasetDescription"
+                                className="text-sm font-medium"
+                              >
+                                Dataset Description
+                              </Label>
+                              <Textarea
+                                id="datasetDescription"
+                                placeholder="a collection of documents"
+                                defaultValue={systemPrompt.datasetDescription}
+                                onBlur={(e) => {
+                                  const value = e.target.value;
+                                  setTimeout(() => {
+                                    setSystemPrompt((prev) => ({
+                                      ...prev,
+                                      datasetDescription: value,
+                                    }));
+                                  }, 0);
+                                }}
+                                className="h-[3.5rem]"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label
+                                htmlFor="persona"
+                                className="text-sm font-medium"
+                              >
+                                Persona
+                              </Label>
+                              <Textarea
+                                id="persona"
+                                placeholder="a helpful assistant"
+                                defaultValue={systemPrompt.persona}
+                                onBlur={(e) => {
+                                  const value = e.target.value;
+                                  setTimeout(() => {
+                                    setSystemPrompt((prev) => ({
+                                      ...prev,
+                                      persona: value,
+                                    }));
+                                  }, 0);
+                                }}
+                                className="h-[3.5rem]"
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                      </PopoverContent>
+                    </Popover>
 
-                  <TooltipProvider>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center flex-shrink-0">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-2 flex items-center gap-2 whitespace-nowrap"
-                          >
-                            <PieChart size={14} />
-                            <Input
-                              type="number"
-                              value={sampleSize || ""}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                setSampleSize(
-                                  value === "" ? null : parseInt(value, 10)
-                                );
-                              }}
-                              className="w-12 h-6 text-xs border-0 p-0 focus-visible:ring-0"
-                              placeholder="All"
-                            />
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Run pipeline on a sample of documents</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
-                <div className="flex items-center border-l pl-2 flex-shrink-0">
-                  <div className="flex items-center space-x-1">
                     <TooltipProvider>
-                      <Tooltip>
+                      <Tooltip delayDuration={0}>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="h-8 w-8"
-                          >
-                            <FileUp size={16} />
-                          </Button>
+                          <div className="flex items-center flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 flex items-center gap-2 whitespace-nowrap"
+                            >
+                              <PieChart size={14} />
+                              <Input
+                                type="number"
+                                value={sampleSize || ""}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setSampleSize(
+                                    value === "" ? null : parseInt(value, 10)
+                                  );
+                                }}
+                                className="w-12 h-6 text-xs border-0 p-0 focus-visible:ring-0"
+                                placeholder="All"
+                              />
+                            </Button>
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
-                          <p>Load from YAML</p>
+                          <p>Run pipeline on a sample of documents</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      accept=".yaml,.yml"
-                      className="hidden"
-                    />
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleExport()}
-                            className="h-8 w-8"
-                          >
-                            <Download size={16} />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Save to YAML</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => setIsSettingsOpen(true)}
-                      className="h-8 w-8"
-                    >
-                      <Settings size={16} />
-                    </Button>
+                  </div>
+
+                  <div className="flex items-center border-l pl-2 flex-shrink-0">
+                    <div className="flex items-center space-x-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="h-8 w-8"
+                            >
+                              <FileUp size={16} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Load from YAML</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept=".yaml,.yml"
+                        className="hidden"
+                      />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleExport()}
+                              className="h-8 w-8"
+                            >
+                              <Download size={16} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Save to YAML</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="h-8 w-8"
+                      >
+                        <Settings size={16} />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex space-x-3 flex-shrink-0">
-              <AddOperationDropdown
-                onAddOperation={handleAddOperation}
-                trigger={
+              <div className="flex space-x-3 flex-shrink-0">
+                <AddOperationDropdown
+                  onAddOperation={handleAddOperation}
+                  trigger={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-sm whitespace-nowrap"
+                    >
+                      Add Operation <Plus size={16} className="ml-2" />
+                    </Button>
+                  }
+                />
+
+                <div className="flex space-x-2 border-l pl-3">
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="destructive"
                     className="rounded-sm whitespace-nowrap"
+                    onClick={handleStop}
+                    disabled={!isLoadingOutputs}
                   >
-                    Add Operation <Plus size={16} className="ml-2" />
+                    <StopCircle size={16} className="mr-2" />
+                    Stop
                   </Button>
-                }
-              />
-
-              <div className="flex space-x-2 border-l pl-3">
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="rounded-sm whitespace-nowrap"
-                  onClick={handleStop}
-                  disabled={!isLoadingOutputs}
-                >
-                  <StopCircle size={16} className="mr-2" />
-                  Stop
-                </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="rounded-sm bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium whitespace-nowrap"
-                        onClick={() => onRunAll(true)}
-                        disabled={isLoadingOutputs}
-                      >
-                        {isLoadingOutputs ? (
-                          <Loader2 size={16} className="mr-2 animate-spin" />
-                        ) : (
-                          <RefreshCw size={16} className="mr-2" />
-                        )}
-                        Run Fresh
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="w-72">
-                      <p>Run pipeline after clearing all cached results</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="rounded-sm whitespace-nowrap"
-                  disabled={isLoadingOutputs}
-                  onClick={() => onRunAll(false)}
-                >
-                  {isLoadingOutputs ? (
-                    <Loader2 size={16} className="mr-2 animate-spin" />
-                  ) : (
-                    <Play size={16} className="mr-2" />
-                  )}
-                  Run
-                </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="rounded-sm bg-secondary hover:bg-secondary/90 text-secondary-foreground font-medium whitespace-nowrap"
+                          onClick={() => onRunAll(true)}
+                          disabled={isLoadingOutputs}
+                        >
+                          {isLoadingOutputs ? (
+                            <Loader2 size={16} className="mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw size={16} className="mr-2" />
+                          )}
+                          Run Fresh
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="w-72">
+                        <p>Run pipeline after clearing all cached results</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="rounded-sm whitespace-nowrap"
+                    disabled={isLoadingOutputs}
+                    onClick={() => onRunAll(false)}
+                  >
+                    {isLoadingOutputs ? (
+                      <Loader2 size={16} className="mr-2 animate-spin" />
+                    ) : (
+                      <Play size={16} className="mr-2" />
+                    )}
+                    Run
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
+        )}
       </div>
-      <div className="flex-1 overflow-y-auto min-h-0 p-2">
+      <div
+        className={`flex-1 overflow-y-auto min-h-0 ${
+          variant === "execute" ? "p-6 bg-[#0B0E14]/30" : "p-2"
+        }`}
+      >
         <div className="space-y-2">
           {operations.map((op, index) => (
             <div key={op.id} id={`op-${op.id}`} className="scroll-mt-28">
@@ -1221,7 +1281,7 @@ const PipelineGUI: React.FC = () => {
                 className="w-full border-dashed h-16 hover:border-primary hover:bg-accent/50 transition-colors"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Operation
+                {variant === "execute" ? "添加操作" : "Add Operation"}
               </Button>
             }
           />

@@ -118,13 +118,6 @@ import {
 import * as localStorageKeys from "@/app/localStorageKeys";
 import { toast } from "@/hooks/use-toast";
 import AIChatPanel from "@/components/AIChatPanel";
-const NamespaceDialog = dynamic(
-  () =>
-    import("@/components/NamespaceDialog").then((mod) => mod.NamespaceDialog),
-  {
-    ssr: false,
-  }
-);
 import { ThemeProvider, useTheme, Theme } from "@/contexts/ThemeContext";
 import { APIKeysDialog } from "@/components/APIKeysDialog";
 import { TutorialsDialog, TUTORIALS } from "@/components/TutorialsDialog";
@@ -304,7 +297,6 @@ const CodeEditorPipelineApp: React.FC = () => {
   const [showChat, setShowChat] = useState(false);
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [showClearPipelineDialog, setShowClearPipelineDialog] = useState(false);
-  const [showNamespaceDialog, setShowNamespaceDialog] = useState(false);
   const [showAPIKeysDialog, setShowAPIKeysDialog] = useState(false);
   const [showTutorialsDialog, setShowTutorialsDialog] = useState(false);
   const [selectedTutorial, setSelectedTutorial] =
@@ -328,7 +320,6 @@ const CodeEditorPipelineApp: React.FC = () => {
     saveProgress,
     unsavedChanges,
     namespace,
-    setNamespace,
     setOperations,
     operations,
     setPipelineName,
@@ -367,12 +358,6 @@ const CodeEditorPipelineApp: React.FC = () => {
 
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
-
-  useEffect(() => {
-    if (isMounted && !namespace) {
-      setShowNamespaceDialog(true);
-    }
-  }, [isMounted, namespace]);
 
   useEffect(() => {
     if (!isMounted || !namespace) {
@@ -483,17 +468,6 @@ const CodeEditorPipelineApp: React.FC = () => {
 
   const handleNew = () => {
     clearPipelineState();
-    setShowNamespaceDialog(true);
-  };
-
-  const handleChangeNamespace = (newNamespace: string) => {
-    // Clear the pipeline state first, then set the new namespace
-    setNamespace(newNamespace);
-    localStorage.setItem(
-      localStorageKeys.NAMESPACE_KEY,
-      JSON.stringify(newNamespace)
-    );
-    setShowNamespaceDialog(false);
   };
 
   const topBarStyles =
@@ -564,14 +538,6 @@ const CodeEditorPipelineApp: React.FC = () => {
                   New from Natural Language
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    openDialogFromMenu(() => setShowNamespaceDialog(true));
-                  }}
-                >
-                  Change Namespace
-                </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={(event) => {
                     event.preventDefault();
@@ -994,12 +960,6 @@ const CodeEditorPipelineApp: React.FC = () => {
             </div>
           </SheetContent>
         </Sheet>
-        <NamespaceDialog
-          open={showNamespaceDialog}
-          onOpenChange={setShowNamespaceDialog}
-          currentNamespace={namespace}
-          onSave={handleChangeNamespace}
-        />
         <APIKeysDialog
           open={showAPIKeysDialog}
           onOpenChange={setShowAPIKeysDialog}
