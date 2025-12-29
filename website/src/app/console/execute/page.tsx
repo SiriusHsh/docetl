@@ -26,13 +26,34 @@ import PipelineGUI from "@/components/PipelineGui";
 import { Output } from "@/components/Output";
 import DatasetView from "@/components/DatasetView";
 import { BookmarkProvider } from "@/contexts/BookmarkContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeProvider, useTheme, type Theme } from "@/contexts/ThemeContext";
 import { PipelineProvider, usePipelineContext } from "@/contexts/PipelineContext";
 import { PipelineStoreProvider, usePipelineStore } from "@/contexts/PipelineStoreContext";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { File } from "@/app/types";
 
 const DEFAULT_NAMESPACE = "default";
+
+const ExecuteThemeSetter: React.FC = () => {
+  const { theme, setTheme } = useTheme();
+  const previousThemeRef = useRef<Theme | null>(null);
+
+  useEffect(() => {
+    if (previousThemeRef.current === null) {
+      previousThemeRef.current = theme;
+    }
+    if (theme !== "midnight") {
+      setTheme("midnight");
+    }
+    return () => {
+      if (previousThemeRef.current && previousThemeRef.current !== "midnight") {
+        setTheme(previousThemeRef.current);
+      }
+    };
+  }, [setTheme, theme]);
+
+  return null;
+};
 
 const formatFileSize = (bytes?: number | null): string => {
   if (!bytes || bytes <= 0) {
@@ -456,7 +477,7 @@ const ExecuteBottomPanel: React.FC = () => {
             activeTab === "output" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
           }`}
         >
-          <div className="flex-1 min-h-0 overflow-hidden bg-white">
+          <div className="flex-1 min-h-0 overflow-hidden bg-[#0B0E14]">
             <Output />
           </div>
         </div>
@@ -466,7 +487,7 @@ const ExecuteBottomPanel: React.FC = () => {
             activeTab === "input" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
           }`}
         >
-          <div className="flex-1 min-h-0 overflow-hidden bg-white">
+          <div className="flex-1 min-h-0 overflow-hidden bg-[#0B0E14]">
             {currentFile ? (
               <DatasetView file={currentFile} />
             ) : (
@@ -580,6 +601,7 @@ const WebSocketWrapper: React.FC<{ children: React.ReactNode }> = ({
 export default function ExecutePage() {
   return (
     <ThemeProvider>
+      <ExecuteThemeSetter />
       <PipelineProvider>
         <PipelineStoreProvider>
           <WebSocketWrapper>

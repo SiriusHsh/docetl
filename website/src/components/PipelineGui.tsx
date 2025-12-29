@@ -47,7 +47,12 @@ import { Input } from "@/components/ui/input";
 import { schemaDictToItemSet } from "./utils";
 import { v4 as uuidv4 } from "uuid";
 import { useOptimizeCheck } from "@/hooks/useOptimizeCheck";
-import { canBeOptimized } from "@/lib/utils";
+import {
+  canBeOptimized,
+  cn,
+  DOCWRANGLER_HOSTED_COST_LIMIT,
+  isDocWranglerHosted,
+} from "@/lib/utils";
 import { Textarea } from "./ui/textarea";
 import { OptimizationDialog } from "@/components/OptimizationDialog";
 import {
@@ -62,10 +67,6 @@ import {
 } from "@/components/ui/hover-card";
 import { useRestorePipeline } from "@/hooks/useRestorePipeline";
 import PipelineSettings from "@/components/PipelineSettings";
-import {
-  DOCWRANGLER_HOSTED_COST_LIMIT,
-  isDocWranglerHosted,
-} from "@/lib/utils";
 
 interface PipelineGUIProps {
   variant?: "default" | "execute";
@@ -1267,10 +1268,16 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
           variant === "execute" ? "p-6 bg-[#0B0E14]/30" : "p-2"
         }`}
       >
-        <div className="space-y-2">
+        <div
+          className={cn(
+            "space-y-2",
+            variant === "execute" &&
+              "relative before:absolute before:inset-y-6 before:left-3 before:w-px before:bg-slate-700/60"
+          )}
+        >
           {operations.map((op, index) => (
             <div key={op.id} id={`op-${op.id}`} className="scroll-mt-28">
-              <OperationCard index={index} id={op.id} />
+              <OperationCard index={index} id={op.id} variant={variant} />
             </div>
           ))}
           <AddOperationDropdown
@@ -1278,7 +1285,11 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
             trigger={
               <Button
                 variant="outline"
-                className="w-full border-dashed h-16 hover:border-primary hover:bg-accent/50 transition-colors"
+                className={cn(
+                  "w-full border-dashed h-16 hover:border-primary hover:bg-accent/50 transition-colors",
+                  variant === "execute" &&
+                    "bg-[#0F131C] border-slate-700 text-slate-400 hover:bg-[#1a2030] hover:text-slate-200"
+                )}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 {variant === "execute" ? "添加操作" : "Add Operation"}

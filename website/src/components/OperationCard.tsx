@@ -42,6 +42,7 @@ import { backendFetch } from "@/lib/backendFetch";
 import createOperationComponent from "./operations/components";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { Badge } from "./ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Popover,
   PopoverContent,
@@ -76,7 +77,7 @@ import { usePipelineStore } from "@/contexts/PipelineStoreContext";
 // Separate components
 interface OperationHeaderProps {
   name: string;
-  type: string;
+  type: Operation["type"];
   llmType: string;
   disabled: boolean;
   currOp: boolean;
@@ -101,7 +102,29 @@ interface OperationHeaderProps {
   isLast: boolean;
   model?: string;
   onModelChange?: (newModel: string) => void;
+  variant?: "default" | "execute";
 }
+
+const executeBadgeStyles: Partial<Record<Operation["type"], string>> = {
+  map: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
+  filter: "bg-amber-500/20 text-amber-200 border-amber-500/30",
+  reduce: "bg-orange-500/20 text-orange-200 border-orange-500/30",
+  split: "bg-purple-500/20 text-purple-200 border-purple-500/30",
+  gather: "bg-sky-500/20 text-sky-200 border-sky-500/30",
+  sample: "bg-indigo-500/20 text-indigo-200 border-indigo-500/30",
+  resolve: "bg-pink-500/20 text-pink-200 border-pink-500/30",
+  unnest: "bg-slate-500/20 text-slate-200 border-slate-500/30",
+  extract: "bg-teal-500/20 text-teal-200 border-teal-500/30",
+  parallel_map: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
+  rank: "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/30",
+  code_map: "bg-blue-500/20 text-blue-200 border-blue-500/30",
+  code_reduce: "bg-orange-500/20 text-orange-200 border-orange-500/30",
+  code_filter: "bg-amber-500/20 text-amber-200 border-amber-500/30",
+};
+
+const getExecuteBadgeStyle = (type: Operation["type"]) =>
+  executeBadgeStyles[type] ??
+  "bg-slate-700/60 text-slate-200 border-slate-600/60";
 
 const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
   ({
@@ -131,19 +154,44 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
     isLast,
     model,
     onModelChange,
+    variant = "default",
   }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(name);
     const [isEditingModel, setIsEditingModel] = useState(false);
     const [editedModel, setEditedModel] = useState(model);
+    const isExecute = variant === "execute";
+    const badgeVariant = isExecute
+      ? "outline"
+      : currOp
+      ? "default"
+      : "secondary";
+    const badgeClassName = isExecute
+      ? cn(
+          "uppercase text-[10px] font-mono font-bold tracking-wider border",
+          getExecuteBadgeStyle(type)
+        )
+      : undefined;
 
     return (
-      <div className="relative flex items-center py-3 px-4 border-b border-border/30 bg-muted/5">
+      <div
+        className={cn(
+          "relative flex items-center",
+          isExecute
+            ? "px-4 pt-4 pb-3"
+            : "py-3 px-4 border-b border-border/30 bg-muted/5"
+        )}
+      >
         {/* Left side - Operation info */}
         <div className="flex-1 flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <Badge variant={currOp ? "default" : "secondary"}>{type}</Badge>
+            <Badge
+              variant={badgeVariant}
+              className={badgeClassName}
+            >
+              {type}
+            </Badge>
 
             {/* Add help button for LLM operations */}
             {llmType === "LLM" &&
@@ -208,12 +256,20 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                     className="flex items-center gap-1 group cursor-pointer"
                     onClick={() => setIsEditingModel(true)}
                   >
-                    <span className="text-xs font-mono text-muted-foreground">
+                    <span
+                      className={cn(
+                        "text-xs font-mono text-muted-foreground",
+                        isExecute && "text-slate-400"
+                      )}
+                    >
                       {model}
                     </span>
                     <Pencil
                       size={11}
-                      className="opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground"
+                      className={cn(
+                        "opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground",
+                        isExecute && "text-slate-500"
+                      )}
                     />
                   </div>
                 )}
@@ -245,17 +301,22 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                 onClick={() => setIsEditing(true)}
               >
                 <span
-                  className={`text-sm font-medium select-none ${
-                    llmType === "LLM"
-                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text font-semibold"
-                      : ""
-                  }`}
+                  className={cn(
+                    "text-sm font-medium select-none",
+                    llmType === "LLM" &&
+                      !isExecute &&
+                      "bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text font-semibold",
+                    isExecute && "text-slate-100"
+                  )}
                 >
                   {name}
                 </span>
                 <Pencil
                   size={13}
-                  className="opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground"
+                  className={cn(
+                    "opacity-0 group-hover:opacity-70 transition-opacity text-muted-foreground",
+                    isExecute && "text-slate-500"
+                  )}
                 />
               </div>
             )}
@@ -268,35 +329,61 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
           <Button
             variant="outline"
             size="sm"
-            className="flex items-center gap-1"
+            className={cn(
+              "flex items-center gap-1",
+              isExecute &&
+                "border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1b2230] hover:text-slate-100"
+            )}
             onClick={onShowOutput}
             disabled={disabled}
           >
             <ListCollapse className="h-4 w-4" />
-            <span className="hidden sm:inline">Show Outputs</span>
+            <span className="hidden sm:inline">
+              {isExecute ? "显示输出" : "Show Outputs"}
+            </span>
           </Button>
 
           {/* LLM-specific Actions */}
           {llmType === "LLM" && (
+            !isExecute && (
             <Button
               variant="outline"
               size="sm"
-              className="flex items-center gap-1"
+              className={cn(
+                "flex items-center gap-1",
+                isExecute &&
+                  "border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1b2230] hover:text-slate-100"
+              )}
               onClick={onImprovePrompt}
             >
               <Wand2 className="h-4 w-4" />
               <span className="hidden sm:inline">Improve Prompt</span>
             </Button>
+            )
           )}
 
           {/* More Options Menu */}
           <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 w-8 p-0",
+                  isExecute &&
+                    "border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1b2230] hover:text-slate-100"
+                )}
+              >
                 <Menu className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-56 p-1" align="end">
+            <PopoverContent
+              className={cn(
+                "w-56 p-1",
+                isExecute && "bg-[#161b26] border-slate-700 text-slate-200"
+              )}
+              align="end"
+            >
               <div className="space-y-0.5">
                 {/* Move operation actions */}
                 {!isFirst && (
@@ -322,7 +409,12 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   </Button>
                 )}
                 {(!isFirst || !isLast) && (
-                  <div className="h-px bg-gray-100 my-1" />
+                  <div
+                    className={cn(
+                      "h-px my-1",
+                      isExecute ? "bg-slate-700/60" : "bg-gray-100"
+                    )}
+                  />
                 )}
 
                 {/* LLM-specific menu items */}
@@ -355,7 +447,12 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                           : "Show Gleaning"}
                       </Button>
                     )}
-                    <div className="h-px bg-gray-100 my-1" />
+                    <div
+                      className={cn(
+                        "h-px my-1",
+                        isExecute ? "bg-slate-700/60" : "bg-gray-100"
+                      )}
+                    />
                   </>
                 )}
 
@@ -404,7 +501,12 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   )}
                 </Button>
 
-                <div className="h-px bg-gray-100 my-1" />
+                <div
+                  className={cn(
+                    "h-px my-1",
+                    isExecute ? "bg-slate-700/60" : "bg-gray-100"
+                  )}
+                />
 
                 {/* Delete Operation */}
                 <Button
@@ -424,13 +526,18 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
+            className={cn(
+              "h-8 w-8 p-0 rounded-full",
+              isExecute ? "hover:bg-slate-800" : "hover:bg-gray-100"
+            )}
             onClick={onToggleExpand}
           >
             <ChevronDown
-              className={`h-4 w-4 text-gray-600 transform transition-transform ${
-                expanded ? "rotate-180" : ""
-              }`}
+              className={cn(
+                "h-4 w-4 transform transition-transform",
+                expanded ? "rotate-180" : "",
+                isExecute ? "text-slate-400" : "text-gray-600"
+              )}
             />
           </Button>
         </div>
@@ -703,11 +810,19 @@ const initialState: State = {
 interface Props {
   index: number;
   id?: string;
+  variant?: "default" | "execute";
 }
 
 // Main component
-export const OperationCard: React.FC<Props> = ({ index, id }) => {
-  const [state, dispatch] = useReducer(operationReducer, initialState);
+export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
+  const [state, dispatch] = useReducer(
+    operationReducer,
+    initialState,
+    (base) => ({
+      ...base,
+      isExpanded: variant === "execute" ? false : base.isExpanded,
+    })
+  );
   const {
     operation,
     isEditing,
@@ -741,6 +856,7 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
   } = usePipelineContext();
   const { activePipelineId } = usePipelineStore();
   const { toast } = useToast();
+  const isExecute = variant === "execute";
 
   const operationRef = useRef(operation);
   const { connect, sendMessage, lastMessage, readyState, disconnect } =
@@ -1099,6 +1215,62 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
     [operation, handleOperationUpdate]
   );
 
+  const operationId = operation?.id ?? null;
+  const operationKwargs = operation?.otherKwargs;
+
+  const progressMeta = useMemo(() => {
+    if (!isExecute || !operationId) {
+      return null;
+    }
+
+    if (!pipelineOutput) {
+      return {
+        label: "等待中",
+        value: 0,
+        color: "bg-slate-600",
+        tone: "text-slate-500",
+      };
+    }
+
+    if (isLoadingOutputs) {
+      const isActive = operationId === pipelineOutput.operationId;
+      return isActive
+        ? {
+            label: "处理中...",
+            value: 45,
+            color: "bg-blue-500",
+            tone: "text-blue-400",
+          }
+        : {
+            label: "已完成",
+            value: 100,
+            color: "bg-emerald-500",
+            tone: "text-emerald-400",
+          };
+    }
+
+    return {
+      label: "已完成",
+      value: 100,
+      color: "bg-emerald-500",
+      tone: "text-emerald-400",
+    };
+  }, [isExecute, isLoadingOutputs, operationId, pipelineOutput]);
+
+  const durationText = useMemo(() => {
+    if (!isExecute || !operationKwargs) return null;
+    const duration =
+      operationKwargs?.latency_ms ??
+      operationKwargs?.duration_ms ??
+      null;
+    if (typeof duration === "number" && Number.isFinite(duration)) {
+      return `${Math.round(duration)}ms`;
+    }
+    return "--";
+  }, [isExecute, operationKwargs]);
+
+  const isRunning = progressMeta?.label === "处理中...";
+
   if (!operation) {
     return <SkeletonCard />;
   }
@@ -1106,11 +1278,22 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
   return (
     <div
       id={id}
-      className={`mb-2 relative rounded-md border shadow-[0_1px_3px_0_rgb(0,0,0,0.05)] w-full pl-6 hover:shadow-md transition-shadow ${
-        pipelineOutput?.operationId === operation.id
-          ? "bg-white border-primary border-2"
-          : "bg-white border-border/40"
-      } ${!operation.visibility ? "opacity-50" : ""}`}
+      className={cn(
+        "mb-2 relative w-full pl-6 rounded-lg border transition-colors",
+        isExecute
+          ? "bg-[#151921] border-slate-800/80 shadow-sm hover:bg-[#1a1f2b]"
+          : "bg-card border-border/40 shadow-[0_1px_3px_0_rgb(0,0,0,0.05)] hover:shadow-md",
+        !isExecute &&
+          pipelineOutput?.operationId === operation.id &&
+          "border-primary border-2",
+        isExecute
+          ? "before:absolute before:left-2 before:top-6 before:h-2 before:w-2 before:rounded-full before:bg-slate-500/80 before:border before:border-slate-500/60"
+          : null,
+        isExecute &&
+          isExpanded &&
+          "border-blue-500/60 ring-1 ring-blue-500/20 shadow-lg",
+        !operation.visibility && "opacity-50"
+      )}
     >
       <OperationHeader
         name={operation.name}
@@ -1142,7 +1325,31 @@ export const OperationCard: React.FC<Props> = ({ index, id }) => {
         isLast={index === operations.length - 1}
         model={operation.otherKwargs?.model || defaultModel}
         onModelChange={handleModelChange}
+        variant={variant}
       />
+      {isExecute && progressMeta ? (
+        <div className="px-4 pb-4">
+          <div className="flex items-center justify-between text-[10px] font-mono mb-2">
+            <span className={cn("font-semibold uppercase", progressMeta.tone)}>
+              {progressMeta.label}
+            </span>
+            <span className="text-slate-500">{durationText}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-500 ease-out relative",
+                progressMeta.color
+              )}
+              style={{ width: `${progressMeta.value}%` }}
+            >
+              {isRunning ? (
+                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {isExpanded && operation.visibility !== false && (
         <>
           <CardContent className="p-4">

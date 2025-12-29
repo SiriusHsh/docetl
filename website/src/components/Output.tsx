@@ -406,7 +406,7 @@ export const ConsoleContent = memo(() => {
           />
 
           {/* Inner content container */}
-          <div className="relative rounded-lg p-4 bg-white">
+          <div className="relative rounded-lg p-4 bg-card">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-medium bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
                 {optimizerProgress.status}
@@ -415,7 +415,7 @@ export const ConsoleContent = memo(() => {
                 {Math.round(optimizerProgress.progress * 100)}%
               </div>
             </div>
-            <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="relative w-full h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="absolute top-0 left-0 h-full"
                 style={{
@@ -436,10 +436,10 @@ export const ConsoleContent = memo(() => {
                       <div className="text-xs font-medium uppercase tracking-wider bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
                         Optimizing because
                       </div>
-                      <ChevronDown className="w-4 h-4 ml-2 text-gray-500 transition-transform group-open:rotate-180" />
+                      <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground transition-transform group-open:rotate-180" />
                     </div>
                   </summary>
-                  <div className="mt-1 text-sm text-gray-600">
+                  <div className="mt-1 text-sm text-muted-foreground">
                     {optimizerProgress.rationale}
                   </div>
                 </details>
@@ -451,10 +451,10 @@ export const ConsoleContent = memo(() => {
                         <div className="text-xs font-medium uppercase tracking-wider bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
                           Using this prompt to evaluate the best plan
                         </div>
-                        <ChevronDown className="w-4 h-4 ml-2 text-gray-500 transition-transform group-open:rotate-180" />
+                        <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground transition-transform group-open:rotate-180" />
                       </div>
                     </summary>
-                    <div className="mt-1 text-sm text-gray-600 whitespace-pre-wrap border-l-4 border-purple-300 pl-3 italic">
+                    <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap border-l-4 border-purple-300 pl-3 italic">
                       {optimizerProgress.validatorPrompt}
                     </div>
                   </details>
@@ -656,7 +656,7 @@ export const Output = memo(() => {
   ]);
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-card">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
@@ -669,7 +669,9 @@ export const Output = memo(() => {
                 <Terminal className="mr-2" size={14} />
                 OUTPUT
                 {opName && (
-                  <span className="text-gray-500 ml-1">- {opName}</span>
+                  <span className="text-muted-foreground ml-1">
+                    - {opName}
+                  </span>
                 )}
               </h2>
               <TabsList>
@@ -689,23 +691,23 @@ export const Output = memo(() => {
             </div>
             <div className="flex items-center space-x-2">
               <div className="flex items-center gap-2 text-sm">
-                <div className="flex items-center px-2 py-1 border border-gray-200 rounded-md">
-                  <span className="text-gray-900 font-medium">
+                <div className="flex items-center px-2 py-1 border border-border rounded-md">
+                  <span className="text-foreground font-medium">
                     {isLoadingOutputs ? "0" : inputCount}
                   </span>
-                  <span className="text-gray-500 ml-1">in</span>
+                  <span className="text-muted-foreground ml-1">in</span>
                 </div>
-                <span className="text-gray-400">→</span>
-                <div className="flex items-center px-2 py-1 border border-gray-200 rounded-md">
-                  <span className="text-gray-900 font-medium">
+                <span className="text-muted-foreground">→</span>
+                <div className="flex items-center px-2 py-1 border border-border rounded-md">
+                  <span className="text-foreground font-medium">
                     {isLoadingOutputs ? "0" : outputCount}
                   </span>
-                  <span className="text-gray-500 ml-1">out</span>
+                  <span className="text-muted-foreground ml-1">out</span>
                 </div>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <div className="flex items-center px-2 py-1 border border-gray-200 rounded-md cursor-help">
+                      <div className="flex items-center px-2 py-1 border border-border rounded-md cursor-help">
                         <span
                           className={clsx(
                             "font-medium",
@@ -718,7 +720,7 @@ export const Output = memo(() => {
                               Number(selectivityFactor) < 1 &&
                               "text-rose-600",
                             (isLoadingOutputs || selectivityFactor === "N/A") &&
-                              "text-gray-900"
+                              "text-foreground"
                           )}
                         >
                           {isLoadingOutputs ? "N/A" : selectivityFactor}×
