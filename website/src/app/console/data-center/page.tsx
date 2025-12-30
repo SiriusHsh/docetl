@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Database,
@@ -71,7 +71,7 @@ export default function DataCenterPage() {
     return lower.endsWith(".xlsx") || lower.endsWith(".xls");
   }, [file]);
 
-  const loadDatasets = async () => {
+  const loadDatasets = useCallback(async () => {
     if (!namespace) return;
     setLoading(true);
     setError(null);
@@ -90,11 +90,23 @@ export default function DataCenterPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [namespace]);
 
   useEffect(() => {
     void loadDatasets();
-  }, [namespace]);
+  }, [loadDatasets]);
+
+  useEffect(() => {
+    if (!namespace) return;
+    const hasProcessing = datasets.some(
+      (dataset) => dataset.ingest_status === "processing"
+    );
+    if (!hasProcessing) return;
+    const timer = setTimeout(() => {
+      void loadDatasets();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [datasets, loadDatasets, namespace]);
 
   const handleUpload = async () => {
     if (!namespace || !file) return;
@@ -352,7 +364,19 @@ export default function DataCenterPage() {
                   <tr key={dataset.id} className="border-t border-white/5">
                     <td className="py-3 pr-4">{dataset.name}</td>
                     <td className="py-3 pr-4">{dataset.source}</td>
-                    <td className="py-3 pr-4">{dataset.ingest_status}</td>
+                    <td className="py-3 pr-4">
+                      <span
+                        className={cn(
+                          "text-xs",
+                          dataset.ingest_status === "ready" && "text-emerald-400",
+                          dataset.ingest_status === "failed" && "text-rose-400",
+                          dataset.ingest_status === "processing" &&
+                            "text-amber-300"
+                        )}
+                      >
+                        {dataset.ingest_status}
+                      </span>
+                    </td>
                     <td className="py-3 pr-4">{dataset.row_count ?? "-"}</td>
                     <td className="py-3 pr-4">
                       {formatTimestamp(dataset.created_at)}
@@ -361,7 +385,8 @@ export default function DataCenterPage() {
                       <button
                         type="button"
                         onClick={() => void openPreview(dataset)}
-                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10"
+                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={dataset.ingest_status !== "ready"}
                       >
                         Preview
                       </button>

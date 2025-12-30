@@ -51,6 +51,7 @@ export default function DataCenterDatasetDetailPage() {
   useEffect(() => {
     if (!datasetId) return;
     let isMounted = true;
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
     const fetchDataset = async () => {
       setLoading(true);
@@ -66,6 +67,15 @@ export default function DataCenterDatasetDetailPage() {
         const data = (await response.json()) as DatasetRecord;
         if (isMounted) {
           setDataset(data);
+          if (refreshTimer) {
+            clearTimeout(refreshTimer);
+            refreshTimer = null;
+          }
+          if (data.ingest_status === "processing") {
+            refreshTimer = setTimeout(() => {
+              void fetchDataset();
+            }, 3000);
+          }
         }
       } catch (err) {
         if (isMounted) {
@@ -82,6 +92,9 @@ export default function DataCenterDatasetDetailPage() {
 
     return () => {
       isMounted = false;
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
     };
   }, [datasetId]);
 
@@ -174,7 +187,7 @@ export default function DataCenterDatasetDetailPage() {
           type="button"
           onClick={() => void openPreview()}
           className="rounded-md border border-white/10 px-3 py-2 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
-          disabled={!datasetId}
+          disabled={!datasetId || dataset?.ingest_status !== "ready"}
         >
           Preview
         </button>

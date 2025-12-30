@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from io import BytesIO
 from pathlib import Path
 
@@ -20,6 +21,7 @@ def client(tmp_path, monkeypatch) -> TestClient:
 
     monkeypatch.setenv("DOCETL_HOME_DIR", str(home_dir))
     monkeypatch.setenv("DOCETL_AUTH_SECRET", "test-secret")
+    monkeypatch.setenv("DOCETL_DISABLE_SCHEDULER", "true")
 
     app = create_app()
     with TestClient(app) as test_client:
@@ -66,6 +68,30 @@ def _create_dataset(namespace: str, *, lineage: dict[str, str]) -> str:
         conn.close()
 
 
+def _wait_for_dataset_ready(
+    client: TestClient,
+    token: str,
+    dataset_id: str,
+    *,
+    timeout: float = 5.0,
+) -> dict:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        resp = client.get(
+            f"/data-center/datasets/{dataset_id}",
+            headers=_auth_headers(token),
+        )
+        assert resp.status_code == 200, resp.text
+        payload = resp.json()
+        status = payload["ingest_status"]
+        if status == "ready":
+            return payload
+        if status == "failed":
+            pytest.fail(f"Dataset ingest failed: {payload.get('error')}")
+        time.sleep(0.1)
+    pytest.fail("Dataset ingest timed out")
+
+
 def test_upload_excel_dataset(client: TestClient) -> None:
     token, namespace = _register_user(client, "excel_user")
 
@@ -91,10 +117,12 @@ def test_upload_excel_dataset(client: TestClient) -> None:
     )
     assert resp.status_code == 201, resp.text
     payload = resp.json()
-    assert payload["ingest_status"] == "ready"
-    assert payload["row_count"] == 2
+    assert payload["ingest_status"] in {"processing", "ready"}
     assert payload["original_format"] == "xlsx"
-    assert Path(payload["path"]).exists()
+
+    ready_payload = _wait_for_dataset_ready(client, token, payload["id"])
+    assert ready_payload["row_count"] == 2
+    assert Path(ready_payload["path"]).exists()
 
     listing = client.get(
         f"/data-center/datasets?namespace={namespace}",

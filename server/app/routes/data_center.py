@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import math
 import random
 import uuid
-from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -112,8 +112,8 @@ def _load_dataset_records(dataset_path: Path) -> list[dict[str, Any]]:
     return _parse_json_bytes(content)
 
 
-def _parse_excel_bytes(
-    content: bytes,
+def _parse_excel_file(
+    path: Path,
     *,
     sheet_name: str | None,
     sheet_index: int | None,
@@ -122,8 +122,7 @@ def _parse_excel_bytes(
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     import pandas as pd
 
-    bio = BytesIO(content)
-    excel = pd.ExcelFile(bio)
+    excel = pd.ExcelFile(path)
     available_sheets = excel.sheet_names
 
     if not available_sheets:
@@ -175,6 +174,148 @@ def _sanitize_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 cleaned[key] = value
         normalized.append(cleaned)
     return normalized
+
+
+def _ingest_dataset_file(
+    *,
+    conn,
+    dataset_row: metadata_db.DatasetRow,
+    raw_path: Path,
+    dataset_path: Path,
+    ext: str,
+    sheet_name: str | None,
+    sheet_index: int | None,
+    header_row: int | None,
+    max_rows: int | None,
+) -> metadata_db.DatasetRow:
+    ingest_config: dict[str, Any] | None = None
+
+    if ext in {".json"}:
+        records = _parse_json_bytes(raw_path.read_bytes())
+    elif ext in {".csv"}:
+        records = _parse_csv_bytes(raw_path.read_bytes())
+    elif ext in {".xlsx", ".xls"}:
+        records, ingest_config = _parse_excel_file(
+            raw_path,
+            sheet_name=sheet_name,
+            sheet_index=sheet_index,
+            header_row=header_row,
+            max_rows=max_rows,
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+
+    records = _sanitize_records(records)
+    row_count = _serialize_records(records, dataset_path)
+    schema = _infer_schema(records)
+
+    return metadata_db.update_dataset(
+        conn,
+        dataset_row.id,
+        ingest_status=DatasetIngestStatus.READY.value,
+        ingest_config=ingest_config or dataset_row.ingest_config,
+        schema=schema,
+        row_count=row_count,
+    )
+
+
+def _ingest_dataset_job(
+    *,
+    dataset_id: str,
+    namespace: str,
+    raw_path: str,
+    dataset_path: str,
+    ext: str,
+    sheet_name: str | None,
+    sheet_index: int | None,
+    header_row: int | None,
+    max_rows: int | None,
+    actor_user_id: str | None,
+    actor_username: str | None,
+    request_meta: dict[str, str | None],
+) -> None:
+    conn = metadata_db.get_connection()
+    try:
+        dataset_row = metadata_db.get_dataset(conn, dataset_id)
+        if dataset_row is None:
+            return
+        dataset_row = _ingest_dataset_file(
+            conn=conn,
+            dataset_row=dataset_row,
+            raw_path=Path(raw_path),
+            dataset_path=Path(dataset_path),
+            ext=ext,
+            sheet_name=sheet_name,
+            sheet_index=sheet_index,
+            header_row=header_row,
+            max_rows=max_rows,
+        )
+        metadata_db.insert_audit_log(
+            conn,
+            actor_user_id=actor_user_id,
+            actor_username=actor_username,
+            action="dataset.ingest_ready",
+            resource_type="dataset",
+            resource_id=dataset_row.id,
+            namespace=namespace,
+            success=True,
+            ip=request_meta.get("ip"),
+            user_agent=request_meta.get("user_agent"),
+            request_id=request_meta.get("request_id"),
+            detail={"row_count": dataset_row.row_count},
+        )
+        conn.commit()
+    except HTTPException as exc:
+        metadata_db.update_dataset(
+            conn,
+            dataset_id,
+            ingest_status=DatasetIngestStatus.FAILED.value,
+            error=exc.detail,
+        )
+        metadata_db.insert_audit_log(
+            conn,
+            actor_user_id=actor_user_id,
+            actor_username=actor_username,
+            action="dataset.ingest_failed",
+            resource_type="dataset",
+            resource_id=dataset_id,
+            namespace=namespace,
+            success=False,
+            ip=request_meta.get("ip"),
+            user_agent=request_meta.get("user_agent"),
+            request_id=request_meta.get("request_id"),
+            detail={"error": exc.detail},
+        )
+        conn.commit()
+    except Exception as exc:
+        logging.exception("Failed to ingest dataset")
+        metadata_db.update_dataset(
+            conn,
+            dataset_id,
+            ingest_status=DatasetIngestStatus.FAILED.value,
+            error=str(exc),
+        )
+        metadata_db.insert_audit_log(
+            conn,
+            actor_user_id=actor_user_id,
+            actor_username=actor_username,
+            action="dataset.ingest_failed",
+            resource_type="dataset",
+            resource_id=dataset_id,
+            namespace=namespace,
+            success=False,
+            ip=request_meta.get("ip"),
+            user_agent=request_meta.get("user_agent"),
+            request_id=request_meta.get("request_id"),
+            detail={"error": str(exc)},
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+async def _ingest_dataset_async(**kwargs: Any) -> None:
+    await asyncio.to_thread(_ingest_dataset_job, **kwargs)
 
 
 @router.get("/datasets", response_model=list[DatasetRecord])
@@ -235,6 +376,8 @@ def preview_dataset(
         namespace=row.namespace,
         min_role=NamespaceRole.VIEWER,
     )
+    if row.ingest_status != DatasetIngestStatus.READY.value:
+        raise HTTPException(status_code=409, detail="Dataset is not ready")
 
     dataset_path = Path(row.path)
     if not dataset_path.exists():
@@ -299,9 +442,12 @@ async def upload_dataset(
     raw_dir = get_data_center_raw_dir(namespace) / dataset_id
     raw_dir.mkdir(parents=True, exist_ok=True)
     raw_path = raw_dir / safe_name
-
-    content = await file.read()
-    raw_path.write_bytes(content)
+    with raw_path.open("wb") as handle:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            handle.write(chunk)
 
     dataset_path = get_data_center_dataset_dir(namespace, DatasetSource.USER_UPLOAD.value) / f"{dataset_id}.json"
 
@@ -338,37 +484,38 @@ async def upload_dataset(
         request_id=meta["request_id"],
         detail={"name": dataset_name, "format": original_format},
     )
+    conn.commit()
 
-    try:
-        records: list[dict[str, Any]]
-        ingest_config: dict[str, Any] | None = None
-
-        if ext in {".json"}:
-            records = _parse_json_bytes(content)
-        elif ext in {".csv"}:
-            records = _parse_csv_bytes(content)
-        elif ext in {".xlsx", ".xls"}:
-            records, ingest_config = _parse_excel_bytes(
-                content,
+    if ext in {".xlsx", ".xls"}:
+        asyncio.create_task(
+            _ingest_dataset_async(
+                dataset_id=dataset_row.id,
+                namespace=namespace,
+                raw_path=str(raw_path),
+                dataset_path=str(dataset_path),
+                ext=ext,
                 sheet_name=sheet_name,
                 sheet_index=sheet_index,
                 header_row=header_row,
                 max_rows=max_rows,
+                actor_user_id=current_user.id,
+                actor_username=current_user.username,
+                request_meta=meta,
             )
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported file type")
+        )
+        return _to_dataset_record(dataset_row)
 
-        records = _sanitize_records(records)
-        row_count = _serialize_records(records, dataset_path)
-        schema = _infer_schema(records)
-
-        dataset_row = metadata_db.update_dataset(
-            conn,
-            dataset_row.id,
-            ingest_status=DatasetIngestStatus.READY.value,
-            ingest_config=ingest_config or dataset_row.ingest_config,
-            schema=schema,
-            row_count=row_count,
+    try:
+        dataset_row = _ingest_dataset_file(
+            conn=conn,
+            dataset_row=dataset_row,
+            raw_path=raw_path,
+            dataset_path=dataset_path,
+            ext=ext,
+            sheet_name=sheet_name,
+            sheet_index=sheet_index,
+            header_row=header_row,
+            max_rows=max_rows,
         )
     except HTTPException as exc:
         metadata_db.update_dataset(
