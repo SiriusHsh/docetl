@@ -874,6 +874,14 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-[#1e2330] rounded-md text-xs font-medium transition-colors"
+                onClick={() => setIsSettingsOpen(true)}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                设置
+              </button>
+              <button
+                type="button"
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${
                   unsavedChanges
                     ? "text-amber-200 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"

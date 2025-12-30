@@ -553,7 +553,7 @@ export default function DeploymentsPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-2xl">
+        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-100">
               {editingDeployment ? "Edit Deployment" : "Create Deployment"}

@@ -459,6 +459,11 @@ def _register_generated_dataset(
         raise ValueError("Unsupported output format")
 
     dataset_id = str(uuid.uuid4())
+    raw_dir = get_namespace_dir(namespace) / "data_center" / "raw" / dataset_id
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = raw_dir / path.name
+    raw_path.write_bytes(content)
+
     dataset_path = (
         get_namespace_dir(namespace)
         / "data_center"
@@ -487,7 +492,7 @@ def _register_generated_dataset(
         source="pipeline_generated",
         format="json",
         original_format=original_format,
-        raw_path=str(path),
+        raw_path=str(raw_path),
         path=str(dataset_path),
         ingest_status="ready",
         schema=schema,
