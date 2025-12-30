@@ -166,6 +166,32 @@ def init_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_runs_created_at ON runs(created_at);
         CREATE INDEX IF NOT EXISTS idx_runs_pipeline_id ON runs(pipeline_id);
 
+        CREATE TABLE IF NOT EXISTS deployments (
+          id TEXT PRIMARY KEY,
+          namespace TEXT NOT NULL,
+          name TEXT NOT NULL,
+          pipeline_id TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          schedule_type TEXT NOT NULL,
+          schedule_json TEXT NOT NULL,
+          timezone TEXT NOT NULL,
+          input_dataset_id TEXT,
+          output_to_data_center INTEGER NOT NULL DEFAULT 0,
+          output_dataset_name_tpl TEXT,
+          misfire_policy TEXT NOT NULL,
+          max_catchup_runs INTEGER,
+          retry_policy_json TEXT,
+          concurrency_policy_json TEXT,
+          last_run_id TEXT,
+          next_run_at INTEGER,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_deployments_namespace_name ON deployments(namespace, name);
+        CREATE INDEX IF NOT EXISTS idx_deployments_namespace ON deployments(namespace);
+        CREATE INDEX IF NOT EXISTS idx_deployments_pipeline_id ON deployments(pipeline_id);
+
         CREATE TABLE IF NOT EXISTS datasets (
           id TEXT PRIMARY KEY,
           namespace TEXT NOT NULL,
@@ -334,6 +360,29 @@ class RunRow:
 
 
 @dataclass(frozen=True)
+class DeploymentRow:
+    id: str
+    namespace: str
+    name: str
+    pipeline_id: str
+    enabled: bool
+    schedule_type: str
+    schedule: dict[str, Any]
+    timezone: str
+    input_dataset_id: str | None
+    output_to_data_center: bool
+    output_dataset_name_tpl: str | None
+    misfire_policy: str
+    max_catchup_runs: int | None
+    retry_policy: dict[str, Any] | None
+    concurrency_policy: dict[str, Any] | None
+    last_run_id: str | None
+    next_run_at: int | None
+    created_at: int
+    updated_at: int
+
+
+@dataclass(frozen=True)
 class DatasetRow:
     id: str
     namespace: str
@@ -424,6 +473,30 @@ def _row_to_run(row: sqlite3.Row) -> RunRow:
     )
 
 
+def _row_to_deployment(row: sqlite3.Row) -> DeploymentRow:
+    return DeploymentRow(
+        id=str(row["id"]),
+        namespace=str(row["namespace"]),
+        name=str(row["name"]),
+        pipeline_id=str(row["pipeline_id"]),
+        enabled=bool(row["enabled"]),
+        schedule_type=str(row["schedule_type"]),
+        schedule=json.loads(row["schedule_json"]) if row["schedule_json"] else {},
+        timezone=str(row["timezone"]),
+        input_dataset_id=str(row["input_dataset_id"]) if row["input_dataset_id"] is not None else None,
+        output_to_data_center=bool(row["output_to_data_center"]),
+        output_dataset_name_tpl=str(row["output_dataset_name_tpl"]) if row["output_dataset_name_tpl"] is not None else None,
+        misfire_policy=str(row["misfire_policy"]),
+        max_catchup_runs=int(row["max_catchup_runs"]) if row["max_catchup_runs"] is not None else None,
+        retry_policy=json.loads(row["retry_policy_json"]) if row["retry_policy_json"] else None,
+        concurrency_policy=json.loads(row["concurrency_policy_json"]) if row["concurrency_policy_json"] else None,
+        last_run_id=str(row["last_run_id"]) if row["last_run_id"] is not None else None,
+        next_run_at=int(row["next_run_at"]) if row["next_run_at"] is not None else None,
+        created_at=int(row["created_at"]),
+        updated_at=int(row["updated_at"]),
+    )
+
+
 def _row_to_dataset(row: sqlite3.Row) -> DatasetRow:
     return DatasetRow(
         id=str(row["id"]),
@@ -451,6 +524,13 @@ _RUN_COLUMNS = (
     "id, namespace, pipeline_id, pipeline_name, trigger, deployment_id, status, "
     "created_at, started_at, ended_at, cost, output_path, log_path, error, "
     "metadata_json, scheduled_for, attempt, max_attempts, triggered_by_user_id"
+)
+
+_DEPLOYMENT_COLUMNS = (
+    "id, namespace, name, pipeline_id, enabled, schedule_type, schedule_json, "
+    "timezone, input_dataset_id, output_to_data_center, output_dataset_name_tpl, "
+    "misfire_policy, max_catchup_runs, retry_policy_json, concurrency_policy_json, "
+    "last_run_id, next_run_at, created_at, updated_at"
 )
 
 _DATASET_COLUMNS = (
@@ -1242,6 +1322,266 @@ def get_run_summary(conn: sqlite3.Connection, *, namespace: str) -> dict[str, in
         "cancelled": int(row["cancelled"] or 0),
         "last_run_at": int(row["last_run_at"]) if row["last_run_at"] is not None else None,
     }
+
+
+def get_run_for_schedule(
+    conn: sqlite3.Connection,
+    *,
+    deployment_id: str,
+    scheduled_for: int,
+) -> RunRow | None:
+    row = conn.execute(
+        f"""
+        SELECT {_RUN_COLUMNS}
+        FROM runs
+        WHERE deployment_id = ? AND scheduled_for = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (deployment_id, scheduled_for),
+    ).fetchone()
+    if row is None:
+        return None
+    return _row_to_run(row)
+
+
+def count_active_runs(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    pipeline_id: str | None = None,
+) -> int:
+    where = ["namespace = ?", "status IN ('pending', 'running')"]
+    params: list[Any] = [namespace]
+    if pipeline_id is not None:
+        where.append("pipeline_id = ?")
+        params.append(pipeline_id)
+
+    row = conn.execute(
+        f"""
+        SELECT COUNT(*) AS total
+        FROM runs
+        WHERE {' AND '.join(where)}
+        """,
+        params,
+    ).fetchone()
+    if row is None:
+        return 0
+    return int(row["total"] or 0)
+
+
+def list_active_runs(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    pipeline_id: str | None = None,
+) -> list[RunRow]:
+    where = ["namespace = ?", "status IN ('pending', 'running')"]
+    params: list[Any] = [namespace]
+    if pipeline_id is not None:
+        where.append("pipeline_id = ?")
+        params.append(pipeline_id)
+
+    rows = conn.execute(
+        f"""
+        SELECT {_RUN_COLUMNS}
+        FROM runs
+        WHERE {' AND '.join(where)}
+        ORDER BY created_at DESC
+        """,
+        params,
+    ).fetchall()
+    return [_row_to_run(row) for row in rows]
+
+
+def create_deployment(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    name: str,
+    pipeline_id: str,
+    enabled: bool,
+    schedule_type: str,
+    schedule: dict[str, Any],
+    timezone: str,
+    input_dataset_id: str | None = None,
+    output_to_data_center: bool = False,
+    output_dataset_name_tpl: str | None = None,
+    misfire_policy: str = "run_once",
+    max_catchup_runs: int | None = None,
+    retry_policy: dict[str, Any] | None = None,
+    concurrency_policy: dict[str, Any] | None = None,
+    next_run_at: int | None = None,
+) -> DeploymentRow:
+    deployment_id = str(uuid.uuid4())
+    now = utc_now_ts()
+    conn.execute(
+        f"""
+        INSERT INTO deployments (
+          id, namespace, name, pipeline_id, enabled, schedule_type, schedule_json,
+          timezone, input_dataset_id, output_to_data_center, output_dataset_name_tpl,
+          misfire_policy, max_catchup_runs, retry_policy_json, concurrency_policy_json,
+          last_run_id, next_run_at, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
+        """,
+        (
+            deployment_id,
+            namespace,
+            name,
+            pipeline_id,
+            1 if enabled else 0,
+            schedule_type,
+            json.dumps(schedule),
+            timezone,
+            input_dataset_id,
+            1 if output_to_data_center else 0,
+            output_dataset_name_tpl,
+            misfire_policy,
+            max_catchup_runs,
+            json.dumps(retry_policy) if retry_policy is not None else None,
+            json.dumps(concurrency_policy) if concurrency_policy is not None else None,
+            next_run_at,
+            now,
+            now,
+        ),
+    )
+    row = conn.execute(
+        f"SELECT {_DEPLOYMENT_COLUMNS} FROM deployments WHERE id = ?",
+        (deployment_id,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError("Failed to load created deployment")
+    return _row_to_deployment(row)
+
+
+def update_deployment(
+    conn: sqlite3.Connection,
+    deployment_id: str,
+    *,
+    name: str | None | Any = _UNSET,
+    pipeline_id: str | None | Any = _UNSET,
+    enabled: bool | None | Any = _UNSET,
+    schedule_type: str | None | Any = _UNSET,
+    schedule: dict[str, Any] | None | Any = _UNSET,
+    timezone: str | None | Any = _UNSET,
+    input_dataset_id: str | None | Any = _UNSET,
+    output_to_data_center: bool | None | Any = _UNSET,
+    output_dataset_name_tpl: str | None | Any = _UNSET,
+    misfire_policy: str | None | Any = _UNSET,
+    max_catchup_runs: int | None | Any = _UNSET,
+    retry_policy: dict[str, Any] | None | Any = _UNSET,
+    concurrency_policy: dict[str, Any] | None | Any = _UNSET,
+    last_run_id: str | None | Any = _UNSET,
+    next_run_at: int | None | Any = _UNSET,
+) -> DeploymentRow:
+    updates: list[str] = ["updated_at = ?"]
+    params: list[Any] = [utc_now_ts()]
+
+    if name is not _UNSET:
+        updates.append("name = ?")
+        params.append(name)
+    if pipeline_id is not _UNSET:
+        updates.append("pipeline_id = ?")
+        params.append(pipeline_id)
+    if enabled is not _UNSET:
+        updates.append("enabled = ?")
+        params.append(1 if enabled else 0)
+    if schedule_type is not _UNSET:
+        updates.append("schedule_type = ?")
+        params.append(schedule_type)
+    if schedule is not _UNSET:
+        updates.append("schedule_json = ?")
+        params.append(json.dumps(schedule) if schedule is not None else None)
+    if timezone is not _UNSET:
+        updates.append("timezone = ?")
+        params.append(timezone)
+    if input_dataset_id is not _UNSET:
+        updates.append("input_dataset_id = ?")
+        params.append(input_dataset_id)
+    if output_to_data_center is not _UNSET:
+        updates.append("output_to_data_center = ?")
+        params.append(1 if output_to_data_center else 0)
+    if output_dataset_name_tpl is not _UNSET:
+        updates.append("output_dataset_name_tpl = ?")
+        params.append(output_dataset_name_tpl)
+    if misfire_policy is not _UNSET:
+        updates.append("misfire_policy = ?")
+        params.append(misfire_policy)
+    if max_catchup_runs is not _UNSET:
+        updates.append("max_catchup_runs = ?")
+        params.append(max_catchup_runs)
+    if retry_policy is not _UNSET:
+        updates.append("retry_policy_json = ?")
+        params.append(json.dumps(retry_policy) if retry_policy is not None else None)
+    if concurrency_policy is not _UNSET:
+        updates.append("concurrency_policy_json = ?")
+        params.append(
+            json.dumps(concurrency_policy) if concurrency_policy is not None else None
+        )
+    if last_run_id is not _UNSET:
+        updates.append("last_run_id = ?")
+        params.append(last_run_id)
+    if next_run_at is not _UNSET:
+        updates.append("next_run_at = ?")
+        params.append(next_run_at)
+
+    params.append(deployment_id)
+    conn.execute(
+        f"UPDATE deployments SET {', '.join(updates)} WHERE id = ?",
+        params,
+    )
+
+    row = conn.execute(
+        f"SELECT {_DEPLOYMENT_COLUMNS} FROM deployments WHERE id = ?",
+        (deployment_id,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("deployment_not_found")
+    return _row_to_deployment(row)
+
+
+def get_deployment(conn: sqlite3.Connection, deployment_id: str) -> DeploymentRow | None:
+    row = conn.execute(
+        f"SELECT {_DEPLOYMENT_COLUMNS} FROM deployments WHERE id = ?",
+        (deployment_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return _row_to_deployment(row)
+
+
+def list_deployments(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str | None,
+    enabled_only: bool = False,
+    limit: int = 200,
+    offset: int = 0,
+) -> list[DeploymentRow]:
+    where: list[str] = []
+    params: list[Any] = []
+    if namespace is not None:
+        where.append("namespace = ?")
+        params.append(namespace)
+    if enabled_only:
+        where.append("enabled = 1")
+    where_sql = " AND ".join(where) if where else "1=1"
+    rows = conn.execute(
+        f"""
+        SELECT {_DEPLOYMENT_COLUMNS}
+        FROM deployments
+        WHERE {where_sql}
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (*params, limit, offset),
+    ).fetchall()
+    return [_row_to_deployment(row) for row in rows]
+
+
+def delete_deployment(conn: sqlite3.Connection, deployment_id: str) -> None:
+    conn.execute("DELETE FROM deployments WHERE id = ?", (deployment_id,))
 
 
 def create_dataset(

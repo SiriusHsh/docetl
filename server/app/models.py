@@ -79,6 +79,74 @@ class RunSummary(BaseModel):
     last_run_at: int | None = None
 
 
+class DeploymentScheduleType(str, Enum):
+    CRON = "cron"
+    INTERVAL = "interval"
+    ONCE = "once"
+
+
+class DeploymentMisfirePolicy(str, Enum):
+    SKIP = "skip"
+    RUN_ONCE = "run_once"
+    CATCH_UP = "catch_up"
+
+
+class DeploymentRecord(BaseModel):
+    id: str
+    namespace: str
+    name: str
+    pipeline_id: str
+    enabled: bool
+    schedule_type: DeploymentScheduleType
+    schedule: dict[str, Any]
+    timezone: str
+    input_dataset_id: str | None = None
+    output_to_data_center: bool = False
+    output_dataset_name_tpl: str | None = None
+    misfire_policy: DeploymentMisfirePolicy
+    max_catchup_runs: int | None = None
+    retry_policy: dict[str, Any] | None = None
+    concurrency_policy: dict[str, Any] | None = None
+    last_run_id: str | None = None
+    next_run_at: int | None = None
+    created_at: int
+    updated_at: int
+
+
+class DeploymentCreateRequest(BaseModel):
+    namespace: str
+    name: str
+    pipeline_id: str
+    enabled: bool = True
+    schedule_type: DeploymentScheduleType
+    schedule: dict[str, Any]
+    timezone: str | None = None
+    input_dataset_id: str | None = None
+    output_to_data_center: bool = False
+    output_dataset_name_tpl: str | None = None
+    misfire_policy: DeploymentMisfirePolicy = DeploymentMisfirePolicy.RUN_ONCE
+    max_catchup_runs: int | None = None
+    retry_policy: dict[str, Any] | None = None
+    concurrency_policy: dict[str, Any] | None = None
+
+
+class DeploymentUpdateRequest(BaseModel):
+    namespace: str
+    name: str | None = None
+    pipeline_id: str | None = None
+    enabled: bool | None = None
+    schedule_type: DeploymentScheduleType | None = None
+    schedule: dict[str, Any] | None = None
+    timezone: str | None = None
+    input_dataset_id: str | None = None
+    output_to_data_center: bool | None = None
+    output_dataset_name_tpl: str | None = None
+    misfire_policy: DeploymentMisfirePolicy | None = None
+    max_catchup_runs: int | None = None
+    retry_policy: dict[str, Any] | None = None
+    concurrency_policy: dict[str, Any] | None = None
+
+
 class DatasetSource(str, Enum):
     USER_UPLOAD = "user_upload"
     PIPELINE_GENERATED = "pipeline_generated"

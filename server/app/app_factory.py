@@ -36,10 +36,18 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def _startup() -> None:
         init_metadata_db()
+        from server.app.scheduler import deployment_scheduler
+        await deployment_scheduler.start()
+
+    @app.on_event("shutdown")
+    async def _shutdown() -> None:
+        from server.app.scheduler import deployment_scheduler
+        await deployment_scheduler.stop()
 
     from server.app.routes import audit as audit_routes
     from server.app.routes import auth as auth_routes
     from server.app.routes import data_center as data_center_routes
+    from server.app.routes import deployments as deployments_routes
     from server.app.routes import groups as groups_routes
     from server.app.routes import runs as runs_routes
     from server.app.routes import users as users_routes
@@ -48,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(users_routes.router)
     app.include_router(groups_routes.router)
     app.include_router(audit_routes.router)
+    app.include_router(deployments_routes.router)
     app.include_router(runs_routes.router)
     app.include_router(data_center_routes.router)
 
