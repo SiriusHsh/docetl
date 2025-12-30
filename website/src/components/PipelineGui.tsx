@@ -23,6 +23,7 @@ import {
   Brain,
   GitBranch,
   Pencil,
+  Save,
   Plus,
   ChevronRight,
   ChevronLeft,
@@ -264,6 +265,8 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
     deletePipeline,
     renamePipeline,
     switchPipeline,
+    saveActivePipeline,
+    saving: isSavingPipeline,
   } = usePipelineStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { toast } = useToast();
@@ -490,6 +493,42 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
       setOptimizerModel(optimizerModel);
     }
   }, [optimizerModel]);
+
+  useEffect(() => {
+    if (variant !== "execute") {
+      return;
+    }
+    if (!unsavedChanges) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (!isSavingPipeline) {
+        void saveActivePipeline();
+      }
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isSavingPipeline, saveActivePipeline, unsavedChanges, variant]);
+
+  useEffect(() => {
+    if (variant !== "execute") {
+      return;
+    }
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "hidden" &&
+        unsavedChanges &&
+        !isSavingPipeline
+      ) {
+        void saveActivePipeline();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isSavingPipeline, saveActivePipeline, unsavedChanges, variant]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
@@ -796,6 +835,25 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
     setIsEditingName(false);
   }, [activePipelineId, editedPipelineName, renamePipeline]);
 
+  const handleManualSave = useCallback(async () => {
+    if (!unsavedChanges) {
+      toast({
+        title: "已是最新",
+        description: "当前执行流程没有需要保存的更改。",
+        duration: 2000,
+      });
+      return;
+    }
+    const saved = await saveActivePipeline();
+    if (saved) {
+      toast({
+        title: "已保存",
+        description: "执行流程已更新。",
+        duration: 2000,
+      });
+    }
+  }, [saveActivePipeline, toast, unsavedChanges]);
+
   return (
     <div className="flex flex-col h-full">
       <div
@@ -814,6 +872,26 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
               </h3>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${
+                  unsavedChanges
+                    ? "text-amber-200 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+                    : "text-slate-300 border-slate-700/60 hover:text-white hover:bg-[#1e2330]"
+                }`}
+                onClick={handleManualSave}
+                disabled={isSavingPipeline}
+              >
+                {isSavingPipeline ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                {isSavingPipeline ? "保存中" : "保存"}
+                {unsavedChanges && !isSavingPipeline ? (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                ) : null}
+              </button>
               <button
                 type="button"
                 className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-md text-xs font-medium transition-colors disabled:opacity-50"

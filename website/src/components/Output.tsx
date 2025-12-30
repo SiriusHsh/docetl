@@ -100,6 +100,18 @@ const useOutputContext = () => {
   };
 };
 
+type OutputVariant = "default" | "execute";
+
+type TableContentProps = {
+  opName: string | undefined;
+  isLoadingOutputs: boolean;
+  outputs: OutputRow[];
+  operation: Operation | undefined;
+  columns: ColumnType<OutputRow>[];
+  variant: OutputVariant;
+  onDownload?: () => void;
+};
+
 // First, move TableContent outside and give it a display name
 const TableContent = memo(
   ({
@@ -108,23 +120,21 @@ const TableContent = memo(
     outputs,
     operation,
     columns,
-  }: {
-    opName: string | undefined;
-    isLoadingOutputs: boolean;
-    outputs: OutputRow[];
-    operation: Operation | undefined;
-    columns: ColumnType<OutputRow>[];
-  }) => {
+    variant,
+    onDownload,
+  }: TableContentProps) => {
+    const emptyTextClass =
+      variant === "execute" ? "text-slate-400" : "text-muted-foreground";
     return (
       <div className="flex-1 min-h-0">
         {!opName ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">No operation selected.</p>
+            <p className={emptyTextClass}>No operation selected.</p>
           </div>
         ) : isLoadingOutputs ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="ml-2 text-muted-foreground">
+            <span className={`ml-2 ${emptyTextClass}`}>
               Loading outputs...
             </span>
           </div>
@@ -140,11 +150,13 @@ const TableContent = memo(
               }
               startingRowHeight={180}
               currentOperation={opName}
+              variant={variant}
+              onDownload={onDownload}
             />
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">No outputs available.</p>
+            <p className={emptyTextClass}>No outputs available.</p>
           </div>
         )}
       </div>
@@ -478,10 +490,15 @@ export const ConsoleContent = memo(() => {
 ConsoleContent.displayName = "ConsoleContent";
 
 // Main Output component
-export const Output = memo(() => {
+type OutputProps = {
+  variant?: OutputVariant;
+};
+
+export const Output = memo(({ variant = "default" }: OutputProps) => {
   const { output, isLoadingOutputs, sampleSize, operations } =
     useOutputContext();
   const operation = useOperation(output?.operationId);
+  const isExecute = variant === "execute";
 
   const [outputs, setOutputs] = useState<OutputRow[]>([]);
   const [inputCount, setInputCount] = useState<number>(0);
@@ -503,8 +520,12 @@ export const Output = memo(() => {
 
   // Effect for tab changes
   useEffect(() => {
+    if (isExecute) {
+      setActiveTab("table");
+      return;
+    }
     setActiveTab(isLoadingOutputs ? "console" : "table");
-  }, [isLoadingOutputs]);
+  }, [isExecute, isLoadingOutputs]);
 
   // Memoize columns
   const columns = useMemo(() => {
@@ -655,6 +676,22 @@ export const Output = memo(() => {
     sampleSize,
   ]);
 
+  if (isExecute) {
+    return (
+      <div className="flex flex-col h-full bg-[#0B0E14]">
+        <TableContent
+          opName={opName}
+          isLoadingOutputs={isLoadingOutputs}
+          outputs={outputs}
+          operation={operation}
+          columns={columns}
+          variant={variant}
+          onDownload={downloadCSV}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-card">
       <Tabs
@@ -757,7 +794,6 @@ export const Output = memo(() => {
                     <Button
                       variant="outline"
                       size="sm"
-                      // className="h-8 w-8 text-gray-500 hover:text-gray-700"
                       onClick={downloadCSV}
                       disabled={outputs.length === 0}
                     >
@@ -784,6 +820,7 @@ export const Output = memo(() => {
               outputs={outputs}
               operation={operation}
               columns={columns}
+              variant={variant}
             />
           </TabsContent>
           <TabsContent

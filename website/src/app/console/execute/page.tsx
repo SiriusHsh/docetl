@@ -25,12 +25,20 @@ import {
 import PipelineGUI from "@/components/PipelineGui";
 import { Output } from "@/components/Output";
 import DatasetView from "@/components/DatasetView";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { BookmarkProvider } from "@/contexts/BookmarkContext";
 import { ThemeProvider, useTheme, type Theme } from "@/contexts/ThemeContext";
 import { PipelineProvider, usePipelineContext } from "@/contexts/PipelineContext";
 import { PipelineStoreProvider, usePipelineStore } from "@/contexts/PipelineStoreContext";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { File } from "@/app/types";
+import { backendFetch } from "@/lib/backendFetch";
 
 const DEFAULT_NAMESPACE = "default";
 
@@ -55,26 +63,37 @@ const ExecuteThemeSetter: React.FC = () => {
   return null;
 };
 
-const formatFileSize = (bytes?: number | null): string => {
-  if (!bytes || bytes <= 0) {
-    return "未知大小";
-  }
-  const units = ["B", "KB", "MB", "GB"];
-  const exponent = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1
-  );
-  const value = bytes / Math.pow(1024, exponent);
-  return `${value % 1 === 0 ? value : value.toFixed(1)} ${units[exponent]}`;
-};
+const formatRecordCount = (count: string) =>
+  count === "-" ? "记录数未知" : `${count} 条记录`;
 
 type DataSourceItem = {
   id: string;
   name: string;
   type: "json" | "csv" | "sql" | "text";
   recordCount: string;
-  size: string;
+  sourceLabel: string;
   file: File;
+};
+
+type DataCenterDataset = {
+  id: string;
+  name: string;
+  path: string;
+  source: string;
+  format: string;
+  original_format?: string | null;
+  ingest_status: string;
+  row_count?: number | null;
+};
+
+const formatDatasetSource = (source: string) => {
+  if (source === "pipeline_generated") {
+    return "流水线产出";
+  }
+  if (source === "user_upload") {
+    return "用户上传";
+  }
+  return "Data Center";
 };
 
 const DataSourceIcon = ({ type }: { type: DataSourceItem["type"] }) => {
@@ -91,10 +110,22 @@ const DataSourceIcon = ({ type }: { type: DataSourceItem["type"] }) => {
 };
 
 const ExecuteLeftPanel: React.FC<{
-  dataSources: DataSourceItem[];
-  activeDataSourceId: string | null;
+  availableDataSources: DataSourceItem[];
+  selectedDataSource: DataSourceItem | null;
+  hasStaleSelection: boolean;
   onSelectDataSource: (item: DataSourceItem) => void;
-}> = ({ dataSources, activeDataSourceId, onSelectDataSource }) => {
+  onClearDataSource: () => void;
+  isLoadingDataSources?: boolean;
+  dataSourceError?: string | null;
+}> = ({
+  availableDataSources,
+  selectedDataSource,
+  hasStaleSelection,
+  onSelectDataSource,
+  onClearDataSource,
+  isLoadingDataSources = false,
+  dataSourceError = null,
+}) => {
   const {
     pipelines,
     activePipelineId,
@@ -108,6 +139,7 @@ const ExecuteLeftPanel: React.FC<{
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -314,29 +346,116 @@ const ExecuteLeftPanel: React.FC<{
 
       <div className="h-[35%] min-h-[200px] shadow-lg shadow-black/20">
         <div className="h-full bg-[#151921] border border-slate-800 rounded-lg p-5 flex flex-col">
-          <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-4">
-            输入数据源
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              输入数据源
+            </h2>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-[11px] border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1a2030] hover:text-slate-100"
+              onClick={() => setDataSourceDialogOpen(true)}
+              disabled={isLoadingDataSources}
+            >
+              {selectedDataSource ? "更换" : "选择"}
+            </Button>
+          </div>
           <div className="space-y-3 overflow-y-auto pr-2 flex-1">
-            {dataSources.length === 0 ? (
+            {isLoadingDataSources ? (
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+                正在加载数据中心数据...
+              </div>
+            ) : dataSourceError ? (
+              <div className="text-center py-8 text-red-400 text-sm border border-dashed border-red-900/60 rounded-lg">
+                数据源加载失败
+              </div>
+            ) : selectedDataSource ? (
+              <div className="flex items-center p-3 border rounded-md group transition-all bg-blue-900/20 border-blue-500/50 shadow-sm shadow-blue-500/10">
+                <div className="p-2 rounded border mr-3 bg-blue-900/30 border-blue-800">
+                  <DataSourceIcon type={selectedDataSource.type} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-bold truncate text-blue-200">
+                      {selectedDataSource.name}
+                    </span>
+                    <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">
+                      {selectedDataSource.type.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <span>
+                      {formatRecordCount(selectedDataSource.recordCount)}
+                    </span>
+                    <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                    <span>{selectedDataSource.sourceLabel}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClearDataSource}
+                  className="ml-2 p-1 rounded-md text-slate-400 hover:text-red-300 hover:bg-red-900/20 transition-colors"
+                  title="移除数据源"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : hasStaleSelection ? (
+              <div className="text-center py-6 text-slate-400 italic text-sm border border-dashed border-slate-700 rounded-lg space-y-3">
+                <div>当前数据源不可用，请重新选择。</div>
+                <button
+                  type="button"
+                  onClick={onClearDataSource}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-300 bg-red-900/20 border border-red-800/50 rounded-md hover:bg-red-900/30"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  移除数据源
+                </button>
+              </div>
+            ) : availableDataSources.length === 0 ? (
               <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
                 未配置数据源
               </div>
             ) : (
-              dataSources.map((ds) => {
-                const isSelected = activeDataSourceId === ds.id;
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+                请点击“选择”配置数据源
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <Dialog open={dataSourceDialogOpen} onOpenChange={setDataSourceDialogOpen}>
+        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold text-slate-100">
+              选择数据源
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+            {availableDataSources.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+                Data Center 暂无可用数据集
+              </div>
+            ) : (
+              availableDataSources.map((ds) => {
+                const isSelected = selectedDataSource?.id === ds.id;
                 return (
-                  <div
+                  <button
                     key={ds.id}
-                    onClick={() => onSelectDataSource(ds)}
-                    className={`flex items-center p-3 border rounded-md group transition-all cursor-pointer ${
+                    type="button"
+                    onClick={() => {
+                      onSelectDataSource(ds);
+                      setDataSourceDialogOpen(false);
+                    }}
+                    className={`w-full flex items-center p-3 border rounded-md transition-all text-left ${
                       isSelected
                         ? "bg-blue-900/20 border-blue-500/50 shadow-sm shadow-blue-500/10"
                         : "bg-[#0B0E14] border-slate-800 hover:border-slate-700 hover:bg-slate-900"
                     }`}
                   >
                     <div
-                      className={`p-2 rounded border mr-3 transition-colors ${
+                      className={`p-2 rounded border mr-3 ${
                         isSelected
                           ? "bg-blue-900/30 border-blue-800"
                           : "bg-slate-900 border-slate-800"
@@ -358,18 +477,18 @@ const ExecuteLeftPanel: React.FC<{
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <span>{ds.recordCount} 条记录</span>
+                        <span>{formatRecordCount(ds.recordCount)}</span>
                         <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
-                        <span>{ds.size}</span>
+                        <span>{ds.sourceLabel}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })
             )}
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -385,6 +504,12 @@ const ExecuteBottomPanel: React.FC = () => {
     if (!terminalOutput) return [];
     return terminalOutput.split("\n").filter((line) => line.trim().length > 0);
   }, [terminalOutput]);
+
+  useEffect(() => {
+    if (!currentFile) return;
+    setActiveTab("input");
+    setIsOpen(true);
+  }, [currentFile?.path]);
 
   return (
     <div
@@ -478,7 +603,7 @@ const ExecuteBottomPanel: React.FC = () => {
           }`}
         >
           <div className="flex-1 min-h-0 overflow-hidden bg-[#0B0E14]">
-            <Output />
+            <Output variant="execute" />
           </div>
         </div>
 
@@ -503,9 +628,14 @@ const ExecuteBottomPanel: React.FC = () => {
 };
 
 const ExecuteWorkspace: React.FC = () => {
-  const { namespace, setNamespace, files, currentFile, setCurrentFile } =
+  const { namespace, setNamespace, currentFile, setCurrentFile } =
     usePipelineContext();
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+  const [dataCenterDatasets, setDataCenterDatasets] = useState<
+    DataCenterDataset[]
+  >([]);
+  const [dataCenterLoading, setDataCenterLoading] = useState(false);
+  const [dataCenterError, setDataCenterError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!namespace) {
@@ -513,33 +643,69 @@ const ExecuteWorkspace: React.FC = () => {
     }
   }, [namespace, setNamespace]);
 
-  const dataSources = useMemo(() => {
-    const base = files
-      .filter((file) => file.type === "json")
-      .map((file) => ({
-        id: file.path,
-        name: file.name,
-        type: "json" as const,
-        recordCount: "-",
-        size: formatFileSize(file.blob?.size ?? null),
-        file,
-      }));
+  useEffect(() => {
+    const loadDatasets = async () => {
+      if (!namespace) {
+        setDataCenterDatasets([]);
+        return;
+      }
+      setDataCenterLoading(true);
+      setDataCenterError(null);
+      try {
+        const response = await backendFetch(
+          `/api/data-center/datasets?namespace=${encodeURIComponent(namespace)}`
+        );
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(detail || "Failed to load datasets");
+        }
+        const data = (await response.json()) as DataCenterDataset[];
+        const normalized = data.filter(
+          (dataset) =>
+            dataset.format === "json" && dataset.ingest_status === "ready"
+        );
+        setDataCenterDatasets(normalized);
+      } catch (err) {
+        setDataCenterDatasets([]);
+        setDataCenterError(
+          err instanceof Error ? err.message : "Failed to load datasets"
+        );
+      } finally {
+        setDataCenterLoading(false);
+      }
+    };
 
-    if (currentFile && !base.some((item) => item.id === currentFile.path)) {
-      base.unshift({
-        id: currentFile.path,
-        name: currentFile.name,
-        type: "json" as const,
-        recordCount: "-",
-        size: formatFileSize(currentFile.blob?.size ?? null),
-        file: currentFile,
-      });
+    void loadDatasets();
+  }, [namespace]);
+
+  const availableDataSources = useMemo(() => {
+    return dataCenterDatasets.map(
+      (dataset): DataSourceItem => ({
+        id: dataset.path,
+        name: dataset.name,
+        type: "json",
+        recordCount: dataset.row_count != null ? String(dataset.row_count) : "-",
+        sourceLabel: formatDatasetSource(dataset.source),
+        file: {
+          name: dataset.name,
+          path: dataset.path,
+          type: "json",
+          parentFolder: "Data Center",
+        },
+      })
+    );
+  }, [dataCenterDatasets]);
+
+  const selectedDataSource = useMemo(() => {
+    if (!currentFile) {
+      return null;
     }
+    return (
+      availableDataSources.find((item) => item.id === currentFile.path) || null
+    );
+  }, [availableDataSources, currentFile]);
 
-    return base;
-  }, [files, currentFile]);
-
-  const activeDataSourceId = currentFile?.path ?? null;
+  const hasStaleSelection = Boolean(currentFile && !selectedDataSource);
 
   return (
     <div className="flex h-screen flex-col min-w-0">
@@ -552,9 +718,13 @@ const ExecuteWorkspace: React.FC = () => {
           }`}
         >
           <ExecuteLeftPanel
-            dataSources={dataSources}
-            activeDataSourceId={activeDataSourceId}
+            availableDataSources={availableDataSources}
+            selectedDataSource={selectedDataSource}
+            hasStaleSelection={hasStaleSelection}
             onSelectDataSource={(item) => setCurrentFile(item.file)}
+            onClearDataSource={() => setCurrentFile(null)}
+            isLoadingDataSources={dataCenterLoading}
+            dataSourceError={dataCenterError}
           />
         </div>
 

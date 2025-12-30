@@ -121,15 +121,6 @@ import AIChatPanel from "@/components/AIChatPanel";
 import { ThemeProvider, useTheme, Theme } from "@/contexts/ThemeContext";
 import { APIKeysDialog } from "@/components/APIKeysDialog";
 import { TutorialsDialog, TUTORIALS } from "@/components/TutorialsDialog";
-const NaturalLanguagePipelineDialog = dynamic(
-  () =>
-    import("@/components/NaturalLanguagePipelineDialog").then(
-      (mod) => mod.default
-    ),
-  {
-    ssr: false,
-  }
-);
 
 const LeftPanelIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => (
   <svg
@@ -301,9 +292,6 @@ const CodeEditorPipelineApp: React.FC = () => {
   const [showTutorialsDialog, setShowTutorialsDialog] = useState(false);
   const [selectedTutorial, setSelectedTutorial] =
     useState<(typeof TUTORIALS)[0]>();
-  const [showNLPipelineDialog, setShowNLPipelineDialog] = useState(false);
-  const [hasAutoOpenedNLPipelineDialog, setHasAutoOpenedNLPipelineDialog] =
-    useState(false);
   const { theme, setTheme } = useTheme();
   const openDialogFromMenu = useCallback((openDialog: () => void) => {
     setWorkspaceMenuOpen(false);
@@ -317,25 +305,17 @@ const CodeEditorPipelineApp: React.FC = () => {
     files,
     setFiles,
     clearPipelineState,
-    saveProgress,
     unsavedChanges,
     namespace,
     setOperations,
-    operations,
     setPipelineName,
     pipelineName,
     setSampleSize,
     setDefaultModel,
     setSystemPrompt,
     setOutput,
-    defaultModel,
   } = usePipelineContext();
   const { saveActivePipeline, saving: isSavingPipeline } = usePipelineStore();
-  const hasWorkspaceContent =
-    (operations?.length ?? 0) > 0 ||
-    (files?.length ?? 0) > 0 ||
-    Boolean(currentFile);
-
   useEffect(() => {
     const token = getAuthToken();
     const expiresAt = getAuthExpiresAt();
@@ -358,28 +338,6 @@ const CodeEditorPipelineApp: React.FC = () => {
 
     return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
-
-  useEffect(() => {
-    if (!isMounted || !namespace) {
-      return;
-    }
-    if (hasWorkspaceContent) {
-      if (hasAutoOpenedNLPipelineDialog) {
-        setHasAutoOpenedNLPipelineDialog(false);
-      }
-      return;
-    }
-    if (!hasAutoOpenedNLPipelineDialog) {
-      setShowNLPipelineDialog(true);
-      setHasAutoOpenedNLPipelineDialog(true);
-    }
-  }, [
-    hasAutoOpenedNLPipelineDialog,
-    hasWorkspaceContent,
-    isMounted,
-    namespace,
-    setShowNLPipelineDialog,
-  ]);
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -528,14 +486,6 @@ const CodeEditorPipelineApp: React.FC = () => {
                   }}
                 >
                   New (Clear Pipeline)
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={(event) => {
-                    event.preventDefault();
-                    openDialogFromMenu(() => setShowNLPipelineDialog(true));
-                  }}
-                >
-                  New from Natural Language
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -982,27 +932,6 @@ const CodeEditorPipelineApp: React.FC = () => {
           currentFile={currentFile}
           files={files}
           setOutput={setOutput}
-        />
-        <NaturalLanguagePipelineDialog
-          open={showNLPipelineDialog}
-          onOpenChange={setShowNLPipelineDialog}
-          onFileUpload={(file: File) => {
-            setFiles((prevFiles) => [...prevFiles, file]);
-            // Set as current file
-            setCurrentFile(file);
-          }}
-          setCurrentFile={setCurrentFile}
-          setOperations={setOperations}
-          setPipelineName={setPipelineName}
-          setSampleSize={setSampleSize}
-          setDefaultModel={setDefaultModel}
-          setSystemPrompt={setSystemPrompt}
-          currentFile={currentFile}
-          files={files}
-          setFiles={setFiles}
-          setOutput={setOutput}
-          defaultModel={defaultModel}
-          namespace={namespace}
         />
       </div>
     </BookmarkProvider>

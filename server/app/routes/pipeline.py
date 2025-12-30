@@ -78,8 +78,6 @@ def _validate_pipeline_config_paths(*, namespace: str, yaml_path: Path) -> None:
         if "://" in path_value:
             raise HTTPException(status_code=400, detail=f"Non-local paths are not allowed for {label}")
         candidate = Path(path_value).expanduser()
-        if not candidate.is_absolute():
-            raise HTTPException(status_code=400, detail=f"{label} path must be absolute")
         resolved = candidate.resolve(strict=False)
         try:
             resolved.relative_to(namespace_root)

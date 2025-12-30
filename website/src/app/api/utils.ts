@@ -33,6 +33,26 @@ export function getNamespaceDir(homeDir: string, namespace: string) {
   return path.join(homeDir, ".docetl", namespace);
 }
 
+const resolveNamespaceDirFromDataPath = (
+  homeDir: string,
+  namespace: string,
+  dataPath?: string
+) => {
+  if (!dataPath) {
+    return getNamespaceDir(homeDir, namespace);
+  }
+
+  const normalizedPath = path.normalize(dataPath);
+  const marker = path.normalize(path.join(".docetl", namespace));
+  const markerIndex = normalizedPath.indexOf(marker);
+
+  if (markerIndex !== -1) {
+    return normalizedPath.slice(0, markerIndex + marker.length);
+  }
+
+  return getNamespaceDir(homeDir, namespace);
+};
+
 export function generatePipelineConfig(
   namespace: string,
   default_model: string,
@@ -237,17 +257,13 @@ export function generatePipelineConfig(
       output: {
         type: "file",
         path: path.join(
-          homeDir,
-          ".docetl",
-          namespace,
+          resolveNamespaceDirFromDataPath(homeDir, namespace, data?.path),
           "pipelines",
           "outputs",
           `${name}.json`
         ),
         intermediate_dir: path.join(
-          homeDir,
-          ".docetl",
-          namespace,
+          resolveNamespaceDirFromDataPath(homeDir, namespace, data?.path),
           "pipelines",
           name,
           "intermediates"

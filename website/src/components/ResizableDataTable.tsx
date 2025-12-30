@@ -36,6 +36,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Download,
   Search,
   Eye,
   Maximize2,
@@ -410,6 +411,7 @@ interface ColumnHeaderProps {
   onSort: () => void;
   sortDirection: false | "asc" | "desc";
   onExpand: () => void;
+  variant?: "default" | "execute";
 }
 
 const ColumnHeader = memo(
@@ -422,7 +424,9 @@ const ColumnHeader = memo(
     onSort,
     sortDirection,
     onExpand,
+    variant = "default",
   }: ColumnHeaderProps) => {
+    const isExecute = variant === "execute";
     const histogramData = useMemo(() => {
       if (!stats) return [];
 
@@ -579,7 +583,7 @@ const ColumnHeader = memo(
             />
           </div>
         </div>
-        {stats && (
+        {!isExecute && stats && (
           <div className="space-y-0.5">
             <div className="flex justify-between text-[10px] text-muted-foreground">
               {stats.isLowCardinality ? (
@@ -688,6 +692,8 @@ interface ResizableDataTableProps<T extends Record<string, unknown>> {
   boldedColumns?: string[];
   startingRowHeight?: number;
   currentOperation?: string;
+  variant?: "default" | "execute";
+  onDownload?: () => void;
 }
 
 interface ObservabilityIndicatorProps {
@@ -759,7 +765,10 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
   boldedColumns = [],
   startingRowHeight = 40,
   currentOperation,
+  variant = "default",
+  onDownload,
 }: ResizableDataTableProps<T>) {
+  const isExecute = variant === "execute";
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() => {
     const savedSettings = localStorage.getItem(TABLE_SETTINGS_KEY);
     if (savedSettings) {
@@ -828,6 +837,9 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
   );
 
   const columnStats = useMemo(() => {
+    if (isExecute) {
+      return {};
+    }
     const stats: Record<string, ColumnStats | null> = {};
     columns.forEach((column) => {
       const accessorKey = (column as { accessorKey?: string }).accessorKey;
@@ -836,7 +848,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
       }
     });
     return stats;
-  }, [data, columns]);
+  }, [data, columns, isExecute]);
 
   const fuzzyFilter: FilterFn<T> = (row, columnId, value) => {
     const searchValue = value.toLowerCase();
@@ -987,22 +999,27 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
     setDialogOpen(true);
   };
 
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageCount = table.getPageCount();
+
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+
   return (
-    <div className="w-full overflow-auto">
-      <div className="mb-2 flex justify-between items-center">
-        <div className="flex items-center gap-2">
+    <div className={isExecute ? "flex flex-col h-full min-h-0" : "w-full overflow-auto"}>
+      {isExecute ? (
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-800 bg-[#0B0E14] text-xs">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center ml-2 h-7"
+                className="flex items-center h-7 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
               >
-                Show/Hide Columns
+                显示/隐藏列
                 <ChevronDown className="ml-1 h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
+            <DropdownMenuContent className="w-56 bg-[#151921] border-slate-700 text-slate-200">
               {table.getAllLeafColumns().map((column) => {
                 return (
                   <DropdownMenuCheckboxItem
@@ -1021,42 +1038,124 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7"
+            className="h-7 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
             onClick={resetColumnWidths}
           >
-            Reset Widths
+            重置宽度
           </Button>
-        </div>
-        <div className="flex items-center space-x-2">
-          {data.length > 0 && (
-            <div className="flex items-center justify-end space-x-2 py-1 mr-2">
+          <div className="flex-1" />
+          {onDownload && (
+            <>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-7"
+                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                onClick={onDownload}
+                disabled={data.length === 0}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <div className="h-4 w-px bg-slate-700 mx-2" />
+            </>
+          )}
+          {data.length > 0 && (
+            <div className="flex items-center gap-2 text-slate-400">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <ChevronLeft className="mr-1 h-3 w-3" /> Previous
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-xs text-gray-600">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+              <span className="text-xs">
+                第 {pageIndex + 1} 页 / 共 {pageCount} 页
               </span>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-7"
+                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                Next <ChevronRight className="ml-1 h-3 w-3" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           )}
         </div>
-      </div>
-      <div style={{ width: "100%", overflow: "auto" }}>
+      ) : (
+        <div className="mb-2 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center ml-2 h-7"
+                >
+                  Show/Hide Columns
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56">
+                {table.getAllLeafColumns().map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7"
+              onClick={resetColumnWidths}
+            >
+              Reset Widths
+            </Button>
+          </div>
+          <div className="flex items-center space-x-2">
+            {data.length > 0 && (
+              <div className="flex items-center justify-end space-x-2 py-1 mr-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronLeft className="mr-1 h-3 w-3" /> Previous
+                </Button>
+                <span className="text-xs text-gray-600">
+                  Page {pageIndex + 1} of {pageCount}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next <ChevronRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      <div
+        style={{ width: "100%", overflow: "auto" }}
+        className={isExecute ? "flex-1 min-h-0 overflow-auto" : undefined}
+      >
         <Table
           style={{
             width: table.getTotalSize() + 100,
@@ -1088,7 +1187,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                                 accessorKey?: string;
                               }
                             ).accessorKey || ""
-                          ]
+                          ] || null
                         }
                         isBold={boldedColumns.includes(
                           header.column.columnDef.header as string
@@ -1112,6 +1211,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                         }}
                         sortDirection={header.column.getIsSorted()}
                         onExpand={() => handleColumnExpand(header.column.id)}
+                        variant={variant}
                       />
                     )}
                     <ColumnResizer header={header} />
@@ -1122,9 +1222,21 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
           </TableHeader>
 
           <TableBody>
-            {table.getRowModel().rows.map((row, index) => (
+            {table.getRowModel().rows.map((row, index) => {
+              const isSelected = row.id === selectedRowId;
+              return (
               <React.Fragment key={row.id}>
-                <TableRow>
+                <TableRow
+                  onClick={() =>
+                    setSelectedRowId((prev) => (prev === row.id ? null : row.id))
+                  }
+                  data-state={isSelected ? "selected" : undefined}
+                  className={
+                    isExecute
+                      ? "cursor-pointer border-slate-800/80 hover:bg-slate-900/40 data-[state=selected]:bg-blue-950/40 data-[state=selected]:ring-1 data-[state=selected]:ring-blue-500/30 data-[state=selected]:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]"
+                      : undefined
+                  }
+                >
                   <TableCell
                     style={{
                       width: "30px",
@@ -1134,7 +1246,10 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                     }}
                   >
                     <div className="flex flex-col items-center gap-1">
-                      <span style={{ fontSize: "0.75rem", color: "#888" }}>
+                      <span
+                        className={isExecute ? "text-slate-400" : "text-gray-500"}
+                        style={{ fontSize: "0.75rem" }}
+                      >
                         {row.index + 1}
                       </span>
                       <ObservabilityIndicator
@@ -1143,7 +1258,37 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                       />
                     </div>
                   </TableCell>
-                  {row.getVisibleCells().map((cell) => (
+                    {row.getVisibleCells().map((cell) => {
+                      const value = cell.getValue();
+                      if (isExecute) {
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            style={{
+                              width: cell.column.getSize(),
+                              minWidth: cell.column.columnDef.minSize,
+                              height: `${rowSizing[index] || startingRowHeight}px`,
+                              padding: "0",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: "100%",
+                                overflowY: "auto",
+                                padding: "0.75rem 0.5rem",
+                                fontWeight: "normal",
+                              }}
+                              className="text-sm text-slate-200 whitespace-pre-wrap break-words"
+                            >
+                              {typeof value === "object" && value !== null
+                                ? JSON.stringify(value, null, 2)
+                                : String(value ?? "")}
+                            </div>
+                          </TableCell>
+                        );
+                      }
+                      return (
                     <TableCell
                       key={cell.id}
                       style={{
@@ -1186,7 +1331,8 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                         )}
                       </div>
                     </TableCell>
-                  ))}
+                      );
+                    })}
                 </TableRow>
                 <RowResizer
                   row={{
@@ -1202,12 +1348,12 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                   }}
                 />
               </React.Fragment>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </div>
 
-      {data.length > 0 && (
+      {!isExecute && data.length > 0 && (
         <div className="flex items-center justify-end space-x-2 py-4">
           <Button
             variant="outline"
