@@ -2,18 +2,40 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
   LayoutDashboard,
+  ListChecks,
   Play,
   Rocket,
   Database,
   Settings,
+  Shield,
 } from "lucide-react";
 
-import { clearAuthSession, getAuthExpiresAt, getAuthToken } from "@/lib/auth";
+import {
+  clearAuthSession,
+  getAuthExpiresAt,
+  getAuthToken,
+  getStoredAuthUser,
+} from "@/lib/auth";
+import { backendFetch } from "@/lib/backendFetch";
+import { getBackendUrl } from "@/lib/api-config";
+import {
+  readNamespace,
+  subscribeToNamespaceChanges,
+  writeNamespace,
+} from "@/lib/namespace";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type NavItem = {
   label: string;
@@ -21,15 +43,19 @@ type NavItem = {
   icon: ComponentType<{ className?: string }>;
 };
 
+type MembershipRecord = {
+  namespace: string;
+  role: string;
+  created_at: number;
+  updated_at: number;
+};
+
 const MAIN_NAV: NavItem[] = [
   { label: "Dashboard", href: "/console/dashboard", icon: LayoutDashboard },
+  { label: "Runs", href: "/console/runs", icon: ListChecks },
   { label: "Execute", href: "/console/execute", icon: Play },
   { label: "Deployments", href: "/console/deployments", icon: Rocket },
   { label: "Data Center", href: "/console/data-center", icon: Database },
-];
-
-const SECONDARY_NAV: NavItem[] = [
-  { label: "Settings", href: "/console/settings", icon: Settings },
 ];
 
 export default function ConsoleLayout({
@@ -39,6 +65,13 @@ export default function ConsoleLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const backendUrl = useMemo(() => getBackendUrl(), []);
+  const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
+  const [loadingMemberships, setLoadingMemberships] = useState(false);
+  const [membershipError, setMembershipError] = useState<string | null>(null);
+  const [activeNamespace, setActiveNamespace] = useState<string | null>(null);
+  const [selectedNamespace, setSelectedNamespace] = useState("");
 
   useEffect(() => {
     const token = getAuthToken();
@@ -50,7 +83,72 @@ export default function ConsoleLayout({
     }
   }, [router]);
 
+  useEffect(() => {
+    const user = getStoredAuthUser();
+    setIsAdmin(user?.platform_role === "platform_admin");
+  }, []);
+
+  useEffect(() => {
+    const stored = readNamespace();
+    if (stored) {
+      setActiveNamespace(stored);
+      setSelectedNamespace(stored);
+    }
+    return subscribeToNamespaceChanges((next) => {
+      setActiveNamespace(next);
+      setSelectedNamespace(next ?? "");
+    });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadMemberships = async () => {
+      const token = getAuthToken();
+      if (!token) return;
+      setLoadingMemberships(true);
+      setMembershipError(null);
+      try {
+        const response = await backendFetch(`${backendUrl}/auth/me`);
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(detail || "Failed to load memberships");
+        }
+        const data = (await response.json()) as {
+          memberships?: MembershipRecord[];
+        };
+        if (cancelled) return;
+        const list = data.memberships || [];
+        setMemberships(list);
+        if (list.length > 0 && (!activeNamespace || !list.some((m) => m.namespace === activeNamespace))) {
+          setSelectedNamespace(list[0].namespace);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMembershipError(
+            error instanceof Error ? error.message : "Failed to load memberships"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingMemberships(false);
+        }
+      }
+    };
+    void loadMemberships();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeNamespace, backendUrl]);
+
   const activePath = useMemo(() => pathname || "", [pathname]);
+  const secondaryNav = useMemo<NavItem[]>(() => {
+    const items: NavItem[] = [];
+    if (isAdmin) {
+      items.push({ label: "Admin", href: "/console/admin", icon: Shield });
+    }
+    items.push({ label: "Settings", href: "/console/settings", icon: Settings });
+    return items;
+  }, [isAdmin]);
 
   return (
     <div className="min-h-screen bg-[#0f1116] text-slate-100">
@@ -85,7 +183,7 @@ export default function ConsoleLayout({
           </nav>
           <div className="px-3 pb-4">
             <div className="my-3 h-px bg-white/5" />
-            {SECONDARY_NAV.map((item) => {
+            {secondaryNav.map((item) => {
               const Icon = item.icon;
               const isActive = activePath.startsWith(item.href);
               return (
@@ -107,7 +205,68 @@ export default function ConsoleLayout({
           </div>
         </aside>
         <main className="flex-1">
-          <div className="min-h-screen bg-[#0f1116]">{children}</div>
+          <div className="min-h-screen bg-[#0f1116] flex flex-col">
+            <div className="sticky top-0 z-20 border-b border-white/5 bg-[#0f1116]/95 backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3">
+                <div className="text-sm text-slate-400">
+                  Workspace:{" "}
+                  <span className="text-slate-200">
+                    {activeNamespace || "-"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {membershipError ? (
+                    <span className="text-xs text-red-400">{membershipError}</span>
+                  ) : memberships.length === 0 ? (
+                    <span className="text-xs text-slate-500">
+                      No namespace access
+                    </span>
+                  ) : (
+                    <>
+                      <Select
+                        value={selectedNamespace || ""}
+                        onValueChange={setSelectedNamespace}
+                        disabled={loadingMemberships}
+                      >
+                        <SelectTrigger className="h-8 w-[220px] bg-[#11131a] border-white/10 text-slate-200">
+                          <SelectValue placeholder="Select namespace" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                          {memberships.map((membership) => (
+                            <SelectItem
+                              key={membership.namespace}
+                              value={membership.namespace}
+                            >
+                              {membership.namespace} ({membership.role})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                        disabled={
+                          loadingMemberships ||
+                          !selectedNamespace ||
+                          selectedNamespace === activeNamespace
+                        }
+                        onClick={() => {
+                          if (!selectedNamespace) return;
+                          writeNamespace(selectedNamespace);
+                          setActiveNamespace(selectedNamespace);
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex-1">{children}</div>
+          </div>
         </main>
       </div>
     </div>

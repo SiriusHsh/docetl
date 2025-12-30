@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 
 import { backendFetch } from "@/lib/backendFetch";
-import * as localStorageKeys from "@/app/localStorageKeys";
+import {
+  readNamespace,
+  subscribeToNamespaceChanges,
+} from "@/lib/namespace";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -56,13 +59,10 @@ export default function DataCenterPage() {
   const [previewSampleMode, setPreviewSampleMode] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(localStorageKeys.NAMESPACE_KEY);
-    if (!stored) return;
-    try {
-      setNamespace(JSON.parse(stored));
-    } catch {
-      setNamespace(stored);
-    }
+    setNamespace(readNamespace());
+    return subscribeToNamespaceChanges((next) => {
+      setNamespace(next);
+    });
   }, []);
 
   const isExcel = useMemo(() => {

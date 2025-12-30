@@ -73,6 +73,38 @@ def init_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS groups (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS group_memberships (
+          group_id TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (group_id, user_id),
+          FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_group_memberships_user_id ON group_memberships(user_id);
+        CREATE INDEX IF NOT EXISTS idx_group_memberships_group_id ON group_memberships(group_id);
+
+        CREATE TABLE IF NOT EXISTS group_namespace_roles (
+          group_id TEXT NOT NULL,
+          namespace TEXT NOT NULL,
+          role TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          PRIMARY KEY (group_id, namespace),
+          FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_group_namespace_roles_namespace ON group_namespace_roles(namespace);
+
         CREATE TABLE IF NOT EXISTS sessions (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL,
@@ -250,6 +282,35 @@ class UserRow:
 
 
 @dataclass(frozen=True)
+class GroupRow:
+    id: str
+    name: str
+    description: str | None
+    created_at: int
+    updated_at: int
+
+
+@dataclass(frozen=True)
+class GroupMemberRow:
+    group_id: str
+    user_id: str
+    username: str
+    email: str | None
+    is_active: bool
+    platform_role: PlatformRole
+    joined_at: int
+
+
+@dataclass(frozen=True)
+class GroupNamespaceAccessRow:
+    group_id: str
+    namespace: str
+    role: NamespaceRole
+    created_at: int
+    updated_at: int
+
+
+@dataclass(frozen=True)
 class RunRow:
     id: str
     namespace: str
@@ -304,6 +365,38 @@ def _row_to_user(row: sqlite3.Row) -> UserRow:
         created_at=int(row["created_at"]),
         updated_at=int(row["updated_at"]),
         last_login_at=int(row["last_login_at"]) if row["last_login_at"] is not None else None,
+    )
+
+
+def _row_to_group(row: sqlite3.Row) -> GroupRow:
+    return GroupRow(
+        id=str(row["id"]),
+        name=str(row["name"]),
+        description=str(row["description"]) if row["description"] is not None else None,
+        created_at=int(row["created_at"]),
+        updated_at=int(row["updated_at"]),
+    )
+
+
+def _row_to_group_member(row: sqlite3.Row) -> GroupMemberRow:
+    return GroupMemberRow(
+        group_id=str(row["group_id"]),
+        user_id=str(row["user_id"]),
+        username=str(row["username"]),
+        email=str(row["email"]) if row["email"] is not None else None,
+        is_active=bool(row["is_active"]),
+        platform_role=str(row["platform_role"]),  # type: ignore[return-value]
+        joined_at=int(row["joined_at"]),
+    )
+
+
+def _row_to_group_namespace_access(row: sqlite3.Row) -> GroupNamespaceAccessRow:
+    return GroupNamespaceAccessRow(
+        group_id=str(row["group_id"]),
+        namespace=str(row["namespace"]),
+        role=str(row["role"]),  # type: ignore[return-value]
+        created_at=int(row["created_at"]),
+        updated_at=int(row["updated_at"]),
     )
 
 
@@ -446,6 +539,243 @@ def list_users(conn: sqlite3.Connection, *, limit: int = 200, offset: int = 0) -
         (limit, offset),
     ).fetchall()
     return [_row_to_user(row) for row in rows]
+
+
+def count_active_platform_admins(conn: sqlite3.Connection) -> int:
+    row = conn.execute(
+        """
+        SELECT COUNT(*) AS count
+        FROM users
+        WHERE platform_role = 'platform_admin' AND is_active = 1
+        """
+    ).fetchone()
+    if row is None:
+        return 0
+    return int(row["count"])
+
+
+def create_group(
+    conn: sqlite3.Connection,
+    *,
+    name: str,
+    description: str | None = None,
+) -> GroupRow:
+    now = utc_now_ts()
+    group_id = str(uuid.uuid4())
+    try:
+        conn.execute(
+            """
+            INSERT INTO groups (id, name, description, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (group_id, name, description, now, now),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("group_name_exists") from exc
+
+    row = conn.execute(
+        "SELECT id, name, description, created_at, updated_at FROM groups WHERE id = ?",
+        (group_id,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("group_not_found")
+    return _row_to_group(row)
+
+
+def list_groups(conn: sqlite3.Connection, *, limit: int = 200, offset: int = 0) -> list[GroupRow]:
+    rows = conn.execute(
+        """
+        SELECT id, name, description, created_at, updated_at
+        FROM groups
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (limit, offset),
+    ).fetchall()
+    return [_row_to_group(row) for row in rows]
+
+
+def get_group_by_id(conn: sqlite3.Connection, group_id: str) -> GroupRow | None:
+    row = conn.execute(
+        "SELECT id, name, description, created_at, updated_at FROM groups WHERE id = ?",
+        (group_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return _row_to_group(row)
+
+
+def update_group(
+    conn: sqlite3.Connection,
+    *,
+    group_id: str,
+    name: str | None = None,
+    description: str | None = None,
+) -> GroupRow:
+    updates: list[str] = []
+    params: list[Any] = []
+    if name is not None:
+        updates.append("name = ?")
+        params.append(name)
+    if description is not None:
+        updates.append("description = ?")
+        params.append(description)
+
+    if not updates:
+        existing = get_group_by_id(conn, group_id)
+        if existing is None:
+            raise ValueError("group_not_found")
+        return existing
+
+    now = utc_now_ts()
+    updates.append("updated_at = ?")
+    params.append(now)
+    params.append(group_id)
+    try:
+        conn.execute(
+            f"UPDATE groups SET {', '.join(updates)} WHERE id = ?",
+            tuple(params),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("group_name_exists") from exc
+
+    row = conn.execute(
+        "SELECT id, name, description, created_at, updated_at FROM groups WHERE id = ?",
+        (group_id,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("group_not_found")
+    return _row_to_group(row)
+
+
+def delete_group(conn: sqlite3.Connection, group_id: str) -> None:
+    cur = conn.execute("DELETE FROM groups WHERE id = ?", (group_id,))
+    if cur.rowcount == 0:
+        raise ValueError("group_not_found")
+
+
+def add_group_member(conn: sqlite3.Connection, *, group_id: str, user_id: str) -> None:
+    now = utc_now_ts()
+    try:
+        conn.execute(
+            """
+            INSERT INTO group_memberships (group_id, user_id, created_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(group_id, user_id) DO NOTHING
+            """,
+            (group_id, user_id, now),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("group_or_user_not_found") from exc
+
+
+def remove_group_member(conn: sqlite3.Connection, *, group_id: str, user_id: str) -> None:
+    conn.execute(
+        "DELETE FROM group_memberships WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id),
+    )
+
+
+def list_group_members(conn: sqlite3.Connection, *, group_id: str) -> list[GroupMemberRow]:
+    rows = conn.execute(
+        """
+        SELECT
+          gm.group_id,
+          u.id AS user_id,
+          u.username,
+          u.email,
+          u.is_active,
+          u.platform_role,
+          gm.created_at AS joined_at
+        FROM group_memberships gm
+        JOIN users u ON gm.user_id = u.id
+        WHERE gm.group_id = ?
+        ORDER BY gm.created_at DESC
+        """,
+        (group_id,),
+    ).fetchall()
+    return [_row_to_group_member(row) for row in rows]
+
+
+def upsert_group_namespace_role(
+    conn: sqlite3.Connection,
+    *,
+    group_id: str,
+    namespace: str,
+    role: NamespaceRole,
+) -> None:
+    now = utc_now_ts()
+    conn.execute(
+        """
+        INSERT INTO group_namespace_roles (group_id, namespace, role, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(group_id, namespace) DO UPDATE SET role=excluded.role, updated_at=excluded.updated_at
+        """,
+        (group_id, namespace, role, now, now),
+    )
+
+
+def remove_group_namespace_role(conn: sqlite3.Connection, *, group_id: str, namespace: str) -> None:
+    conn.execute(
+        "DELETE FROM group_namespace_roles WHERE group_id = ? AND namespace = ?",
+        (group_id, namespace),
+    )
+
+
+def list_group_namespace_roles(conn: sqlite3.Connection, *, group_id: str) -> list[GroupNamespaceAccessRow]:
+    rows = conn.execute(
+        """
+        SELECT group_id, namespace, role, created_at, updated_at
+        FROM group_namespace_roles
+        WHERE group_id = ?
+        ORDER BY namespace ASC
+        """,
+        (group_id,),
+    ).fetchall()
+    return [_row_to_group_namespace_access(row) for row in rows]
+
+
+def list_group_roles_for_namespace(
+    conn: sqlite3.Connection,
+    *,
+    user_id: str,
+    namespace: str,
+) -> list[NamespaceRole]:
+    rows = conn.execute(
+        """
+        SELECT gnr.role
+        FROM group_memberships gm
+        JOIN group_namespace_roles gnr ON gm.group_id = gnr.group_id
+        WHERE gm.user_id = ? AND gnr.namespace = ?
+        """,
+        (user_id, namespace),
+    ).fetchall()
+    return [str(row["role"]) for row in rows]  # type: ignore[return-value]
+
+
+def list_group_namespace_access_for_user(
+    conn: sqlite3.Connection,
+    *,
+    user_id: str,
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT gnr.namespace, gnr.role, gnr.created_at, gnr.updated_at
+        FROM group_memberships gm
+        JOIN group_namespace_roles gnr ON gm.group_id = gnr.group_id
+        WHERE gm.user_id = ?
+        """,
+        (user_id,),
+    ).fetchall()
+    return [
+        {
+            "namespace": str(row["namespace"]),
+            "role": str(row["role"]),
+            "created_at": int(row["created_at"]),
+            "updated_at": int(row["updated_at"]),
+        }
+        for row in rows
+    ]
 
 
 def set_user_active(conn: sqlite3.Connection, user_id: str, *, is_active: bool) -> UserRow:

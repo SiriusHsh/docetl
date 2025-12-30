@@ -93,6 +93,27 @@ def update_user(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
+    target_platform_role = (
+        payload.platform_role.value if payload.platform_role is not None else user.platform_role
+    )
+    target_is_active = payload.is_active if payload.is_active is not None else user.is_active
+    will_remain_active_admin = (
+        user.platform_role == "platform_admin"
+        and user.is_active
+        and target_platform_role == "platform_admin"
+        and target_is_active
+    )
+    if (
+        user.platform_role == "platform_admin"
+        and user.is_active
+        and not will_remain_active_admin
+        and metadata_db.count_active_platform_admins(conn) <= 1
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot remove or disable the last platform admin",
+        )
+
     if payload.is_active is not None:
         user = metadata_db.set_user_active(conn, user_id, is_active=payload.is_active)
     if payload.platform_role is not None:

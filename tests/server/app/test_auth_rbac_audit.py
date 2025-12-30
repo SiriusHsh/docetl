@@ -104,3 +104,20 @@ def test_admin_rbac_and_audit_logs(client: TestClient) -> None:
     assert "user.create" in actions
     assert "membership.upsert" in actions
 
+    admin_me = client.get("/auth/me", headers=_auth_headers(admin_token))
+    assert admin_me.status_code == 200, admin_me.text
+    admin_id = admin_me.json()["user"]["id"]
+
+    disable_admin = client.patch(
+        f"/users/{admin_id}",
+        headers=_auth_headers(admin_token),
+        json={"is_active": False},
+    )
+    assert disable_admin.status_code == 400, disable_admin.text
+
+    demote_admin = client.patch(
+        f"/users/{admin_id}",
+        headers=_auth_headers(admin_token),
+        json={"platform_role": "user"},
+    )
+    assert demote_admin.status_code == 400, demote_admin.text

@@ -224,6 +224,50 @@ class SetMembershipRequest(BaseModel):
     role: NamespaceRole
 
 
+class GroupCreateRequest(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class GroupUpdateRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class GroupRecord(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    created_at: int
+    updated_at: int
+
+
+class GroupMemberCreateRequest(BaseModel):
+    user_id: str
+
+
+class GroupMemberRecord(BaseModel):
+    group_id: str
+    user_id: str
+    username: str
+    email: str | None = None
+    is_active: bool
+    platform_role: PlatformRole
+    joined_at: int
+
+
+class GroupNamespaceAccessRequest(BaseModel):
+    role: NamespaceRole
+
+
+class GroupNamespaceAccessRecord(BaseModel):
+    group_id: str
+    namespace: str
+    role: NamespaceRole
+    created_at: int
+    updated_at: int
+
+
 class AuditLogEntry(BaseModel):
     id: str
     occurred_at: int

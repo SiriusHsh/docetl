@@ -16,6 +16,11 @@ import {
 import * as localStorageKeys from "@/app/localStorageKeys";
 import { toast } from "@/hooks/use-toast";
 import { backendFetch } from "@/lib/backendFetch";
+import {
+  readNamespace,
+  subscribeToNamespaceChanges,
+  writeNamespace,
+} from "@/lib/namespace";
 
 const DEFAULT_NAMESPACE = "default";
 
@@ -359,7 +364,7 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const buildInitialState = (): PipelineState => {
-    const namespace = loadFromLocalStorage(localStorageKeys.NAMESPACE_KEY, null);
+    const namespace = readNamespace();
     const snapshot = {
       pipelineId: loadFromLocalStorage(localStorageKeys.PIPELINE_ID_KEY, null),
       operations: loadFromLocalStorage(
@@ -427,6 +432,8 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const stateRef = useRef(state);
+  const suppressNamespaceEventRef = useRef<string | null>(null);
+  const externalNamespaceUpdateRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = state;
@@ -440,10 +447,7 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!isMounted || state.namespace) {
       return;
     }
-    localStorage.setItem(
-      localStorageKeys.NAMESPACE_KEY,
-      JSON.stringify(DEFAULT_NAMESPACE)
-    );
+    writeNamespace(DEFAULT_NAMESPACE);
     setState((prev) => ({ ...prev, namespace: DEFAULT_NAMESPACE }));
   }, [isMounted, state.namespace]);
 
@@ -577,10 +581,11 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
         if (newValue !== prevState[key]) {
           if (key === "namespace") {
             clearPipelineState();
-            localStorage.setItem(
-              localStorageKeys.NAMESPACE_KEY,
-              JSON.stringify(newValue)
-            );
+            if (!externalNamespaceUpdateRef.current) {
+              suppressNamespaceEventRef.current =
+                (newValue as string | null) ?? null;
+              writeNamespace((newValue as string | null) ?? null);
+            }
             return { ...prevState, [key]: newValue, pipelineId: null };
           } else {
             if (key !== "apiKeys" && key !== "pipelineId") {
@@ -594,6 +599,27 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [clearPipelineState]
   );
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+    return subscribeToNamespaceChanges((next) => {
+      if (
+        suppressNamespaceEventRef.current &&
+        suppressNamespaceEventRef.current === next
+      ) {
+        suppressNamespaceEventRef.current = null;
+        return;
+      }
+      if (!next || next === stateRef.current.namespace) {
+        return;
+      }
+      externalNamespaceUpdateRef.current = true;
+      setStateAndUpdate("namespace", next);
+      externalNamespaceUpdateRef.current = false;
+    });
+  }, [isMounted, setStateAndUpdate]);
 
   const loadPipelineSnapshot = useCallback(
     (

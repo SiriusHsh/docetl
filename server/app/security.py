@@ -114,11 +114,28 @@ def assert_namespace_role(
     if current_user.platform_role == PlatformRole.PLATFORM_ADMIN:
         return NamespaceRole.NAMESPACE_ADMIN
 
-    role_str = metadata_db.get_namespace_role(conn, user_id=current_user.id, namespace=namespace)
-    if role_str is None:
+    roles: list[NamespaceRole] = []
+
+    direct_role = metadata_db.get_namespace_role(
+        conn,
+        user_id=current_user.id,
+        namespace=namespace,
+    )
+    if direct_role is not None:
+        roles.append(NamespaceRole(direct_role))
+
+    group_roles = metadata_db.list_group_roles_for_namespace(
+        conn,
+        user_id=current_user.id,
+        namespace=namespace,
+    )
+    for role_value in group_roles:
+        roles.append(NamespaceRole(role_value))
+
+    if not roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No access to namespace")
 
-    role = NamespaceRole(role_str)
+    role = max(roles, key=lambda value: _NAMESPACE_ROLE_RANK[value])
     if _NAMESPACE_ROLE_RANK[role] < _NAMESPACE_ROLE_RANK[min_role]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role for namespace")
 

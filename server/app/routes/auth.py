@@ -194,6 +194,27 @@ def me(current_user: CurrentUser = Depends(get_current_user), conn=Depends(get_d
     if user_row is None:
         raise HTTPException(status_code=404, detail="User not found")
     memberships = metadata_db.list_memberships(conn, user_id=current_user.id)
+    group_access = metadata_db.list_group_namespace_access_for_user(conn, user_id=current_user.id)
+    role_rank = {"viewer": 0, "editor": 1, "namespace_admin": 2}
+    effective: dict[str, dict[str, int | str]] = {}
+
+    for record in memberships + group_access:
+        namespace = str(record["namespace"])
+        role = str(record["role"])
+        created_at = int(record["created_at"])
+        updated_at = int(record["updated_at"])
+        existing = effective.get(namespace)
+        if existing is None or role_rank[role] > role_rank[str(existing["role"])]:
+            effective[namespace] = {
+                "namespace": namespace,
+                "role": role,
+                "created_at": created_at,
+                "updated_at": updated_at,
+            }
+        elif existing is not None and updated_at > int(existing["updated_at"]):
+            existing["updated_at"] = updated_at
+
+    memberships = sorted(effective.values(), key=lambda item: str(item["namespace"]))
     return MeResponse(
         user=_to_user_public(user_row),
         memberships=memberships,  # type: ignore[arg-type]
