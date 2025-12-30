@@ -31,6 +31,9 @@ except Exception:  # pragma: no cover - optional dependency
 
 DEFAULT_TIMEZONE = "Asia/Shanghai"
 DEFAULT_POLL_SECONDS = 5
+DEFAULT_RETRY_BACKOFF_SECONDS = 30
+DEFAULT_RETRY_BACKOFF_MULTIPLIER = 2.0
+DEFAULT_RETRY_MAX_BACKOFF_SECONDS = 3600
 
 
 @dataclass
@@ -134,6 +137,73 @@ def compute_due_runs(
         scheduled_times = [scheduled_times[-1]] if scheduled_times else []
 
     return scheduled_times, current
+
+
+def _max_attempts(retry_policy: dict[str, Any] | None) -> int:
+    if not isinstance(retry_policy, dict):
+        return 1
+    value = retry_policy.get("max_attempts", 1)
+    if isinstance(value, bool):
+        return 1
+    try:
+        value_int = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, value_int)
+
+
+def compute_retry_delay_seconds(
+    retry_policy: dict[str, Any] | None, next_attempt: int
+) -> int:
+    if next_attempt <= 1:
+        return 0
+    if not isinstance(retry_policy, dict):
+        return 0
+    base = retry_policy.get("backoff_seconds", DEFAULT_RETRY_BACKOFF_SECONDS)
+    multiplier = retry_policy.get(
+        "backoff_multiplier", DEFAULT_RETRY_BACKOFF_MULTIPLIER
+    )
+    max_backoff = retry_policy.get(
+        "max_backoff_seconds", DEFAULT_RETRY_MAX_BACKOFF_SECONDS
+    )
+    try:
+        base_val = float(base)
+    except (TypeError, ValueError):
+        base_val = float(DEFAULT_RETRY_BACKOFF_SECONDS)
+    try:
+        multiplier_val = float(multiplier)
+    except (TypeError, ValueError):
+        multiplier_val = float(DEFAULT_RETRY_BACKOFF_MULTIPLIER)
+    try:
+        max_backoff_val = float(max_backoff)
+    except (TypeError, ValueError):
+        max_backoff_val = float(DEFAULT_RETRY_MAX_BACKOFF_SECONDS)
+
+    if base_val <= 0:
+        return 0
+    if multiplier_val < 1:
+        multiplier_val = 1
+
+    delay = base_val * (multiplier_val ** max(0, next_attempt - 2))
+    if max_backoff_val > 0:
+        delay = min(delay, max_backoff_val)
+    return int(delay)
+
+
+def _notification_settings(
+    retry_policy: dict[str, Any] | None,
+) -> tuple[bool, bool, str | None]:
+    if not isinstance(retry_policy, dict):
+        return False, False, None
+    notify_on_each = bool(retry_policy.get("notify_on_each_failure", False))
+    notify_on_final = bool(retry_policy.get("notify_on_final_failure", False))
+    webhook_url = retry_policy.get("notify_webhook_url")
+    if isinstance(webhook_url, str) and webhook_url.strip():
+        notify_on_final = True
+        webhook_url = webhook_url.strip()
+    else:
+        webhook_url = None
+    return notify_on_each, notify_on_final, webhook_url
 
 
 def _resolve_dataset_path(
@@ -464,6 +534,7 @@ class DeploymentScheduler:
         pipeline = load_pipeline(deployment.namespace, deployment.pipeline_id)
         conn = metadata_db.get_connection()
         try:
+            max_attempts = _max_attempts(deployment.retry_policy)
             run_row = metadata_db.create_run(
                 conn,
                 namespace=deployment.namespace,
@@ -474,6 +545,8 @@ class DeploymentScheduler:
                 status="running",
                 scheduled_for=scheduled_for,
                 triggered_by_user_id=triggered_by_user_id,
+                attempt=1,
+                max_attempts=max_attempts,
             )
             metadata_db.update_deployment(
                 conn,
@@ -565,6 +638,7 @@ class DeploymentScheduler:
                 return
 
             pipeline = load_pipeline(deployment.namespace, deployment.pipeline_id)
+            max_attempts = _max_attempts(deployment.retry_policy)
             run_row = metadata_db.create_run(
                 conn,
                 namespace=deployment.namespace,
@@ -574,6 +648,8 @@ class DeploymentScheduler:
                 deployment_id=deployment.id,
                 status="running",
                 scheduled_for=scheduled_for,
+                attempt=1,
+                max_attempts=max_attempts,
             )
             metadata_db.update_deployment(conn, deployment.id, last_run_id=run_row.id)
             conn.commit()
@@ -619,12 +695,131 @@ class DeploymentScheduler:
             return True
         return False
 
+    async def _run_retry_after(
+        self,
+        *,
+        deployment_id: str,
+        run_id: str,
+        delay_seconds: int,
+    ) -> None:
+        if delay_seconds > 0:
+            await asyncio.sleep(delay_seconds)
+        conn = metadata_db.get_connection()
+        try:
+            deployment = metadata_db.get_deployment(conn, deployment_id)
+            run_row = metadata_db.get_run(conn, run_id)
+            if run_row is None:
+                return
+            if deployment is None or not deployment.enabled:
+                metadata_db.update_run(
+                    conn,
+                    run_id,
+                    status="cancelled",
+                    ended_at=metadata_db.utc_now_ts(),
+                    error="Deployment disabled",
+                )
+                conn.commit()
+                return
+            if not self._can_schedule(conn, deployment):
+                metadata_db.update_run(
+                    conn,
+                    run_id,
+                    status="cancelled",
+                    ended_at=metadata_db.utc_now_ts(),
+                    error="Retry skipped due to concurrency policy",
+                )
+                conn.commit()
+                return
+        finally:
+            conn.close()
+
+        await self._execute_run(deployment, run_id)
+
+    async def _send_failure_notification(
+        self,
+        *,
+        deployment: metadata_db.DeploymentRow,
+        run_id: str,
+        pipeline_name: str,
+        error_message: str,
+        attempt: int,
+        max_attempts: int,
+    ) -> None:
+        notify_on_each, notify_on_final, webhook_url = _notification_settings(
+            deployment.retry_policy
+        )
+        should_notify = notify_on_each or (notify_on_final and attempt >= max_attempts)
+        if not should_notify:
+            return
+
+        payload = {
+            "deployment_id": deployment.id,
+            "pipeline_id": deployment.pipeline_id,
+            "pipeline_name": pipeline_name,
+            "run_id": run_id,
+            "namespace": deployment.namespace,
+            "attempt": attempt,
+            "max_attempts": max_attempts,
+            "error": error_message,
+        }
+        success = True
+        error_detail: str | None = None
+
+        if webhook_url:
+            try:
+                import httpx
+
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    await client.post(webhook_url, json=payload)
+            except Exception as exc:  # pragma: no cover - network failure
+                success = False
+                error_detail = str(exc)
+                logger.warning("Failed to send deployment alert: %s", exc)
+
+        conn = metadata_db.get_connection()
+        try:
+            metadata_db.insert_audit_log(
+                conn,
+                actor_user_id=None,
+                actor_username=None,
+                action="deployment.alert",
+                resource_type="deployment",
+                resource_id=deployment.id,
+                namespace=deployment.namespace,
+                success=success,
+                detail={
+                    **payload,
+                    "webhook_url": webhook_url,
+                    "notify_error": error_detail,
+                },
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
     async def _execute_run(self, deployment: metadata_db.DeploymentRow, run_id: str) -> None:
         runner: DSLRunner | None = None
+        attempt = 1
+        max_attempts = _max_attempts(deployment.retry_policy)
+        pipeline_name = deployment.pipeline_id
         try:
             conn = metadata_db.get_connection()
             try:
+                run_row = metadata_db.get_run(conn, run_id)
+                if run_row is None:
+                    return
+                if run_row.status == "cancelled":
+                    return
+                attempt = run_row.attempt
+                max_attempts = run_row.max_attempts or max_attempts
                 pipeline = load_pipeline(deployment.namespace, deployment.pipeline_id)
+                pipeline_name = pipeline.name
+                metadata_db.update_run(
+                    conn,
+                    run_id,
+                    status="running",
+                    started_at=metadata_db.utc_now_ts(),
+                )
                 input_path = _resolve_dataset_path(
                     conn=conn,
                     namespace=deployment.namespace,
@@ -638,6 +833,7 @@ class DeploymentScheduler:
                     input_path=input_path,
                     optimizer_model=pipeline.state.get("optimizerModel"),
                 )
+                conn.commit()
             finally:
                 conn.close()
 
@@ -726,6 +922,67 @@ class DeploymentScheduler:
                 conn.close()
             update_pipeline_run_status(deployment.namespace, deployment.pipeline_id, "failed")
             logger.warning("Deployment run %s failed: %s", run_id, exc)
+            await self._send_failure_notification(
+                deployment=deployment,
+                run_id=run_id,
+                pipeline_name=pipeline_name,
+                error_message=str(exc),
+                attempt=attempt,
+                max_attempts=max_attempts,
+            )
+            if attempt < max_attempts:
+                delay = compute_retry_delay_seconds(
+                    deployment.retry_policy, attempt + 1
+                )
+                conn = metadata_db.get_connection()
+                try:
+                    retry_run = metadata_db.create_run(
+                        conn,
+                        namespace=deployment.namespace,
+                        pipeline_id=deployment.pipeline_id,
+                        pipeline_name=pipeline_name,
+                        trigger="deployment",
+                        deployment_id=deployment.id,
+                        status="pending",
+                        scheduled_for=metadata_db.utc_now_ts() + delay,
+                        attempt=attempt + 1,
+                        max_attempts=max_attempts,
+                        metadata={
+                            "retry_of": run_id,
+                            "attempt": attempt + 1,
+                            "last_error": str(exc),
+                        },
+                    )
+                    metadata_db.update_deployment(
+                        conn,
+                        deployment.id,
+                        last_run_id=retry_run.id,
+                    )
+                    metadata_db.insert_audit_log(
+                        conn,
+                        actor_user_id=None,
+                        actor_username=None,
+                        action="run.retry_scheduled",
+                        resource_type="run",
+                        resource_id=retry_run.id,
+                        namespace=deployment.namespace,
+                        success=True,
+                        detail={
+                            "previous_run_id": run_id,
+                            "next_attempt": attempt + 1,
+                            "delay_seconds": delay,
+                        },
+                    )
+                    conn.commit()
+                finally:
+                    conn.close()
+                asyncio.create_task(
+                    self._run_retry_after(
+                        deployment_id=deployment.id,
+                        run_id=retry_run.id,
+                        delay_seconds=delay,
+                    )
+                )
         finally:
             unregister_run(run_id)
             if runner is not None:

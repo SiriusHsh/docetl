@@ -53,6 +53,15 @@ type DeploymentRecord = {
   output_to_data_center: boolean;
   output_dataset_name_tpl?: string | null;
   misfire_policy: "skip" | "run_once" | "catch_up";
+  retry_policy?: {
+    max_attempts?: number;
+    backoff_seconds?: number;
+    backoff_multiplier?: number;
+    max_backoff_seconds?: number;
+    notify_on_each_failure?: boolean;
+    notify_on_final_failure?: boolean;
+    notify_webhook_url?: string | null;
+  } | null;
   max_catchup_runs?: number | null;
   last_run_id?: string | null;
   next_run_at?: number | null;
@@ -126,6 +135,12 @@ export default function DeploymentsPage() {
   const [formInputDatasetId, setFormInputDatasetId] = useState("none");
   const [formOutputToDataCenter, setFormOutputToDataCenter] = useState(false);
   const [formOutputTemplate, setFormOutputTemplate] = useState("");
+  const [formMaxAttempts, setFormMaxAttempts] = useState("1");
+  const [formBackoffSeconds, setFormBackoffSeconds] = useState("30");
+  const [formBackoffMultiplier, setFormBackoffMultiplier] = useState("2");
+  const [formMaxBackoffSeconds, setFormMaxBackoffSeconds] = useState("3600");
+  const [formNotifyOnFinalFailure, setFormNotifyOnFinalFailure] = useState(false);
+  const [formNotifyWebhookUrl, setFormNotifyWebhookUrl] = useState("");
 
   useEffect(() => {
     setNamespace(readNamespace());
@@ -199,6 +214,12 @@ export default function DeploymentsPage() {
     setFormInputDatasetId("none");
     setFormOutputToDataCenter(false);
     setFormOutputTemplate("");
+    setFormMaxAttempts("1");
+    setFormBackoffSeconds("30");
+    setFormBackoffMultiplier("2");
+    setFormMaxBackoffSeconds("3600");
+    setFormNotifyOnFinalFailure(false);
+    setFormNotifyWebhookUrl("");
     setDialogOpen(true);
   };
 
@@ -216,6 +237,22 @@ export default function DeploymentsPage() {
     setFormInputDatasetId(deployment.input_dataset_id || "none");
     setFormOutputToDataCenter(deployment.output_to_data_center);
     setFormOutputTemplate(deployment.output_dataset_name_tpl || "");
+    setFormMaxAttempts(
+      String(deployment.retry_policy?.max_attempts ?? 1)
+    );
+    setFormBackoffSeconds(
+      String(deployment.retry_policy?.backoff_seconds ?? 30)
+    );
+    setFormBackoffMultiplier(
+      String(deployment.retry_policy?.backoff_multiplier ?? 2)
+    );
+    setFormMaxBackoffSeconds(
+      String(deployment.retry_policy?.max_backoff_seconds ?? 3600)
+    );
+    setFormNotifyOnFinalFailure(
+      Boolean(deployment.retry_policy?.notify_on_final_failure)
+    );
+    setFormNotifyWebhookUrl(deployment.retry_policy?.notify_webhook_url || "");
     setDialogOpen(true);
   };
 
@@ -229,6 +266,23 @@ export default function DeploymentsPage() {
     return {
       every: Number(formIntervalEvery || 0),
       unit: formIntervalUnit,
+    };
+  };
+
+  const buildRetryPolicy = () => {
+    const maxAttempts = Math.max(1, Number(formMaxAttempts || 1));
+    const hasNotifications =
+      formNotifyOnFinalFailure || Boolean(formNotifyWebhookUrl.trim());
+    if (maxAttempts <= 1 && !hasNotifications) {
+      return null;
+    }
+    return {
+      max_attempts: maxAttempts,
+      backoff_seconds: Math.max(0, Number(formBackoffSeconds || 0)),
+      backoff_multiplier: Math.max(1, Number(formBackoffMultiplier || 1)),
+      max_backoff_seconds: Math.max(0, Number(formMaxBackoffSeconds || 0)),
+      notify_on_final_failure: formNotifyOnFinalFailure,
+      notify_webhook_url: formNotifyWebhookUrl.trim() || null,
     };
   };
 
@@ -253,6 +307,7 @@ export default function DeploymentsPage() {
       input_dataset_id: formInputDatasetId !== "none" ? formInputDatasetId : null,
       output_to_data_center: formOutputToDataCenter,
       output_dataset_name_tpl: formOutputTemplate.trim() || null,
+      retry_policy: buildRetryPolicy(),
     };
     setSaving(true);
     try {
@@ -666,6 +721,81 @@ export default function DeploymentsPage() {
                   />
                 </div>
               ) : null}
+            </div>
+
+            <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-slate-400">Retry Policy</div>
+                <span className="text-xs text-slate-500">
+                  Max attempts & backoff
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">Max attempts</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={formMaxAttempts}
+                    onChange={(event) => setFormMaxAttempts(event.target.value)}
+                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">
+                    Backoff (seconds)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formBackoffSeconds}
+                    onChange={(event) => setFormBackoffSeconds(event.target.value)}
+                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">
+                    Backoff multiplier
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    step="0.1"
+                    value={formBackoffMultiplier}
+                    onChange={(event) => setFormBackoffMultiplier(event.target.value)}
+                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">
+                    Max backoff (seconds)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formMaxBackoffSeconds}
+                    onChange={(event) => setFormMaxBackoffSeconds(event.target.value)}
+                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formNotifyOnFinalFailure}
+                    onCheckedChange={setFormNotifyOnFinalFailure}
+                  />
+                  <span className="text-xs text-slate-400">
+                    Notify on final failure
+                  </span>
+                </div>
+                <Input
+                  value={formNotifyWebhookUrl}
+                  onChange={(event) => setFormNotifyWebhookUrl(event.target.value)}
+                  placeholder="Webhook URL (optional)"
+                  className="bg-[#0f1116] border-slate-800 text-slate-200 md:max-w-sm"
+                />
+              </div>
             </div>
 
             <Button

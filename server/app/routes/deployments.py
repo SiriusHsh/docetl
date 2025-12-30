@@ -48,6 +48,45 @@ def _validate_schedule(
         raise HTTPException(status_code=400, detail="Unsupported schedule type")
 
 
+def _validate_retry_policy(policy: dict | None) -> None:
+    if policy is None:
+        return
+    if not isinstance(policy, dict):
+        raise HTTPException(status_code=400, detail="Retry policy must be an object")
+
+    def _ensure_number(field: str, *, minimum: float | None = None) -> None:
+        if field not in policy:
+            return
+        value = policy[field]
+        if isinstance(value, bool):
+            raise HTTPException(status_code=400, detail=f"{field} must be a number")
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail=f"{field} must be a number")
+        if minimum is not None and numeric < minimum:
+            raise HTTPException(
+                status_code=400, detail=f"{field} must be >= {minimum}"
+            )
+
+    def _ensure_bool(field: str) -> None:
+        if field not in policy:
+            return
+        if not isinstance(policy[field], bool):
+            raise HTTPException(status_code=400, detail=f"{field} must be boolean")
+
+    _ensure_number("max_attempts", minimum=1)
+    _ensure_number("backoff_seconds", minimum=0)
+    _ensure_number("backoff_multiplier", minimum=1)
+    _ensure_number("max_backoff_seconds", minimum=0)
+    _ensure_bool("notify_on_final_failure")
+    _ensure_bool("notify_on_each_failure")
+
+    webhook_url = policy.get("notify_webhook_url")
+    if webhook_url is not None and not isinstance(webhook_url, str):
+        raise HTTPException(status_code=400, detail="notify_webhook_url must be a string")
+
+
 def _to_record(row: metadata_db.DeploymentRow) -> DeploymentRecord:
     return DeploymentRecord(
         id=row.id,
@@ -129,6 +168,7 @@ def create_deployment(
         min_role=NamespaceRole.EDITOR,
     )
     _validate_schedule(request.schedule_type, request.schedule)
+    _validate_retry_policy(request.retry_policy)
 
     timezone = request.timezone or "Asia/Shanghai"
     load_pipeline(request.namespace, request.pipeline_id)
@@ -236,6 +276,8 @@ def update_deployment(
     )
     schedule = request.schedule if "schedule" in fields_set else row.schedule
     _validate_schedule(schedule_type, schedule)
+    if "retry_policy" in fields_set:
+        _validate_retry_policy(request.retry_policy)
 
     if request.pipeline_id:
         load_pipeline(row.namespace, request.pipeline_id)
