@@ -60,18 +60,18 @@ function StatCard({ label, value, helper, icon: Icon, highlight }: StatCardProps
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/5 bg-gradient-to-br from-white/5 to-transparent p-4 shadow-inner",
-        highlight && "border-emerald-400/40 shadow-emerald-500/10"
+        "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm",
+        highlight && "border-emerald-300 shadow-emerald-100/60"
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-300">{label}</span>
+        <span className="text-sm text-slate-600">{label}</span>
         <Icon className="h-4 w-4 text-slate-400" />
       </div>
-      <div className="mt-2 text-3xl font-semibold text-white">
+      <div className="mt-2 text-3xl font-semibold text-slate-900">
         {value ?? "--"}
       </div>
-      {helper ? <div className="mt-1 text-xs text-slate-400">{helper}</div> : null}
+      {helper ? <div className="mt-1 text-xs text-slate-500">{helper}</div> : null}
     </div>
   );
 }
@@ -217,8 +217,8 @@ export default function DashboardPage() {
   return (
     <div className="px-6 py-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-white">仪表盘</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-2xl font-semibold text-slate-900">仪表盘</h1>
+        <p className="text-sm text-slate-500">
           {namespace ? `当前工作区：${namespace}` : "请在执行页选择工作区后继续"}
         </p>
       </div>
@@ -251,13 +251,13 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-5">
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-slate-300">最近一次运行</div>
-            <div className="mt-1 text-lg font-medium text-white">{lastRunText}</div>
+            <div className="text-sm text-slate-600">最近一次运行</div>
+            <div className="mt-1 text-lg font-medium text-slate-900">{lastRunText}</div>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
             <Timer className="h-3 w-3" />
             <span>{loading ? "同步中" : "已同步"}</span>
           </div>
@@ -268,10 +268,10 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-slate-300">运行趋势</div>
+              <div className="text-sm text-slate-600">运行趋势</div>
               <div className="text-xs text-slate-500">最近 14 天</div>
             </div>
             <div className="text-xs text-slate-500">
@@ -280,7 +280,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-4 h-[220px]">
             {trendData.every((item) => item.runs === 0) ? (
-              <div className="h-full rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-sm text-slate-500">
+              <div className="h-full rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-sm text-slate-500">
                 暂无运行活动
               </div>
             ) : (
@@ -294,24 +294,24 @@ export default function DashboardPage() {
                   </defs>
                   <XAxis
                     dataKey="label"
-                    tick={{ fill: "#94a3b8", fontSize: 10 }}
+                    tick={{ fill: "#64748b", fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fill: "#94a3b8", fontSize: 10 }}
+                    tick={{ fill: "#64748b", fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <RechartsTooltip
                     contentStyle={{
-                      backgroundColor: "#0f1116",
-                      border: "1px solid rgba(148, 163, 184, 0.2)",
+                      backgroundColor: "#ffffff",
+                      border: "1px solid rgba(148, 163, 184, 0.3)",
                       borderRadius: 8,
-                      color: "#e2e8f0",
+                      color: "#0f172a",
                       fontSize: 12,
                     }}
-                    labelStyle={{ color: "#94a3b8" }}
+                    labelStyle={{ color: "#64748b" }}
                   />
                   <Area
                     type="monotone"
@@ -326,8 +326,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
-          <div className="text-sm text-slate-300">热门流水线</div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="text-sm text-slate-600">热门流水线</div>
           <div className="mt-4 space-y-4">
             {topPipelines.length === 0 ? (
               <div className="text-sm text-slate-500">暂无流水线活动。</div>
@@ -340,14 +340,14 @@ export default function DashboardPage() {
                 return (
                   <div key={pipeline.name} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-slate-200 truncate">
+                      <div className="text-sm text-slate-700 truncate">
                         {pipeline.name}
                       </div>
                       <div className="text-xs text-slate-500">
                         {pipeline.total} 次运行 · {failureRate}% 失败
                       </div>
                     </div>
-                    <div className="h-1.5 rounded-full bg-slate-800">
+                    <div className="h-1.5 rounded-full bg-slate-100">
                       <div
                         className="h-1.5 rounded-full bg-emerald-500/70"
                         style={{
@@ -363,12 +363,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-slate-800 bg-[#151921] p-5">
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-slate-300">最近运行</div>
+          <div className="text-sm text-slate-600">最近运行</div>
           <Link
             href="/console/runs"
-            className="text-xs text-blue-300 hover:text-blue-200"
+            className="text-xs text-blue-600 hover:text-blue-500"
           >
             查看全部
           </Link>
@@ -381,17 +381,17 @@ export default function DashboardPage() {
               <Link
                 key={run.id}
                 href={`/console/runs/${run.id}`}
-                className="flex items-center justify-between rounded-lg border border-slate-800 bg-[#0f1116] px-4 py-3 transition hover:border-slate-700"
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 <div>
-                  <div className="text-sm text-slate-200">
+                  <div className="text-sm text-slate-700">
                     {run.pipeline_name || "未命名流水线"}
                   </div>
                   <div className="text-xs text-slate-500">
                     {new Date(run.created_at * 1000).toLocaleString()}
                   </div>
                 </div>
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-500">
                   {runStatusLabels[run.status] || run.status}
                 </div>
               </Link>

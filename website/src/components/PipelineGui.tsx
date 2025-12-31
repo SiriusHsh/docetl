@@ -876,21 +876,21 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
         ref={headerRef}
         className={`flex-none relative sticky top-0 z-10 ${
           variant === "execute"
-            ? "border-b border-slate-800"
+            ? "border-b border-slate-200 bg-white"
             : "bg-background border-b shadow-sm"
         }`}
       >
         {variant === "execute" ? (
-          <div className="flex items-center justify-between px-6 py-4 bg-[#0B0E14]">
+          <div className="flex items-center justify-between px-6 py-4 bg-white">
             <div className="flex items-center gap-4">
-              <h3 className="text-xs uppercase tracking-wider font-bold text-slate-400">
+              <h3 className="text-xs uppercase tracking-wider font-bold text-slate-500">
                 执行流程
               </h3>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-[#1e2330] rounded-md text-xs font-medium transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors"
                 onClick={() => setIsSettingsOpen(true)}
               >
                 <Settings className="w-3.5 h-3.5" />
@@ -900,8 +900,8 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                 type="button"
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${
                   unsavedChanges
-                    ? "text-amber-200 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
-                    : "text-slate-300 border-slate-700/60 hover:text-white hover:bg-[#1e2330]"
+                    ? "text-amber-700 border-amber-300 bg-amber-50 hover:bg-amber-100"
+                    : "text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100"
                 }`}
                 onClick={handleManualSave}
                 disabled={isSavingPipeline}
@@ -918,7 +918,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
                 onClick={handleStop}
                 disabled={!isLoadingOutputs}
               >
@@ -927,7 +927,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-[#1e2330] rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
                 onClick={() => onRunAll(true)}
                 disabled={isLoadingOutputs}
               >
@@ -940,7 +940,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 px-4 py-1.5 text-white bg-blue-600 hover:bg-blue-500 rounded-md text-xs font-medium shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 disabled:bg-slate-700"
+                className="flex items-center gap-2 px-4 py-1.5 text-white bg-blue-600 hover:bg-blue-500 rounded-md text-xs font-medium shadow-sm transition-all disabled:opacity-50 disabled:bg-slate-300"
                 onClick={() => onRunAll(false)}
                 disabled={isLoadingOutputs}
               >
@@ -1366,14 +1366,14 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
       </div>
       <div
         className={`flex-1 overflow-y-auto min-h-0 ${
-          variant === "execute" ? "p-6 bg-[#0B0E14]/30" : "p-2"
+          variant === "execute" ? "p-6 bg-slate-50" : "p-2"
         }`}
       >
         <div
           className={cn(
             "space-y-2",
             variant === "execute" &&
-              "relative before:absolute before:inset-y-6 before:left-3 before:w-px before:bg-slate-700/60"
+              "relative before:absolute before:inset-y-6 before:left-3 before:w-px before:bg-slate-200"
           )}
         >
           {operations.map((op, index) => (
@@ -1389,7 +1389,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                 className={cn(
                   "w-full border-dashed h-16 hover:border-primary hover:bg-accent/50 transition-colors",
                   variant === "execute" &&
-                    "bg-[#0F131C] border-slate-700 text-slate-400 hover:bg-[#1a2030] hover:text-slate-200"
+                    "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 )}
               >
                 <Plus className="mr-2 h-4 w-4" />

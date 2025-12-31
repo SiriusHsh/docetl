@@ -1007,19 +1007,19 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
   return (
     <div className={isExecute ? "flex flex-col h-full min-h-0" : "w-full overflow-auto"}>
       {isExecute ? (
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-800 bg-[#0B0E14] text-xs">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-200 bg-slate-50 text-xs">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center h-7 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                className="flex items-center h-7 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               >
                 显示/隐藏列
                 <ChevronDown className="ml-1 h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-[#151921] border-slate-700 text-slate-200">
+            <DropdownMenuContent className="w-56 bg-white border-slate-200 text-slate-700">
               {table.getAllLeafColumns().map((column) => {
                 return (
                   <DropdownMenuCheckboxItem
@@ -1038,7 +1038,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+            className="h-7 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             onClick={resetColumnWidths}
           >
             重置宽度
@@ -1049,21 +1049,21 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 onClick={onDownload}
                 disabled={data.length === 0}
               >
                 <Download className="h-4 w-4" />
               </Button>
-              <div className="h-4 w-px bg-slate-700 mx-2" />
+              <div className="h-4 w-px bg-slate-200 mx-2" />
             </>
           )}
           {data.length > 0 && (
-            <div className="flex items-center gap-2 text-slate-400">
+            <div className="flex items-center gap-2 text-slate-600">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -1075,7 +1075,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
@@ -1233,7 +1233,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                   data-state={isSelected ? "selected" : undefined}
                   className={
                     isExecute
-                      ? "cursor-pointer border-slate-800/80 hover:bg-slate-900/40 data-[state=selected]:bg-blue-950/40 data-[state=selected]:ring-1 data-[state=selected]:ring-blue-500/30 data-[state=selected]:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]"
+                      ? "cursor-pointer border-slate-200 hover:bg-slate-50 data-[state=selected]:bg-blue-50 data-[state=selected]:ring-1 data-[state=selected]:ring-blue-200 data-[state=selected]:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]"
                       : undefined
                   }
                 >
@@ -1247,7 +1247,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                   >
                     <div className="flex flex-col items-center gap-1">
                       <span
-                        className={isExecute ? "text-slate-400" : "text-gray-500"}
+                        className={isExecute ? "text-slate-500" : "text-gray-500"}
                         style={{ fontSize: "0.75rem" }}
                       >
                         {row.index + 1}
@@ -1279,7 +1279,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                                 padding: "0.75rem 0.5rem",
                                 fontWeight: "normal",
                               }}
-                              className="text-sm text-slate-200 whitespace-pre-wrap break-words"
+                              className="text-sm text-slate-700 whitespace-pre-wrap break-words"
                             >
                               {typeof value === "object" && value !== null
                                 ? JSON.stringify(value, null, 2)

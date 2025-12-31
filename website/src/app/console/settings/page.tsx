@@ -111,36 +111,36 @@ export default function SettingsPage() {
   return (
     <div className="px-6 py-6">
       <div className="flex items-center gap-3">
-        <User className="h-6 w-6 text-slate-200" />
-        <h1 className="text-2xl font-semibold text-white">设置</h1>
+        <User className="h-6 w-6 text-slate-600" />
+        <h1 className="text-2xl font-semibold text-slate-900">设置</h1>
       </div>
-      <p className="mt-2 text-sm text-slate-400">
+      <p className="mt-2 text-sm text-slate-500">
         管理个人信息与会话。
       </p>
 
-      <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-5">
-        <div className="text-sm text-slate-300">当前用户</div>
-        <div className="mt-2 text-lg font-medium text-white">
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="text-sm text-slate-600">当前用户</div>
+        <div className="mt-2 text-lg font-medium text-slate-900">
           {user?.username || "未知用户"}
         </div>
         {user?.email ? (
-          <div className="mt-1 text-sm text-slate-400">{user.email}</div>
+          <div className="mt-1 text-sm text-slate-500">{user.email}</div>
         ) : null}
         <button
           type="button"
           onClick={handleLogout}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 hover:border-white/20 hover:bg-white/10"
+          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
         >
           <LogOut className="h-4 w-4" />
           退出登录
         </button>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-5">
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center gap-3">
-          <Layers className="h-5 w-5 text-slate-200" />
+          <Layers className="h-5 w-5 text-slate-600" />
           <div>
-            <div className="text-sm font-medium text-slate-200">
+            <div className="text-sm font-medium text-slate-700">
               工作区权限
             </div>
             <div className="text-xs text-slate-500">
@@ -150,11 +150,11 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-4 space-y-2">
-          <Label className="text-xs text-slate-400">工作区</Label>
+          <Label className="text-xs text-slate-500">工作区</Label>
           {membershipError ? (
-            <div className="text-sm text-red-400">{membershipError}</div>
+            <div className="text-sm text-rose-600">{membershipError}</div>
           ) : loadingMemberships ? (
-            <div className="text-sm text-slate-400">正在加载权限...</div>
+            <div className="text-sm text-slate-500">正在加载权限...</div>
           ) : memberships.length === 0 ? (
             <div className="text-sm text-slate-500">
               当前账号暂无工作区权限。
@@ -171,10 +171,10 @@ export default function SettingsPage() {
                 });
               }}
             >
-              <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+              <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                 <SelectValue placeholder="选择工作区" />
               </SelectTrigger>
-              <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+              <SelectContent className="bg-white border-slate-200 text-slate-700">
                 {memberships.map((membership) => (
                   <SelectItem
                     key={membership.namespace}

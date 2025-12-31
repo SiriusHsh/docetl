@@ -673,7 +673,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
 
   if (isExecute) {
     return (
-      <div className="flex flex-col h-full bg-[#0B0E14]">
+      <div className="flex flex-col h-full bg-white">
         <TableContent
           opName={opName}
           isLoadingOutputs={isLoadingOutputs}

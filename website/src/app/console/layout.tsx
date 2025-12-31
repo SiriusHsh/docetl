@@ -151,11 +151,11 @@ export default function ConsoleLayout({
   }, [isAdmin]);
 
   return (
-    <div className="min-h-screen bg-[#0f1116] text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="flex min-h-screen">
-        <aside className="w-64 border-r border-white/5 bg-[#11131a]">
+        <aside className="w-64 border-r border-slate-200 bg-white">
           <div className="flex items-center gap-3 px-5 py-5">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sky-300 via-cyan-200 to-emerald-200 text-[#0f1116] flex items-center justify-center font-bold">
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sky-300 via-cyan-200 to-emerald-200 text-slate-900 flex items-center justify-center font-bold">
               D
             </div>
             <div className="text-lg font-semibold tracking-wide">
@@ -173,8 +173,8 @@ export default function ConsoleLayout({
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
                     isActive
-                      ? "bg-white/10 text-white"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                      ? "bg-slate-200 text-slate-900"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -184,7 +184,7 @@ export default function ConsoleLayout({
             })}
           </nav>
           <div className="px-3 pb-4">
-            <div className="my-3 h-px bg-white/5" />
+            <div className="my-3 h-px bg-slate-200" />
             {secondaryNav.map((item) => {
               const Icon = item.icon;
               const isActive = activePath.startsWith(item.href);
@@ -195,8 +195,8 @@ export default function ConsoleLayout({
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
                     isActive
-                      ? "bg-white/10 text-white"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                      ? "bg-slate-200 text-slate-900"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -207,12 +207,12 @@ export default function ConsoleLayout({
           </div>
         </aside>
         <main className="flex-1">
-          <div className="min-h-screen bg-[#0f1116] flex flex-col">
-            <div className="sticky top-0 z-20 border-b border-white/5 bg-[#0f1116]/95 backdrop-blur">
+          <div className="min-h-screen bg-slate-50 flex flex-col">
+            <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
               <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3">
-                <div className="text-sm text-slate-400">
+                <div className="text-sm text-slate-600">
                   工作区：{" "}
-                  <span className="text-slate-200">
+                  <span className="text-slate-900">
                     {activeNamespace || "-"}
                   </span>
                 </div>
@@ -230,10 +230,10 @@ export default function ConsoleLayout({
                         onValueChange={setSelectedNamespace}
                         disabled={loadingMemberships}
                       >
-                        <SelectTrigger className="h-8 w-[220px] bg-[#11131a] border-white/10 text-slate-200">
+                        <SelectTrigger className="h-8 w-[220px] bg-white border-slate-200 text-slate-700">
                           <SelectValue placeholder="选择工作区" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                        <SelectContent className="bg-white border-slate-200 text-slate-900">
                           {memberships.map((membership) => (
                             <SelectItem
                               key={membership.namespace}
@@ -248,7 +248,7 @@ export default function ConsoleLayout({
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                        className="border-slate-300 text-slate-700 hover:bg-slate-100"
                         disabled={
                           loadingMemberships ||
                           !selectedNamespace ||

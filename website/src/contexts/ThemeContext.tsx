@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 export type Theme =
   | "default"
@@ -20,26 +20,26 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const themes = {
   default: {
-    background: "211 40% 99%",
-    foreground: "211 5% 0%",
-    card: "211 25% 97%",
-    "card-foreground": "211 5% 10%",
-    popover: "211 40% 99%",
-    "popover-foreground": "211 100% 0%",
-    primary: "211 100% 50%",
+    background: "0 0% 100%",
+    foreground: "222 47% 11%",
+    card: "0 0% 100%",
+    "card-foreground": "222 47% 11%",
+    popover: "0 0% 100%",
+    "popover-foreground": "222 47% 11%",
+    primary: "220 90% 56%",
     "primary-foreground": "0 0% 100%",
-    secondary: "211 30% 70%",
-    "secondary-foreground": "0 0% 0%",
-    muted: "173 30% 92%",
-    "muted-foreground": "211 5% 35%",
-    accent: "173 30% 90%",
-    "accent-foreground": "211 5% 10%",
-    destructive: "0 100% 30%",
-    "destructive-foreground": "211 5% 90%",
-    border: "211 30% 50%",
-    input: "211 30% 18%",
-    ring: "211 100% 50%",
-    chart1: "12 76% 61%",
+    secondary: "220 14% 96%",
+    "secondary-foreground": "222 47% 11%",
+    muted: "220 14% 96%",
+    "muted-foreground": "215 16% 47%",
+    accent: "210 40% 96%",
+    "accent-foreground": "222 47% 11%",
+    destructive: "0 72% 51%",
+    "destructive-foreground": "0 0% 100%",
+    border: "220 13% 91%",
+    input: "220 13% 91%",
+    ring: "220 90% 56%",
+    chart1: "220 90% 56%",
     chart2: "173 58% 39%",
     chart3: "197 37% 24%",
     chart4: "43 74% 66%",
@@ -204,13 +204,14 @@ const themes = {
 };
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("default");
+  const [theme, setThemeState] = useState<Theme>("default");
+  const setTheme = useCallback((nextTheme: Theme) => {
+    setThemeState(nextTheme === "default" ? "default" : "default");
+  }, []);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("color-theme") as Theme;
-    if (savedTheme && themes[savedTheme]) {
-      setTheme(savedTheme);
-    }
+    setThemeState("default");
+    localStorage.setItem("color-theme", "default");
   }, []);
 
   useEffect(() => {

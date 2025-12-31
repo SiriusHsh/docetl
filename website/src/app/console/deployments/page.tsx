@@ -416,10 +416,10 @@ export default function DeploymentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <CalendarClock className="h-6 w-6 text-slate-200" />
-            <h1 className="text-2xl font-semibold text-white">部署</h1>
+            <CalendarClock className="h-6 w-6 text-slate-600" />
+            <h1 className="text-2xl font-semibold text-slate-900">部署</h1>
           </div>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-slate-500">
             配置流水线自动运行。
           </p>
         </div>
@@ -427,7 +427,7 @@ export default function DeploymentsPage() {
           <Button
             type="button"
             variant="outline"
-            className="border-slate-700 text-slate-200 hover:bg-slate-800"
+            className="border-slate-200 text-slate-600 hover:bg-slate-50"
             onClick={() => void loadDeployments()}
             disabled={loading}
           >
@@ -449,32 +449,32 @@ export default function DeploymentsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-[#151921]">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
-          <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
+          <div className="p-6 flex items-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" /> 正在加载部署...
           </div>
         ) : deployments.length === 0 ? (
-          <div className="p-6 text-sm text-slate-400">
+          <div className="p-6 text-sm text-slate-500">
             暂无部署，可创建后自动调度流水线。
           </div>
         ) : (
           <Table>
-            <TableHeader className="bg-[#11141c]">
-              <TableRow className="border-slate-800">
-                <TableHead className="text-slate-300">部署</TableHead>
-                <TableHead className="text-slate-300">调度</TableHead>
-                <TableHead className="text-slate-300">下次运行</TableHead>
-                <TableHead className="text-slate-300">上次运行</TableHead>
-                <TableHead className="text-slate-300">状态</TableHead>
-                <TableHead className="text-slate-300 text-right">操作</TableHead>
+            <TableHeader className="bg-slate-50">
+              <TableRow className="border-slate-200">
+                <TableHead className="text-slate-600">部署</TableHead>
+                <TableHead className="text-slate-600">调度</TableHead>
+                <TableHead className="text-slate-600">下次运行</TableHead>
+                <TableHead className="text-slate-600">上次运行</TableHead>
+                <TableHead className="text-slate-600">状态</TableHead>
+                <TableHead className="text-slate-600 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {deployments.map((deployment) => (
-                <TableRow key={deployment.id} className="border-slate-800">
+                <TableRow key={deployment.id} className="border-slate-200">
                   <TableCell>
-                    <div className="text-sm text-slate-100 font-medium">
+                    <div className="text-sm text-slate-900 font-medium">
                       {deployment.name}
                     </div>
                     <div className="text-xs text-slate-500">
@@ -482,14 +482,14 @@ export default function DeploymentsPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm text-slate-200">
+                    <div className="text-sm text-slate-700">
                       {scheduleTypeLabels[deployment.schedule_type]}
                     </div>
                     <div className="text-xs text-slate-500">
                       {formatSchedule(deployment)}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-slate-300">
+                  <TableCell className="text-sm text-slate-600">
                     {deployment.next_run_at
                       ? formatTimestamp(deployment.next_run_at)
                       : "-"}
@@ -498,7 +498,7 @@ export default function DeploymentsPage() {
                     {deployment.last_run_id ? (
                       <Link
                         href={`/console/runs/${deployment.last_run_id}`}
-                        className="text-xs text-blue-300 hover:text-blue-200"
+                        className="text-xs text-blue-600 hover:text-blue-700"
                       >
                         {deployment.last_run_id.slice(0, 8)}
                       </Link>
@@ -515,7 +515,7 @@ export default function DeploymentsPage() {
                       <span
                         className={cn(
                           "text-xs",
-                          deployment.enabled ? "text-emerald-400" : "text-slate-500"
+                          deployment.enabled ? "text-emerald-600" : "text-slate-500"
                         )}
                       >
                         {deployment.enabled ? "启用" : "停用"}
@@ -527,7 +527,7 @@ export default function DeploymentsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                        className="border-slate-200 text-slate-600 hover:bg-slate-50"
                         onClick={() => handleTrigger(deployment)}
                       >
                         <Play className="mr-2 h-4 w-4" />
@@ -536,7 +536,7 @@ export default function DeploymentsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                        className="border-slate-200 text-slate-600 hover:bg-slate-50"
                         onClick={() => openEditDialog(deployment)}
                       >
                         <Settings className="mr-2 h-4 w-4" />
@@ -545,7 +545,7 @@ export default function DeploymentsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-red-500/40 text-red-300 hover:bg-red-500/10"
+                        className="border-rose-200 text-rose-600 hover:bg-rose-50"
                         onClick={() => handleDelete(deployment)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -561,29 +561,29 @@ export default function DeploymentsPage() {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-100">
+            <DialogTitle className="text-sm font-semibold text-slate-900">
               {editingDeployment ? "编辑部署" : "创建部署"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">名称</Label>
+                <Label className="text-xs text-slate-500">名称</Label>
                 <Input
                   value={formName}
                   onChange={(event) => setFormName(event.target.value)}
-                  className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="bg-white border-slate-200 text-slate-700"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">流水线</Label>
+                <Label className="text-xs text-slate-500">流水线</Label>
                 <Select value={formPipelineId} onValueChange={setFormPipelineId}>
-                  <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                  <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                     <SelectValue placeholder="选择流水线" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                  <SelectContent className="bg-white border-slate-200 text-slate-700">
                     {pipelines.map((pipeline) => (
                       <SelectItem key={pipeline.id} value={pipeline.id}>
                         {pipeline.name}
@@ -593,15 +593,15 @@ export default function DeploymentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">调度类型</Label>
+                <Label className="text-xs text-slate-500">调度类型</Label>
                 <Select
                   value={formScheduleType}
                   onValueChange={(value) => setFormScheduleType(value as ScheduleType)}
                 >
-                  <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                  <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                  <SelectContent className="bg-white border-slate-200 text-slate-700">
                     {Object.entries(scheduleTypeLabels).map(([value, label]) => (
                       <SelectItem key={value} value={value}>
                         {label}
@@ -611,23 +611,23 @@ export default function DeploymentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">时区</Label>
+                <Label className="text-xs text-slate-500">时区</Label>
                 <Input
                   value={formTimezone}
                   onChange={(event) => setFormTimezone(event.target.value)}
-                  className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="bg-white border-slate-200 text-slate-700"
                 />
               </div>
             </div>
 
             {formScheduleType === "cron" ? (
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">定时表达式</Label>
+                <Label className="text-xs text-slate-500">定时表达式</Label>
                 <Input
                   value={formCron}
                   onChange={(event) => setFormCron(event.target.value)}
                   placeholder="0 9 * * *"
-                  className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="bg-white border-slate-200 text-slate-700"
                 />
               </div>
             ) : null}
@@ -635,23 +635,23 @@ export default function DeploymentsPage() {
             {formScheduleType === "interval" ? (
               <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">间隔</Label>
+                  <Label className="text-xs text-slate-500">间隔</Label>
                   <Input
                     value={formIntervalEvery}
                     onChange={(event) => setFormIntervalEvery(event.target.value)}
-                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                    className="bg-white border-slate-200 text-slate-700"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">单位</Label>
+                  <Label className="text-xs text-slate-500">单位</Label>
                   <Select
                     value={formIntervalUnit}
                     onValueChange={setFormIntervalUnit}
                   >
-                    <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                    <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                    <SelectContent className="bg-white border-slate-200 text-slate-700">
                       <SelectItem value="seconds">秒</SelectItem>
                       <SelectItem value="minutes">分钟</SelectItem>
                       <SelectItem value="hours">小时</SelectItem>
@@ -664,27 +664,27 @@ export default function DeploymentsPage() {
 
             {formScheduleType === "once" ? (
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">运行时间（本地）</Label>
+                <Label className="text-xs text-slate-500">运行时间（本地）</Label>
                 <Input
                   type="datetime-local"
                   value={formRunAt}
                   onChange={(event) => setFormRunAt(event.target.value)}
-                  className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="bg-white border-slate-200 text-slate-700"
                 />
               </div>
             ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">输入数据集</Label>
+                <Label className="text-xs text-slate-500">输入数据集</Label>
                 <Select
                   value={formInputDatasetId}
                   onValueChange={setFormInputDatasetId}
                 >
-                  <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                  <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                     <SelectValue placeholder="使用流水线默认" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                  <SelectContent className="bg-white border-slate-200 text-slate-700">
                     <SelectItem value="none">使用流水线默认</SelectItem>
                     {datasets.map((dataset) => (
                       <SelectItem key={dataset.id} value={dataset.id}>
@@ -695,22 +695,22 @@ export default function DeploymentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">启用</Label>
+                <Label className="text-xs text-slate-500">启用</Label>
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={formEnabled}
                     onCheckedChange={setFormEnabled}
                   />
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-500">
                     {formEnabled ? "已启用" : "已停用"}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4 space-y-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-slate-400">输出到数据中心</div>
+                <div className="text-xs text-slate-500">输出到数据中心</div>
                 <Switch
                   checked={formOutputToDataCenter}
                   onCheckedChange={setFormOutputToDataCenter}
@@ -725,32 +725,32 @@ export default function DeploymentsPage() {
                     value={formOutputTemplate}
                     onChange={(event) => setFormOutputTemplate(event.target.value)}
                     placeholder="{{pipeline_name}}_{{date}}"
-                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                    className="bg-white border-slate-200 text-slate-700"
                   />
                 </div>
               ) : null}
             </div>
 
-            <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4 space-y-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-slate-400">重试策略</div>
+                <div className="text-xs text-slate-500">重试策略</div>
                 <span className="text-xs text-slate-500">
                   最大重试与退避
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">最大重试次数</Label>
+                  <Label className="text-xs text-slate-500">最大重试次数</Label>
                   <Input
                     type="number"
                     min={1}
                     value={formMaxAttempts}
                     onChange={(event) => setFormMaxAttempts(event.target.value)}
-                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                    className="bg-white border-slate-200 text-slate-700"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">
+                  <Label className="text-xs text-slate-500">
                     退避秒数
                   </Label>
                   <Input
@@ -758,11 +758,11 @@ export default function DeploymentsPage() {
                     min={0}
                     value={formBackoffSeconds}
                     onChange={(event) => setFormBackoffSeconds(event.target.value)}
-                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                    className="bg-white border-slate-200 text-slate-700"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">
+                  <Label className="text-xs text-slate-500">
                     退避倍率
                   </Label>
                   <Input
@@ -771,11 +771,11 @@ export default function DeploymentsPage() {
                     step="0.1"
                     value={formBackoffMultiplier}
                     onChange={(event) => setFormBackoffMultiplier(event.target.value)}
-                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                    className="bg-white border-slate-200 text-slate-700"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">
+                  <Label className="text-xs text-slate-500">
                     最大退避秒数
                   </Label>
                   <Input
@@ -783,7 +783,7 @@ export default function DeploymentsPage() {
                     min={0}
                     value={formMaxBackoffSeconds}
                     onChange={(event) => setFormMaxBackoffSeconds(event.target.value)}
-                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                    className="bg-white border-slate-200 text-slate-700"
                   />
                 </div>
               </div>
@@ -793,7 +793,7 @@ export default function DeploymentsPage() {
                     checked={formNotifyOnFinalFailure}
                     onCheckedChange={setFormNotifyOnFinalFailure}
                   />
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-500">
                     最终失败通知
                   </span>
                 </div>
@@ -801,7 +801,7 @@ export default function DeploymentsPage() {
                   value={formNotifyWebhookUrl}
                   onChange={(event) => setFormNotifyWebhookUrl(event.target.value)}
                   placeholder="回调地址（可选）"
-                  className="bg-[#0f1116] border-slate-800 text-slate-200 md:max-w-sm"
+                  className="bg-white border-slate-200 text-slate-700 md:max-w-sm"
                 />
               </div>
             </div>

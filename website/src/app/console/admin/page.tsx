@@ -792,11 +792,11 @@ export default function AdminPage() {
         <div className="max-w-xl rounded-2xl border border-red-500/30 bg-red-500/5 p-6">
           <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-red-300" />
-            <h1 className="text-xl font-semibold text-slate-100">
+            <h1 className="text-xl font-semibold text-slate-900">
               无权限访问
             </h1>
           </div>
-          <p className="mt-2 text-sm text-slate-300">
+          <p className="mt-2 text-sm text-slate-600">
             仅平台管理员可访问该页面。
           </p>
           <Button
@@ -815,8 +815,8 @@ export default function AdminPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <Users className="h-6 w-6 text-slate-200" />
-            <h1 className="text-2xl font-semibold text-white">管理后台</h1>
+            <Users className="h-6 w-6 text-slate-700" />
+            <h1 className="text-2xl font-semibold text-slate-900">管理后台</h1>
           </div>
           <p className="mt-2 text-sm text-slate-400">
             管理用户、权限与审计日志。
@@ -825,7 +825,7 @@ export default function AdminPage() {
         <Button
           type="button"
           variant="outline"
-          className="border-slate-700 text-slate-200 hover:bg-slate-800"
+          className="border-slate-200 text-slate-700 hover:bg-slate-50"
           onClick={() => {
             void loadUsers();
             void loadAuditLogs();
@@ -843,22 +843,22 @@ export default function AdminPage() {
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="bg-[#151921] border border-slate-800">
+        <TabsList className="bg-white border border-slate-200">
           <TabsTrigger
             value="users"
-            className="data-[state=active]:bg-[#0f1116] data-[state=active]:text-white"
+            className="data-[state=active]:bg-white data-[state=active]:text-slate-900"
           >
             用户
           </TabsTrigger>
           <TabsTrigger
             value="audit"
-            className="data-[state=active]:bg-[#0f1116] data-[state=active]:text-white"
+            className="data-[state=active]:bg-white data-[state=active]:text-slate-900"
           >
             审计日志
           </TabsTrigger>
           <TabsTrigger
             value="groups"
-            className="data-[state=active]:bg-[#0f1116] data-[state=active]:text-white"
+            className="data-[state=active]:bg-white data-[state=active]:text-slate-900"
           >
             分组
           </TabsTrigger>
@@ -866,7 +866,7 @@ export default function AdminPage() {
 
         <TabsContent value="users" className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="flex items-center gap-2 text-sm text-slate-300">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
               <Users className="h-4 w-4" />
               共 {users.length} 位用户
             </div>
@@ -875,7 +875,7 @@ export default function AdminPage() {
                 placeholder="搜索用户名/邮箱"
                 value={userSearch}
                 onChange={(event) => setUserSearch(event.target.value)}
-                className="w-64 bg-[#0f1116] border-slate-800 text-slate-200"
+                className="w-64 bg-white border-slate-200 text-slate-700"
               />
               <Button
                 type="button"
@@ -888,7 +888,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-[#151921]">
+          <div className="rounded-2xl border border-slate-200 bg-white">
             {usersError ? (
               <div className="p-6 text-sm text-red-400">{usersError}</div>
             ) : usersLoading ? (
@@ -899,13 +899,13 @@ export default function AdminPage() {
               <div className="p-6 text-sm text-slate-400">暂无用户。</div>
             ) : (
               <Table>
-                <TableHeader className="bg-[#11141c]">
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-300">用户</TableHead>
-                    <TableHead className="text-slate-300">平台角色</TableHead>
-                    <TableHead className="text-slate-300">状态</TableHead>
-                    <TableHead className="text-slate-300">最近登录</TableHead>
-                    <TableHead className="text-slate-300">操作</TableHead>
+                <TableHeader className="bg-slate-50">
+                  <TableRow className="border-slate-200">
+                    <TableHead className="text-slate-600">用户</TableHead>
+                    <TableHead className="text-slate-600">平台角色</TableHead>
+                    <TableHead className="text-slate-600">状态</TableHead>
+                    <TableHead className="text-slate-600">最近登录</TableHead>
+                    <TableHead className="text-slate-600">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -917,9 +917,9 @@ export default function AdminPage() {
                     const isLastActiveAdmin = isActiveAdmin && activeAdminCount <= 1;
                     const isProtected = isSelf || isLastActiveAdmin;
                     return (
-                      <TableRow key={user.id} className="border-slate-800">
+                      <TableRow key={user.id} className="border-slate-200">
                         <TableCell>
-                          <div className="font-medium text-slate-100">{user.username}</div>
+                          <div className="font-medium text-slate-900">{user.username}</div>
                           <div className="text-xs text-slate-400">
                             {user.email || "-"}
                           </div>
@@ -934,10 +934,10 @@ export default function AdminPage() {
                             }
                             disabled={isPending || isProtected}
                           >
-                            <SelectTrigger className="h-8 w-44 bg-[#0f1116] border-slate-800 text-slate-200">
+                            <SelectTrigger className="h-8 w-44 bg-white border-slate-200 text-slate-700">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                            <SelectContent className="bg-white border-slate-200 text-slate-900">
                               {PLATFORM_ROLES.map((role) => (
                                 <SelectItem key={role.value} value={role.value}>
                                   {role.label}
@@ -970,7 +970,7 @@ export default function AdminPage() {
                             ) : null}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-slate-300">
+                        <TableCell className="text-sm text-slate-600">
                           {formatTimestamp(user.last_login_at)}
                         </TableCell>
                         <TableCell>
@@ -978,7 +978,7 @@ export default function AdminPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                              className="border-slate-200 text-slate-700 hover:bg-slate-50"
                               onClick={() => handleOpenMemberships(user)}
                             >
                               权限
@@ -986,7 +986,7 @@ export default function AdminPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                              className="border-slate-200 text-slate-700 hover:bg-slate-50"
                               onClick={() => {
                                 setSelectedUser(user);
                                 setResetDialogOpen(true);
@@ -1006,7 +1006,7 @@ export default function AdminPage() {
         </TabsContent>
 
         <TabsContent value="audit" className="space-y-4">
-          <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-2">
                 <Label className="text-xs text-slate-400">工作区</Label>
@@ -1014,7 +1014,7 @@ export default function AdminPage() {
                   value={auditNamespace}
                   onChange={(event) => setAuditNamespace(event.target.value)}
                   placeholder="工作区"
-                  className="w-48 bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="w-48 bg-white border-slate-200 text-slate-700"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -1023,7 +1023,7 @@ export default function AdminPage() {
                   value={auditAction}
                   onChange={(event) => setAuditAction(event.target.value)}
                   placeholder="动作"
-                  className="w-48 bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="w-48 bg-white border-slate-200 text-slate-700"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -1032,7 +1032,7 @@ export default function AdminPage() {
                   value={auditActorUserId}
                   onChange={(event) => setAuditActorUserId(event.target.value)}
                   placeholder="操作者 ID"
-                  className="w-56 bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="w-56 bg-white border-slate-200 text-slate-700"
                 />
               </div>
               <Button
@@ -1045,7 +1045,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-[#151921]">
+          <div className="rounded-2xl border border-slate-200 bg-white">
             {auditError ? (
               <div className="p-6 text-sm text-red-400">{auditError}</div>
             ) : auditLoading ? (
@@ -1056,27 +1056,27 @@ export default function AdminPage() {
               <div className="p-6 text-sm text-slate-400">暂无审计日志。</div>
             ) : (
               <Table>
-                <TableHeader className="bg-[#11141c]">
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-300">时间</TableHead>
-                    <TableHead className="text-slate-300">操作者</TableHead>
-                    <TableHead className="text-slate-300">动作</TableHead>
-                    <TableHead className="text-slate-300">资源</TableHead>
-                    <TableHead className="text-slate-300">工作区</TableHead>
-                    <TableHead className="text-slate-300">结果</TableHead>
-                    <TableHead className="text-slate-300">详情</TableHead>
+                <TableHeader className="bg-slate-50">
+                  <TableRow className="border-slate-200">
+                    <TableHead className="text-slate-600">时间</TableHead>
+                    <TableHead className="text-slate-600">操作者</TableHead>
+                    <TableHead className="text-slate-600">动作</TableHead>
+                    <TableHead className="text-slate-600">资源</TableHead>
+                    <TableHead className="text-slate-600">工作区</TableHead>
+                    <TableHead className="text-slate-600">结果</TableHead>
+                    <TableHead className="text-slate-600">详情</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {auditLogs.map((log) => (
-                    <TableRow key={log.id} className="border-slate-800">
-                      <TableCell className="text-sm text-slate-300">
+                    <TableRow key={log.id} className="border-slate-200">
+                      <TableCell className="text-sm text-slate-600">
                         {formatTimestamp(log.occurred_at)}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-300">
+                      <TableCell className="text-sm text-slate-600">
                         {log.actor_username || log.actor_user_id || "-"}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-200">
+                      <TableCell className="text-sm text-slate-700">
                         {log.action}
                       </TableCell>
                       <TableCell className="text-sm text-slate-400">
@@ -1116,7 +1116,7 @@ export default function AdminPage() {
 
         <TabsContent value="groups" className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="flex items-center gap-2 text-sm text-slate-300">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
               <Shield className="h-4 w-4" />
               共 {groups.length} 个分组
             </div>
@@ -1125,7 +1125,7 @@ export default function AdminPage() {
                 placeholder="搜索分组"
                 value={groupSearch}
                 onChange={(event) => setGroupSearch(event.target.value)}
-                className="w-64 bg-[#0f1116] border-slate-800 text-slate-200"
+                className="w-64 bg-white border-slate-200 text-slate-700"
               />
               <Button
                 type="button"
@@ -1138,7 +1138,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-[#151921]">
+          <div className="rounded-2xl border border-slate-200 bg-white">
             {groupsError ? (
               <div className="p-6 text-sm text-red-400">{groupsError}</div>
             ) : groupsLoading ? (
@@ -1149,25 +1149,25 @@ export default function AdminPage() {
               <div className="p-6 text-sm text-slate-400">暂无分组。</div>
             ) : (
               <Table>
-                <TableHeader className="bg-[#11141c]">
-                  <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-300">分组</TableHead>
-                    <TableHead className="text-slate-300">描述</TableHead>
-                    <TableHead className="text-slate-300">更新时间</TableHead>
-                    <TableHead className="text-slate-300">操作</TableHead>
+                <TableHeader className="bg-slate-50">
+                  <TableRow className="border-slate-200">
+                    <TableHead className="text-slate-600">分组</TableHead>
+                    <TableHead className="text-slate-600">描述</TableHead>
+                    <TableHead className="text-slate-600">更新时间</TableHead>
+                    <TableHead className="text-slate-600">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredGroups.map((group) => (
-                    <TableRow key={group.id} className="border-slate-800">
+                    <TableRow key={group.id} className="border-slate-200">
                       <TableCell>
-                        <div className="font-medium text-slate-100">{group.name}</div>
+                        <div className="font-medium text-slate-900">{group.name}</div>
                         <div className="text-xs text-slate-500">{group.id}</div>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-300">
+                      <TableCell className="text-sm text-slate-600">
                         {group.description || "-"}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-300">
+                      <TableCell className="text-sm text-slate-600">
                         {formatTimestamp(group.updated_at)}
                       </TableCell>
                       <TableCell>
@@ -1175,7 +1175,7 @@ export default function AdminPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50"
                             onClick={() => handleOpenManageGroup(group)}
                           >
                             管理
@@ -1183,7 +1183,7 @@ export default function AdminPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50"
                             onClick={() => handleOpenGroupForm(group)}
                           >
                             编辑
@@ -1208,9 +1208,9 @@ export default function AdminPage() {
       </Tabs>
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-100">
+            <DialogTitle className="text-sm font-semibold text-slate-900">
               创建用户
             </DialogTitle>
           </DialogHeader>
@@ -1221,7 +1221,7 @@ export default function AdminPage() {
                 value={createUsername}
                 onChange={(event) => setCreateUsername(event.target.value)}
                 placeholder="用户名"
-                className="bg-[#0f1116] border-slate-800 text-slate-200"
+                className="bg-white border-slate-200 text-slate-700"
               />
             </div>
             <div className="space-y-2">
@@ -1230,7 +1230,7 @@ export default function AdminPage() {
                 value={createEmail}
                 onChange={(event) => setCreateEmail(event.target.value)}
                 placeholder="邮箱"
-                className="bg-[#0f1116] border-slate-800 text-slate-200"
+                className="bg-white border-slate-200 text-slate-700"
               />
             </div>
             <div className="space-y-2">
@@ -1240,7 +1240,7 @@ export default function AdminPage() {
                 onChange={(event) => setCreatePassword(event.target.value)}
                 placeholder="至少 8 位"
                 type="password"
-                className="bg-[#0f1116] border-slate-800 text-slate-200"
+                className="bg-white border-slate-200 text-slate-700"
               />
             </div>
             <div className="space-y-2">
@@ -1249,10 +1249,10 @@ export default function AdminPage() {
                 value={createRole}
                 onValueChange={(value) => setCreateRole(value as PlatformRole)}
               >
-                <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                <SelectContent className="bg-white border-slate-200 text-slate-900">
                   {PLATFORM_ROLES.map((role) => (
                     <SelectItem key={role.value} value={role.value}>
                       {role.label}
@@ -1279,16 +1279,16 @@ export default function AdminPage() {
       </Dialog>
 
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-100">
+            <DialogTitle className="text-sm font-semibold text-slate-900">
               重置密码
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="text-sm text-slate-300">
+            <div className="text-sm text-slate-600">
               为{" "}
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-slate-900">
                 {selectedUser?.username}
               </span>
               设置新密码。
@@ -1300,7 +1300,7 @@ export default function AdminPage() {
                 onChange={(event) => setResetPassword(event.target.value)}
                 placeholder="至少 8 位"
                 type="password"
-                className="bg-[#0f1116] border-slate-800 text-slate-200"
+                className="bg-white border-slate-200 text-slate-700"
               />
             </div>
             <Button
@@ -1321,20 +1321,20 @@ export default function AdminPage() {
       </Dialog>
 
       <Dialog open={membershipDialogOpen} onOpenChange={setMembershipDialogOpen}>
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-[640px]">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[640px]">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-100">
+            <DialogTitle className="text-sm font-semibold text-slate-900">
               工作区权限
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="text-sm text-slate-300">
+            <div className="text-sm text-slate-600">
               用户：{" "}
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-slate-900">
                 {selectedUser?.username}
               </span>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4">
+            <div className="rounded-lg border border-slate-200 bg-white p-4">
               <div className="text-xs text-slate-400 mb-2">当前权限</div>
               {membershipLoading ? (
                 <div className="text-sm text-slate-400 flex items-center gap-2">
@@ -1347,10 +1347,10 @@ export default function AdminPage() {
                   {memberships.map((item) => (
                     <div
                       key={item.namespace}
-                      className="flex items-center justify-between text-sm text-slate-200"
+                      className="flex items-center justify-between text-sm text-slate-700"
                     >
                       <div>
-                        <span className="font-medium text-white">
+                        <span className="font-medium text-slate-900">
                           {item.namespace}
                         </span>
                         <span className="ml-2 text-xs text-slate-500">
@@ -1379,7 +1379,7 @@ export default function AdminPage() {
                   value={membershipNamespace}
                   onChange={(event) => setMembershipNamespace(event.target.value)}
                   placeholder="工作区"
-                  className="bg-[#0f1116] border-slate-800 text-slate-200"
+                  className="bg-white border-slate-200 text-slate-700"
                 />
               </div>
               <div className="space-y-2">
@@ -1388,10 +1388,10 @@ export default function AdminPage() {
                   value={membershipRole}
                   onValueChange={(value) => setMembershipRole(value as NamespaceRole)}
                 >
-                  <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                  <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
                     {NAMESPACE_ROLES.map((role) => (
                       <SelectItem key={role.value} value={role.value}>
                         {role.label}
@@ -1422,9 +1422,9 @@ export default function AdminPage() {
       </Dialog>
 
       <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-100">
+            <DialogTitle className="text-sm font-semibold text-slate-900">
               {editingGroup ? "编辑分组" : "创建分组"}
             </DialogTitle>
           </DialogHeader>
@@ -1435,7 +1435,7 @@ export default function AdminPage() {
                 value={groupFormName}
                 onChange={(event) => setGroupFormName(event.target.value)}
                 placeholder="分组名称"
-                className="bg-[#0f1116] border-slate-800 text-slate-200"
+                className="bg-white border-slate-200 text-slate-700"
               />
             </div>
             <div className="space-y-2">
@@ -1444,7 +1444,7 @@ export default function AdminPage() {
                 value={groupFormDescription}
                 onChange={(event) => setGroupFormDescription(event.target.value)}
                 placeholder="可选描述"
-                className="bg-[#0f1116] border-slate-800 text-slate-200"
+                className="bg-white border-slate-200 text-slate-700"
               />
             </div>
             <Button
@@ -1473,16 +1473,16 @@ export default function AdminPage() {
           }
         }}
       >
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-[880px]">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[880px]">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-100">
+            <DialogTitle className="text-sm font-semibold text-slate-900">
               管理分组
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="text-sm text-slate-300">
+            <div className="text-sm text-slate-600">
               分组：{" "}
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-slate-900">
                 {activeGroup?.name || "-"}
               </span>
             </div>
@@ -1491,7 +1491,7 @@ export default function AdminPage() {
                 <div className="text-xs uppercase tracking-wider text-slate-400">
                   成员
                 </div>
-                <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4">
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
                   {groupMembersError ? (
                     <div className="text-sm text-red-400">{groupMembersError}</div>
                   ) : groupMembersLoading ? (
@@ -1505,10 +1505,10 @@ export default function AdminPage() {
                       {groupMembers.map((member) => (
                         <div
                           key={member.user_id}
-                          className="flex items-center justify-between text-sm text-slate-200"
+                          className="flex items-center justify-between text-sm text-slate-700"
                         >
                           <div>
-                            <span className="font-medium text-white">
+                            <span className="font-medium text-slate-900">
                               {member.username}
                             </span>
                             <span className="ml-2 text-xs text-slate-500">
@@ -1529,10 +1529,10 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Select value={memberToAdd} onValueChange={setMemberToAdd}>
-                    <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                    <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                       <SelectValue placeholder="选择用户" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
                       {availableMemberOptions.length === 0 ? (
                         <SelectItem value="__none" disabled>
                           暂无可添加用户
@@ -1566,7 +1566,7 @@ export default function AdminPage() {
                 <div className="text-xs uppercase tracking-wider text-slate-400">
                   工作区权限
                 </div>
-                <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4">
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
                   {groupAccessError ? (
                     <div className="text-sm text-red-400">{groupAccessError}</div>
                   ) : groupAccessLoading ? (
@@ -1580,10 +1580,10 @@ export default function AdminPage() {
                       {groupAccess.map((entry) => (
                         <div
                           key={entry.namespace}
-                          className="flex items-center justify-between text-sm text-slate-200"
+                          className="flex items-center justify-between text-sm text-slate-700"
                         >
                           <div>
-                            <span className="font-medium text-white">
+                            <span className="font-medium text-slate-900">
                               {entry.namespace}
                             </span>
                             <span className="ml-2 text-xs text-slate-500">
@@ -1619,16 +1619,16 @@ export default function AdminPage() {
                     value={accessNamespace}
                     onChange={(event) => setAccessNamespace(event.target.value)}
                     placeholder="工作区"
-                    className="bg-[#0f1116] border-slate-800 text-slate-200"
+                    className="bg-white border-slate-200 text-slate-700"
                   />
                   <Select
                     value={accessRole}
                     onValueChange={(value) => setAccessRole(value as NamespaceRole)}
                   >
-                    <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+                    <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
                       {NAMESPACE_ROLES.map((role) => (
                         <SelectItem key={role.value} value={role.value}>
                           {role.label}

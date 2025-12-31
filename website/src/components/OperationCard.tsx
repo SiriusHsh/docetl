@@ -106,20 +106,20 @@ interface OperationHeaderProps {
 }
 
 const executeBadgeStyles: Partial<Record<Operation["type"], string>> = {
-  map: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
-  filter: "bg-amber-500/20 text-amber-200 border-amber-500/30",
-  reduce: "bg-orange-500/20 text-orange-200 border-orange-500/30",
-  split: "bg-purple-500/20 text-purple-200 border-purple-500/30",
-  gather: "bg-sky-500/20 text-sky-200 border-sky-500/30",
-  sample: "bg-indigo-500/20 text-indigo-200 border-indigo-500/30",
-  resolve: "bg-pink-500/20 text-pink-200 border-pink-500/30",
-  unnest: "bg-slate-500/20 text-slate-200 border-slate-500/30",
-  extract: "bg-teal-500/20 text-teal-200 border-teal-500/30",
-  parallel_map: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
-  rank: "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/30",
-  code_map: "bg-blue-500/20 text-blue-200 border-blue-500/30",
-  code_reduce: "bg-orange-500/20 text-orange-200 border-orange-500/30",
-  code_filter: "bg-amber-500/20 text-amber-200 border-amber-500/30",
+  map: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  filter: "bg-amber-50 text-amber-700 border-amber-200",
+  reduce: "bg-orange-50 text-orange-700 border-orange-200",
+  split: "bg-purple-50 text-purple-700 border-purple-200",
+  gather: "bg-sky-50 text-sky-700 border-sky-200",
+  sample: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  resolve: "bg-pink-50 text-pink-700 border-pink-200",
+  unnest: "bg-slate-50 text-slate-700 border-slate-200",
+  extract: "bg-teal-50 text-teal-700 border-teal-200",
+  parallel_map: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  rank: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
+  code_map: "bg-blue-50 text-blue-700 border-blue-200",
+  code_reduce: "bg-orange-50 text-orange-700 border-orange-200",
+  code_filter: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
 const OPERATION_TYPE_LABELS: Record<Operation["type"], string> = {
@@ -141,7 +141,7 @@ const OPERATION_TYPE_LABELS: Record<Operation["type"], string> = {
 
 const getExecuteBadgeStyle = (type: Operation["type"]) =>
   executeBadgeStyles[type] ??
-  "bg-slate-700/60 text-slate-200 border-slate-600/60";
+  "bg-slate-50 text-slate-600 border-slate-200";
 
 const getOperationTypeLabel = (type: Operation["type"]) =>
   OPERATION_TYPE_LABELS[type] ?? type;
@@ -327,7 +327,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                     llmType === "LLM" &&
                       !isExecute &&
                       "bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text font-semibold",
-                    isExecute && "text-slate-100"
+                    isExecute && "text-slate-900"
                   )}
                 >
                   {name}
@@ -353,7 +353,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
             className={cn(
               "flex items-center gap-1",
               isExecute &&
-                "border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1b2230] hover:text-slate-100"
+                "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
             )}
             onClick={onShowOutput}
             disabled={disabled}
@@ -373,7 +373,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
               className={cn(
                 "flex items-center gap-1",
                 isExecute &&
-                  "border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1b2230] hover:text-slate-100"
+                  "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
               )}
               onClick={onImprovePrompt}
             >
@@ -392,7 +392,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                 className={cn(
                   "h-8 w-8 p-0",
                   isExecute &&
-                    "border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1b2230] hover:text-slate-100"
+                    "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                 )}
               >
                 <Menu className="h-4 w-4" />
@@ -401,7 +401,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
             <PopoverContent
               className={cn(
                 "w-56 p-1",
-                isExecute && "bg-[#161b26] border-slate-700 text-slate-200"
+                isExecute && "bg-white border-slate-200 text-slate-700"
               )}
               align="end"
             >
@@ -433,7 +433,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   <div
                     className={cn(
                       "h-px my-1",
-                      isExecute ? "bg-slate-700/60" : "bg-gray-100"
+                      isExecute ? "bg-slate-200" : "bg-gray-100"
                     )}
                   />
                 )}
@@ -471,7 +471,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                     <div
                       className={cn(
                         "h-px my-1",
-                        isExecute ? "bg-slate-700/60" : "bg-gray-100"
+                        isExecute ? "bg-slate-200" : "bg-gray-100"
                       )}
                     />
                   </>
@@ -525,7 +525,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                 <div
                   className={cn(
                     "h-px my-1",
-                    isExecute ? "bg-slate-700/60" : "bg-gray-100"
+                    isExecute ? "bg-slate-200" : "bg-gray-100"
                   )}
                 />
 
@@ -549,7 +549,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
             size="sm"
             className={cn(
               "h-8 w-8 p-0 rounded-full",
-              isExecute ? "hover:bg-slate-800" : "hover:bg-gray-100"
+              isExecute ? "hover:bg-slate-100" : "hover:bg-gray-100"
             )}
             onClick={onToggleExpand}
           >
@@ -557,7 +557,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
               className={cn(
                 "h-4 w-4 transform transition-transform",
                 expanded ? "rotate-180" : "",
-                isExecute ? "text-slate-400" : "text-gray-600"
+                isExecute ? "text-slate-500" : "text-gray-600"
               )}
             />
           </Button>
@@ -1248,7 +1248,7 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
       return {
         label: "等待中",
         value: 0,
-        color: "bg-slate-600",
+        color: "bg-slate-300",
         tone: "text-slate-500",
       };
     }
@@ -1260,13 +1260,13 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
             label: "处理中...",
             value: 45,
             color: "bg-blue-500",
-            tone: "text-blue-400",
+            tone: "text-blue-600",
           }
         : {
             label: "已完成",
             value: 100,
             color: "bg-emerald-500",
-            tone: "text-emerald-400",
+            tone: "text-emerald-600",
           };
     }
 
@@ -1274,7 +1274,7 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
       label: "已完成",
       value: 100,
       color: "bg-emerald-500",
-      tone: "text-emerald-400",
+      tone: "text-emerald-600",
     };
   }, [isExecute, isLoadingOutputs, operationId, pipelineOutput]);
 
@@ -1302,17 +1302,17 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
       className={cn(
         "mb-2 relative w-full pl-6 rounded-lg border transition-colors",
         isExecute
-          ? "bg-[#151921] border-slate-800/80 shadow-sm hover:bg-[#1a1f2b]"
+          ? "bg-white border-slate-200 shadow-sm hover:bg-slate-50"
           : "bg-card border-border/40 shadow-[0_1px_3px_0_rgb(0,0,0,0.05)] hover:shadow-md",
         !isExecute &&
           pipelineOutput?.operationId === operation.id &&
           "border-primary border-2",
         isExecute
-          ? "before:absolute before:left-2 before:top-6 before:h-2 before:w-2 before:rounded-full before:bg-slate-500/80 before:border before:border-slate-500/60"
+          ? "before:absolute before:left-2 before:top-6 before:h-2 before:w-2 before:rounded-full before:bg-slate-300 before:border before:border-slate-200"
           : null,
         isExecute &&
           isExpanded &&
-          "border-blue-500/60 ring-1 ring-blue-500/20 shadow-lg",
+          "border-blue-300 ring-1 ring-blue-200/60 shadow-sm",
         !operation.visibility && "opacity-50"
       )}
     >
@@ -1356,7 +1356,7 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
             </span>
             <span className="text-slate-500">{durationText}</span>
           </div>
-          <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-500 ease-out relative",
@@ -1365,7 +1365,7 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
               style={{ width: `${progressMeta.value}%` }}
             >
               {isRunning ? (
-                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                <div className="absolute inset-0 bg-white/50 animate-pulse" />
               ) : null}
             </div>
           </div>

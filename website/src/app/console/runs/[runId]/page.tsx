@@ -53,11 +53,11 @@ const statusLabelMap: Record<RunStatus, string> = {
 };
 
 const statusClassMap: Record<RunStatus, string> = {
-  pending: "bg-amber-500/10 text-amber-300 border-amber-500/30",
-  running: "bg-sky-500/10 text-sky-300 border-sky-500/30",
-  completed: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
-  failed: "bg-red-500/10 text-red-300 border-red-500/30",
-  cancelled: "bg-slate-500/10 text-slate-400 border-slate-500/30",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  running: "bg-sky-50 text-sky-700 border-sky-200",
+  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
+  cancelled: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 const formatTimestamp = (value?: number | null) => {
@@ -155,7 +155,7 @@ const FilePreviewDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-3xl">
+      <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold text-slate-100">
             {title}
@@ -167,8 +167,8 @@ const FilePreviewDialog = ({
             {error ? (
               <div className="text-sm text-red-400">{error}</div>
             ) : (
-              <ScrollArea className="h-[360px] rounded-lg border border-slate-800 bg-[#0f1116] p-3">
-                <pre className="text-xs text-slate-200 whitespace-pre-wrap">
+              <ScrollArea className="h-[360px] rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <pre className="text-xs text-slate-700 whitespace-pre-wrap">
                   {content || (loading ? "加载中..." : "暂无内容")}
                 </pre>
               </ScrollArea>
@@ -177,7 +177,7 @@ const FilePreviewDialog = ({
               <Button
                 type="button"
                 variant="outline"
-                className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                className="border-slate-200 text-slate-600 hover:bg-slate-50"
                 onClick={() => {
                   if (!path) return;
                   window.open(
@@ -281,7 +281,7 @@ export default function RunDetailPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/console/runs"
-            className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-slate-100"
+            className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
           >
             <ArrowLeft className="h-4 w-4" />
             返回运行记录
@@ -301,7 +301,7 @@ export default function RunDetailPage() {
           <Button
             type="button"
             variant="outline"
-            className="border-slate-700 text-slate-200 hover:bg-slate-800"
+            className="border-slate-300 text-slate-700 hover:bg-slate-100"
             onClick={() => void loadRun()}
             disabled={loading}
           >
@@ -316,7 +316,7 @@ export default function RunDetailPage() {
             <Button
               type="button"
               variant="outline"
-              className="border-red-500/40 text-red-300 hover:bg-red-500/10"
+              className="border-red-300 text-red-600 hover:bg-red-50"
               onClick={handleCancel}
               disabled={pendingCancel}
             >
@@ -332,49 +332,49 @@ export default function RunDetailPage() {
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6 text-sm text-red-300">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
           {error}
         </div>
       ) : loading && !run ? (
-        <div className="rounded-2xl border border-slate-800 bg-[#151921] p-6 text-sm text-slate-400 flex items-center gap-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" /> 正在加载运行详情...
         </div>
       ) : run ? (
         <>
-          <div className="rounded-2xl border border-slate-800 bg-[#151921] p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-xs uppercase tracking-wider text-slate-500">
                   运行
                 </div>
-                <h1 className="text-2xl font-semibold text-white mt-1">
+                <h1 className="text-2xl font-semibold text-slate-900 mt-1">
                   {run.id}
                 </h1>
               </div>
-              <div className="text-sm text-slate-400">
+              <div className="text-sm text-slate-500">
                 创建时间 {formatTimestamp(run.created_at)}
               </div>
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs text-slate-500">流水线</div>
-                <div className="mt-1 text-sm text-white">
+                <div className="mt-1 text-sm text-slate-900">
                   {run.pipeline_name || "未命名流水线"}
                 </div>
                 <div className="text-xs text-slate-500">
                   {run.pipeline_id || "-"}
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs text-slate-500">触发方式</div>
-                <div className="mt-1 text-sm text-white">{run.trigger}</div>
+                <div className="mt-1 text-sm text-slate-900">{run.trigger}</div>
                 <div className="text-xs text-slate-500">
                   部署 {run.deployment_id || "-"}
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs text-slate-500">时间</div>
-                <div className="mt-1 text-sm text-white">
+                <div className="mt-1 text-sm text-slate-900">
                   开始 {formatTimestamp(run.started_at)}
                 </div>
                 <div className="text-xs text-slate-500">
@@ -384,9 +384,9 @@ export default function RunDetailPage() {
                   耗时 {formatDuration(run)}
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs text-slate-500">成本</div>
-                <div className="mt-1 text-sm text-white">
+                <div className="mt-1 text-sm text-slate-900">
                   {formatCost(run.cost)}
                 </div>
                 <div className="text-xs text-slate-500">
@@ -398,11 +398,11 @@ export default function RunDetailPage() {
           </div>
 
           {run.error ? (
-            <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-5 text-sm text-red-200 flex items-start gap-2">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 mt-0.5" />
               <div>
-                <div className="font-semibold text-red-100">运行失败</div>
-                <div className="mt-1 text-xs text-red-200 whitespace-pre-wrap">
+                <div className="font-semibold text-red-700">运行失败</div>
+                <div className="mt-1 text-xs text-red-700 whitespace-pre-wrap">
                   {run.error}
                 </div>
               </div>
@@ -410,13 +410,13 @@ export default function RunDetailPage() {
           ) : null}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5 space-y-3">
-              <div className="text-sm font-semibold text-white">产物</div>
-              <div className="space-y-3 text-sm text-slate-300">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
+              <div className="text-sm font-semibold text-slate-900">产物</div>
+              <div className="space-y-3 text-sm text-slate-600">
                 <div>
                   <div className="text-xs text-slate-500">输出路径</div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-slate-200 break-all">
+                    <span className="text-slate-700 break-all">
                       {run.output_path || "-"}
                     </span>
                     {run.output_path ? (
@@ -424,7 +424,7 @@ export default function RunDetailPage() {
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                        className="border-slate-300 text-slate-700 hover:bg-slate-100"
                         onClick={() => setOutputOpen(true)}
                       >
                         预览
@@ -435,7 +435,7 @@ export default function RunDetailPage() {
                 <div>
                   <div className="text-xs text-slate-500">日志路径</div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-slate-200 break-all">
+                    <span className="text-slate-700 break-all">
                       {run.log_path || "-"}
                     </span>
                     {run.log_path ? (
@@ -443,7 +443,7 @@ export default function RunDetailPage() {
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="border-slate-700 text-slate-200 hover:bg-slate-800"
+                        className="border-slate-300 text-slate-700 hover:bg-slate-100"
                         onClick={() => setLogOpen(true)}
                       >
                         预览
@@ -454,10 +454,10 @@ export default function RunDetailPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
-              <div className="text-sm font-semibold text-white">元数据</div>
-              <ScrollArea className="mt-3 h-[220px] rounded-lg border border-slate-800 bg-[#0f1116] p-3">
-                <pre className="text-xs text-slate-200 whitespace-pre-wrap">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="text-sm font-semibold text-slate-900">元数据</div>
+              <ScrollArea className="mt-3 h-[220px] rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <pre className="text-xs text-slate-700 whitespace-pre-wrap">
                   {stringifyJson(run.metadata)}
                 </pre>
               </ScrollArea>
@@ -480,7 +480,7 @@ export default function RunDetailPage() {
           />
         </>
       ) : (
-        <div className="rounded-2xl border border-slate-800 bg-[#151921] p-6 text-sm text-slate-400">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
           未找到运行记录。
         </div>
       )}

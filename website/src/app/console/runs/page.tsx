@@ -103,11 +103,11 @@ const statusLabelMap: Record<RunStatus, string> = {
 };
 
 const statusClassMap: Record<RunStatus, string> = {
-  pending: "bg-amber-500/10 text-amber-300 border-amber-500/30",
-  running: "bg-sky-500/10 text-sky-300 border-sky-500/30",
-  completed: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
-  failed: "bg-red-500/10 text-red-300 border-red-500/30",
-  cancelled: "bg-slate-500/10 text-slate-400 border-slate-500/30",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  running: "bg-sky-50 text-sky-700 border-sky-200",
+  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
+  cancelled: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
 export default function RunsPage() {
@@ -227,15 +227,15 @@ export default function RunsPage() {
     <div className="px-6 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">运行记录</h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <h1 className="text-2xl font-semibold text-slate-900">运行记录</h1>
+          <p className="mt-2 text-sm text-slate-500">
             跟踪流水线执行并管理运行生命周期。
           </p>
         </div>
         <Button
           type="button"
           variant="outline"
-          className="border-slate-700 text-slate-200 hover:bg-slate-800"
+          className="border-slate-300 text-slate-700 hover:bg-slate-100"
           onClick={() => void loadRuns()}
           disabled={loading}
         >
@@ -248,16 +248,16 @@ export default function RunsPage() {
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-[#151921] p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[180px_240px_1fr]">
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as RunStatus | "all")}
           >
-            <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+            <SelectTrigger className="bg-white border-slate-200 text-slate-700">
               <SelectValue placeholder="状态" />
             </SelectTrigger>
-            <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+            <SelectContent className="bg-white border-slate-200 text-slate-900">
               {STATUS_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -267,10 +267,10 @@ export default function RunsPage() {
           </Select>
 
           <Select value={pipelineFilter} onValueChange={setPipelineFilter}>
-            <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
+            <SelectTrigger className="bg-white border-slate-200 text-slate-700">
               <SelectValue placeholder="流水线" />
             </SelectTrigger>
-            <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
+            <SelectContent className="bg-white border-slate-200 text-slate-900">
               <SelectItem value="all">全部流水线</SelectItem>
               {pipelines.map((pipeline) => (
                 <SelectItem key={pipeline.id} value={pipeline.id}>
@@ -284,34 +284,34 @@ export default function RunsPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="按运行 ID / 流水线 / 触发方式搜索"
-            className="bg-[#0f1116] border-slate-800 text-slate-200"
+            className="bg-white border-slate-200 text-slate-700"
           />
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-[#151921]">
+      <div className="rounded-2xl border border-slate-200 bg-white">
         {error ? (
           <div className="p-6 text-sm text-red-400">{error}</div>
         ) : loading ? (
-          <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
+          <div className="p-6 flex items-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" /> 正在加载运行记录...
           </div>
         ) : filteredRuns.length === 0 ? (
-          <div className="p-6 text-sm text-slate-400">
+          <div className="p-6 text-sm text-slate-500">
             当前筛选条件下暂无运行记录。
           </div>
         ) : (
           <Table>
-            <TableHeader className="bg-[#11141c]">
-              <TableRow className="border-slate-800">
-                <TableHead className="text-slate-300">运行</TableHead>
-                <TableHead className="text-slate-300">流水线</TableHead>
-                <TableHead className="text-slate-300">状态</TableHead>
-                <TableHead className="text-slate-300">触发方式</TableHead>
-                <TableHead className="text-slate-300">开始时间</TableHead>
-                <TableHead className="text-slate-300">耗时</TableHead>
-                <TableHead className="text-slate-300">成本</TableHead>
-                <TableHead className="text-slate-300 text-right">操作</TableHead>
+            <TableHeader className="bg-slate-50">
+              <TableRow className="border-slate-200">
+                <TableHead className="text-slate-600">运行</TableHead>
+                <TableHead className="text-slate-600">流水线</TableHead>
+                <TableHead className="text-slate-600">状态</TableHead>
+                <TableHead className="text-slate-600">触发方式</TableHead>
+                <TableHead className="text-slate-600">开始时间</TableHead>
+                <TableHead className="text-slate-600">耗时</TableHead>
+                <TableHead className="text-slate-600">成本</TableHead>
+                <TableHead className="text-slate-600 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -319,9 +319,9 @@ export default function RunsPage() {
                 const canCancel = run.status === "running" || run.status === "pending";
                 const isPending = pendingActions[run.id];
                 return (
-                  <TableRow key={run.id} className="border-slate-800">
+                  <TableRow key={run.id} className="border-slate-200">
                     <TableCell>
-                      <div className="text-sm text-slate-200 font-medium">
+                      <div className="text-sm text-slate-700 font-medium">
                         {run.id.slice(0, 8)}
                       </div>
                       <div className="text-xs text-slate-500">
@@ -329,7 +329,7 @@ export default function RunsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm text-slate-200">
+                      <div className="text-sm text-slate-700">
                         {run.pipeline_name || "未命名流水线"}
                       </div>
                       <div className="text-xs text-slate-500">
@@ -346,16 +346,16 @@ export default function RunsPage() {
                         {statusLabelMap[run.status]}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-300">
+                    <TableCell className="text-sm text-slate-600">
                       {run.trigger || "-"}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-300">
+                    <TableCell className="text-sm text-slate-600">
                       {formatTimestamp(run.started_at)}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-300">
+                    <TableCell className="text-sm text-slate-600">
                       {formatDuration(run)}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-300">
+                    <TableCell className="text-sm text-slate-600">
                       {formatCost(run.cost)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -364,7 +364,7 @@ export default function RunsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-red-500/40 text-red-300 hover:bg-red-500/10"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
                             onClick={() => void handleCancel(run.id)}
                             disabled={Boolean(isPending)}
                           >
@@ -378,7 +378,7 @@ export default function RunsPage() {
                         ) : null}
                         <Link
                           href={`/console/runs/${run.id}`}
-                          className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500"
                         >
                           查看
                           <ChevronRight className="h-3.5 w-3.5" />
@@ -394,7 +394,7 @@ export default function RunsPage() {
       </div>
 
       {!namespace ? (
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200 flex items-center gap-2">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" />
           请先选择工作区查看运行记录。
         </div>

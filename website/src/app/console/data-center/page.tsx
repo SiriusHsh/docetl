@@ -286,16 +286,16 @@ export default function DataCenterPage() {
   return (
     <div className="px-6 py-6">
       <div className="flex items-center gap-3">
-        <Database className="h-6 w-6 text-slate-200" />
-        <h1 className="text-2xl font-semibold text-white">数据中心</h1>
+        <Database className="h-6 w-6 text-slate-600" />
+        <h1 className="text-2xl font-semibold text-slate-900">数据中心</h1>
       </div>
-      <p className="mt-2 text-sm text-slate-400">
+      <p className="mt-2 text-sm text-slate-500">
         上传数据集并将 Excel/CSV/JSON 规范化为可复用的数据集。
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-        <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
-          <div className="flex items-center gap-2 text-sm text-slate-200">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
             <UploadCloud className="h-4 w-4" />
             <span>用户上传</span>
           </div>
@@ -303,66 +303,66 @@ export default function DataCenterPage() {
             上传 Excel、CSV 或 JSON。Excel 文件可配置工作表与表头信息。
           </p>
 
-          <div className="mt-4 space-y-3 text-sm text-slate-200">
+          <div className="mt-4 space-y-3 text-sm text-slate-700">
             <div>
-              <label className="text-xs text-slate-400">数据集名称</label>
+              <label className="text-xs text-slate-500">数据集名称</label>
               <input
                 value={datasetName}
                 onChange={(event) => setDatasetName(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
                 placeholder="可选显示名称"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400">文件</label>
+              <label className="text-xs text-slate-500">文件</label>
               <input
                 type="file"
                 accept=".json,.csv,.xlsx,.xls"
                 onChange={(event) =>
                   setFile(event.target.files?.[0] ?? null)
                 }
-                className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-slate-200"
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
               />
             </div>
 
             <div className={cn("grid gap-3 md:grid-cols-2", !isExcel && "opacity-60")}>
               <div>
-                <label className="text-xs text-slate-400">工作表名称</label>
+                <label className="text-xs text-slate-500">工作表名称</label>
                 <input
                   value={sheetName}
                   onChange={(event) => setSheetName(event.target.value)}
                   disabled={!isExcel}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 disabled:text-slate-400"
                   placeholder="默认：首个工作表"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">工作表序号</label>
+                <label className="text-xs text-slate-500">工作表序号</label>
                 <input
                   value={sheetIndex}
                   onChange={(event) => setSheetIndex(event.target.value)}
                   disabled={!isExcel}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 disabled:text-slate-400"
                   placeholder="从 0 开始的序号"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">表头行</label>
+                <label className="text-xs text-slate-500">表头行</label>
                 <input
                   value={headerRow}
                   onChange={(event) => setHeaderRow(event.target.value)}
                   disabled={!isExcel}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 disabled:text-slate-400"
                   placeholder="默认：0"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">最大行数</label>
+                <label className="text-xs text-slate-500">最大行数</label>
                 <input
                   value={maxRows}
                   onChange={(event) => setMaxRows(event.target.value)}
                   disabled={!isExcel}
-                  className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 disabled:text-slate-400"
                   placeholder="可选限制"
                 />
               </div>
@@ -371,17 +371,17 @@ export default function DataCenterPage() {
               type="button"
               onClick={handleUpload}
               disabled={!file || !namespace || uploading}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 disabled:opacity-50"
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               上传数据集
             </button>
-            {error ? <div className="text-xs text-rose-300">{error}</div> : null}
+            {error ? <div className="text-xs text-rose-600">{error}</div> : null}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
-          <div className="flex items-center gap-2 text-sm text-slate-200">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-sm text-slate-600">
             <FileText className="h-4 w-4" />
             <span>流水线输出</span>
           </div>
@@ -391,14 +391,14 @@ export default function DataCenterPage() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-5">
-        <div className="flex items-center gap-2 text-sm text-slate-200">
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
           <Table2 className="h-4 w-4" />
           <span>数据集</span>
         </div>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-200">
-            <thead className="text-xs uppercase text-slate-400">
+          <table className="w-full text-left text-sm text-slate-700">
+            <thead className="text-xs uppercase text-slate-500">
               <tr>
                 <th className="py-2 pr-4">名称</th>
                 <th className="py-2 pr-4">来源</th>
@@ -413,19 +413,19 @@ export default function DataCenterPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-4 text-slate-400">
+                  <td colSpan={8} className="py-4 text-slate-500">
                     正在加载数据集...
                   </td>
                 </tr>
               ) : datasets.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-4 text-slate-400">
+                  <td colSpan={8} className="py-4 text-slate-500">
                     暂无数据集。
                   </td>
                 </tr>
               ) : (
                 datasets.map((dataset) => (
-                  <tr key={dataset.id} className="border-t border-white/5">
+                  <tr key={dataset.id} className="border-t border-slate-200">
                     <td className="py-3 pr-4">{dataset.name}</td>
                     <td className="py-3 pr-4">
                       {sourceLabels[dataset.source] || dataset.source}
@@ -436,11 +436,11 @@ export default function DataCenterPage() {
                           className={cn(
                             "text-xs",
                             dataset.ingest_status === "ready" &&
-                              "text-emerald-400",
+                              "text-emerald-600",
                             dataset.ingest_status === "failed" &&
-                              "text-rose-400",
+                              "text-rose-600",
                             dataset.ingest_status === "processing" &&
-                              "text-amber-300"
+                              "text-amber-600"
                           )}
                         >
                           {ingestStatusLabels[dataset.ingest_status] ||
@@ -465,7 +465,7 @@ export default function DataCenterPage() {
                                   )}%`
                                 : ""}
                             </span>
-                            <div className="h-1.5 w-28 rounded-full bg-white/10">
+                            <div className="h-1.5 w-28 rounded-full bg-slate-200">
                               <div
                                 className="h-1.5 rounded-full bg-blue-500"
                                 style={{
@@ -491,7 +491,7 @@ export default function DataCenterPage() {
                       <button
                         type="button"
                         onClick={() => void openPreview(dataset)}
-                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                         disabled={dataset.ingest_status !== "ready"}
                       >
                         预览
@@ -500,7 +500,7 @@ export default function DataCenterPage() {
                     <td className="py-3 pr-4">
                       <Link
                         href={`/console/data-center/${dataset.id}`}
-                        className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10"
+                        className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                       >
                         详情
                       </Link>
@@ -509,7 +509,7 @@ export default function DataCenterPage() {
                       <button
                         type="button"
                         onClick={() => setDatasetToDelete(dataset)}
-                        className="rounded-md border border-rose-500/40 px-2 py-1 text-xs text-rose-200 hover:border-rose-400/70 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-600 hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
                         disabled={deletingId === dataset.id}
                       >
                         {deletingId === dataset.id ? "删除中..." : "删除"}
@@ -539,7 +539,7 @@ export default function DataCenterPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                 disabled={!previewDatasetId || previewLoading || previewOffset <= 0 || previewSampleMode}
                 onClick={() =>
                   previewDatasetId
@@ -555,7 +555,7 @@ export default function DataCenterPage() {
               </button>
               <button
                 type="button"
-                className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                 disabled={
                   !previewDatasetId ||
                   previewLoading ||
@@ -576,7 +576,7 @@ export default function DataCenterPage() {
               </button>
               <button
                 type="button"
-                className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                 disabled={!previewDatasetId || previewLoading}
                 onClick={() =>
                   previewDatasetId
@@ -591,9 +591,9 @@ export default function DataCenterPage() {
                 随机抽样
               </button>
             </div>
-            <div className="rounded-lg border border-white/10 bg-black/40 p-3 text-xs text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
               {previewLoading ? (
-                <div className="flex items-center gap-2 text-slate-300">
+                <div className="flex items-center gap-2 text-slate-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   正在加载预览...
                 </div>
@@ -615,21 +615,21 @@ export default function DataCenterPage() {
           }
         }}
       >
-        <AlertDialogContent className="border border-white/10 bg-slate-950 text-slate-100 shadow-xl">
+        <AlertDialogContent className="border border-slate-200 bg-white text-slate-900 shadow-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-slate-100">
+            <AlertDialogTitle className="text-slate-900">
               删除数据集
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
+            <AlertDialogDescription className="text-slate-600">
               将永久删除{" "}
-              <span className="font-semibold text-slate-200">
+              <span className="font-semibold text-slate-900">
                 {datasetToDelete?.name}
               </span>{" "}
               及其存储文件，无法恢复。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 text-slate-200 hover:bg-white/5">
+            <AlertDialogCancel className="border-slate-200 text-slate-700 hover:bg-slate-100">
               取消
             </AlertDialogCancel>
             <AlertDialogAction

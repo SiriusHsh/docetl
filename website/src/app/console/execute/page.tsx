@@ -33,7 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { BookmarkProvider } from "@/contexts/BookmarkContext";
-import { ThemeProvider, useTheme, type Theme } from "@/contexts/ThemeContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PipelineProvider, usePipelineContext } from "@/contexts/PipelineContext";
 import { PipelineStoreProvider, usePipelineStore } from "@/contexts/PipelineStoreContext";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
@@ -41,27 +41,6 @@ import { File } from "@/app/types";
 import { backendFetch } from "@/lib/backendFetch";
 
 const DEFAULT_NAMESPACE = "default";
-
-const ExecuteThemeSetter: React.FC = () => {
-  const { theme, setTheme } = useTheme();
-  const previousThemeRef = useRef<Theme | null>(null);
-
-  useEffect(() => {
-    if (previousThemeRef.current === null) {
-      previousThemeRef.current = theme;
-    }
-    if (theme !== "midnight") {
-      setTheme("midnight");
-    }
-    return () => {
-      if (previousThemeRef.current && previousThemeRef.current !== "midnight") {
-        setTheme(previousThemeRef.current);
-      }
-    };
-  }, [setTheme, theme]);
-
-  return null;
-};
 
 const formatRecordCount = (count: string) =>
   count === "-" ? "记录数未知" : `${count} 条记录`;
@@ -167,21 +146,21 @@ const ExecuteLeftPanel: React.FC<{
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <div className="flex-1 min-h-0 shadow-lg shadow-black/20">
-        <div className="h-full bg-[#151921] border border-slate-800 rounded-lg p-5 flex flex-col">
+      <div className="flex-1 min-h-0 shadow-sm">
+        <div className="h-full bg-white border border-slate-200 rounded-lg p-5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 活跃流水线
               </h2>
-              <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">
                 {pipelines.length}
               </span>
             </div>
             <button
               type="button"
               onClick={() => void createPipeline()}
-              className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded transition-colors"
+              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded transition-colors"
               title="新建流水线"
             >
               <Plus className="w-4 h-4" />
@@ -204,8 +183,8 @@ const ExecuteLeftPanel: React.FC<{
                   }}
                   className={`relative group cursor-pointer p-3 rounded-md border transition-all duration-200 ${
                     isSelected
-                      ? "bg-blue-900/20 border-blue-500/50 shadow-sm shadow-blue-500/10"
-                      : "bg-[#0B0E14] border-slate-800 hover:border-slate-700 hover:bg-slate-900"
+                      ? "bg-blue-50 border-blue-200 shadow-sm"
+                      : "bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-1 min-h-[24px]">
@@ -223,7 +202,7 @@ const ExecuteLeftPanel: React.FC<{
                             if (event.key === "Escape") setEditingId(null);
                           }}
                           autoFocus
-                          className="flex-1 bg-slate-950 border border-blue-500 rounded px-2 py-0.5 text-sm text-slate-200 focus:outline-none"
+                          className="flex-1 bg-white border border-blue-400 rounded px-2 py-0.5 text-sm text-slate-900 focus:outline-none"
                         />
                         <button
                           type="button"
@@ -249,7 +228,7 @@ const ExecuteLeftPanel: React.FC<{
                     ) : (
                       <span
                         className={`text-sm font-bold leading-tight truncate flex-1 pr-2 ${
-                          isSelected ? "text-blue-200" : "text-slate-200"
+                          isSelected ? "text-blue-700" : "text-slate-800"
                         }`}
                       >
                         {pipeline.name}
@@ -265,7 +244,7 @@ const ExecuteLeftPanel: React.FC<{
                           {isSelected ? (
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                           ) : (
-                            <CircleDashed className="w-3.5 h-3.5 text-slate-600" />
+                            <CircleDashed className="w-3.5 h-3.5 text-slate-400" />
                           )}
                         </div>
                         <div className="relative">
@@ -277,8 +256,8 @@ const ExecuteLeftPanel: React.FC<{
                             }}
                             className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
                               isMenuOpen
-                                ? "bg-slate-700 text-white opacity-100"
-                                : "text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-slate-800 hover:text-slate-200"
+                                ? "bg-slate-100 text-slate-700 opacity-100"
+                                : "text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700"
                             }`}
                           >
                             <MoreVertical className="w-4 h-4" />
@@ -287,7 +266,7 @@ const ExecuteLeftPanel: React.FC<{
                           {isMenuOpen && (
                             <div
                               ref={menuRef}
-                              className="absolute right-0 top-7 w-36 bg-[#1e2330] border border-slate-700 rounded-lg shadow-xl z-50 flex flex-col py-1"
+                              className="absolute right-0 top-7 w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-50 flex flex-col py-1"
                               onClick={(event) => event.stopPropagation()}
                             >
                               <button
@@ -296,7 +275,7 @@ const ExecuteLeftPanel: React.FC<{
                                   event.stopPropagation();
                                   startRenaming(pipeline.id, pipeline.name);
                                 }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors text-left"
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
                                 重命名
@@ -308,12 +287,12 @@ const ExecuteLeftPanel: React.FC<{
                                   void duplicatePipeline(pipeline.id);
                                   setActiveMenuId(null);
                                 }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700/50 hover:text-white transition-colors text-left"
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left"
                               >
                                 <Copy className="w-3.5 h-3.5" />
                                 复制
                               </button>
-                              <div className="h-px bg-slate-700/50 my-1 mx-2"></div>
+                              <div className="h-px bg-slate-200 my-1 mx-2"></div>
                               <button
                                 type="button"
                                 onClick={(event) => {
@@ -321,7 +300,7 @@ const ExecuteLeftPanel: React.FC<{
                                   void deletePipeline(pipeline.id);
                                   setActiveMenuId(null);
                                 }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-left"
+                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors text-left"
                               >
                                 <Trash className="w-3.5 h-3.5" />
                                 删除
@@ -336,7 +315,7 @@ const ExecuteLeftPanel: React.FC<{
               );
             })}
             {pipelines.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
                 未配置流水线
               </div>
             ) : null}
@@ -344,17 +323,17 @@ const ExecuteLeftPanel: React.FC<{
         </div>
       </div>
 
-      <div className="h-[35%] min-h-[200px] shadow-lg shadow-black/20">
-        <div className="h-full bg-[#151921] border border-slate-800 rounded-lg p-5 flex flex-col">
+      <div className="h-[35%] min-h-[200px] shadow-sm">
+        <div className="h-full bg-white border border-slate-200 rounded-lg p-5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               输入数据源
             </h2>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 px-2 text-[11px] border-slate-700 bg-[#0F131C] text-slate-200 hover:bg-[#1a2030] hover:text-slate-100"
+              className="h-7 px-2 text-[11px] border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               onClick={() => setDataSourceDialogOpen(true)}
               disabled={isLoadingDataSources}
             >
@@ -363,24 +342,24 @@ const ExecuteLeftPanel: React.FC<{
           </div>
           <div className="space-y-3 overflow-y-auto pr-2 flex-1">
             {isLoadingDataSources ? (
-              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
                 正在加载数据中心数据...
               </div>
             ) : dataSourceError ? (
-              <div className="text-center py-8 text-red-400 text-sm border border-dashed border-red-900/60 rounded-lg">
+              <div className="text-center py-8 text-red-600 text-sm border border-dashed border-red-200 rounded-lg">
                 数据源加载失败
               </div>
             ) : selectedDataSource ? (
-              <div className="flex items-center p-3 border rounded-md group transition-all bg-blue-900/20 border-blue-500/50 shadow-sm shadow-blue-500/10">
-                <div className="p-2 rounded border mr-3 bg-blue-900/30 border-blue-800">
+              <div className="flex items-center p-3 border rounded-md group transition-all bg-blue-50 border-blue-200 shadow-sm">
+                <div className="p-2 rounded border mr-3 bg-blue-100 border-blue-200">
                   <DataSourceIcon type={selectedDataSource.type} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-bold truncate text-blue-200">
+                    <span className="text-sm font-bold truncate text-blue-700">
                       {selectedDataSource.name}
                     </span>
-                    <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">
+                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">
                       {selectedDataSource.type.toUpperCase()}
                     </span>
                   </div>
@@ -388,37 +367,37 @@ const ExecuteLeftPanel: React.FC<{
                     <span>
                       {formatRecordCount(selectedDataSource.recordCount)}
                     </span>
-                    <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                    <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
                     <span>{selectedDataSource.sourceLabel}</span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={onClearDataSource}
-                  className="ml-2 p-1 rounded-md text-slate-400 hover:text-red-300 hover:bg-red-900/20 transition-colors"
+                  className="ml-2 p-1 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                   title="移除数据源"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             ) : hasStaleSelection ? (
-              <div className="text-center py-6 text-slate-400 italic text-sm border border-dashed border-slate-700 rounded-lg space-y-3">
+              <div className="text-center py-6 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg space-y-3">
                 <div>当前数据源不可用，请重新选择。</div>
                 <button
                   type="button"
                   onClick={onClearDataSource}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-300 bg-red-900/20 border border-red-800/50 rounded-md hover:bg-red-900/30"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100"
                 >
                   <X className="w-3.5 h-3.5" />
                   移除数据源
                 </button>
               </div>
             ) : availableDataSources.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
                 未配置数据源
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
                 请点击“选择”配置数据源
               </div>
             )}
@@ -426,15 +405,15 @@ const ExecuteLeftPanel: React.FC<{
         </div>
       </div>
       <Dialog open={dataSourceDialogOpen} onOpenChange={setDataSourceDialogOpen}>
-        <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-[560px]">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[560px]">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-100">
+            <DialogTitle className="text-sm font-semibold text-slate-900">
               选择数据源
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
             {availableDataSources.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
+              <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
                 数据中心暂无可用数据集
               </div>
             ) : (
@@ -450,15 +429,15 @@ const ExecuteLeftPanel: React.FC<{
                     }}
                     className={`w-full flex items-center p-3 border rounded-md transition-all text-left ${
                       isSelected
-                        ? "bg-blue-900/20 border-blue-500/50 shadow-sm shadow-blue-500/10"
-                        : "bg-[#0B0E14] border-slate-800 hover:border-slate-700 hover:bg-slate-900"
+                        ? "bg-blue-50 border-blue-200 shadow-sm"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
                     <div
                       className={`p-2 rounded border mr-3 ${
                         isSelected
-                          ? "bg-blue-900/30 border-blue-800"
-                          : "bg-slate-900 border-slate-800"
+                          ? "bg-blue-100 border-blue-200"
+                          : "bg-slate-100 border-slate-200"
                       }`}
                     >
                       <DataSourceIcon type={ds.type} />
@@ -467,18 +446,18 @@ const ExecuteLeftPanel: React.FC<{
                       <div className="flex items-center justify-between mb-1">
                         <span
                           className={`text-sm font-bold truncate ${
-                            isSelected ? "text-blue-200" : "text-slate-200"
+                            isSelected ? "text-blue-700" : "text-slate-800"
                           }`}
                         >
                           {ds.name}
                         </span>
-                        <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">
+                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">
                           {ds.type.toUpperCase()}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-slate-500">
                         <span>{formatRecordCount(ds.recordCount)}</span>
-                        <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                        <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
                         <span>{ds.sourceLabel}</span>
                       </div>
                     </div>
@@ -513,10 +492,10 @@ const ExecuteBottomPanel: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-0 right-0 z-20 transition-all duration-300 ease-in-out bg-[#0B0E14] border-t border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] flex flex-col"
+      className="fixed bottom-0 right-0 z-20 transition-all duration-300 ease-in-out bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] flex flex-col"
       style={{ width: "calc(100% - 16rem)", height: isOpen ? "450px" : "40px" }}
     >
-      <div className="h-10 flex items-center justify-between bg-[#151921] border-b border-slate-800 select-none">
+      <div className="h-10 flex items-center justify-between bg-slate-50 border-b border-slate-200 select-none">
         <div className="flex items-center h-full">
           <button
             type="button"
@@ -524,16 +503,16 @@ const ExecuteBottomPanel: React.FC = () => {
               setActiveTab("console");
               setIsOpen(true);
             }}
-            className={`h-full px-4 flex items-center gap-2 text-xs font-medium border-r border-slate-800 transition-colors ${
+            className={`h-full px-4 flex items-center gap-2 text-xs font-medium border-r border-slate-200 transition-colors ${
               activeTab === "console" && isOpen
-                ? "bg-[#0B0E14] text-blue-400 border-t-2 border-t-blue-500"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                ? "bg-white text-blue-600 border-t-2 border-t-blue-500"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
             执行控制台
             {logLines.length > 0 ? (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] border border-slate-700">
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] border border-slate-200">
                 {logLines.length}
               </span>
             ) : null}
@@ -544,10 +523,10 @@ const ExecuteBottomPanel: React.FC = () => {
               setActiveTab("output");
               setIsOpen(true);
             }}
-            className={`h-full px-4 flex items-center gap-2 text-xs font-medium border-r border-slate-800 transition-colors ${
+            className={`h-full px-4 flex items-center gap-2 text-xs font-medium border-r border-slate-200 transition-colors ${
               activeTab === "output" && isOpen
-                ? "bg-[#0B0E14] text-emerald-400 border-t-2 border-t-emerald-500"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                ? "bg-white text-emerald-600 border-t-2 border-t-emerald-500"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
             }`}
           >
             <Table2 className="w-3.5 h-3.5" />
@@ -559,10 +538,10 @@ const ExecuteBottomPanel: React.FC = () => {
               setActiveTab("input");
               setIsOpen(true);
             }}
-            className={`h-full px-4 flex items-center gap-2 text-xs font-medium border-r border-slate-800 transition-colors ${
+            className={`h-full px-4 flex items-center gap-2 text-xs font-medium border-r border-slate-200 transition-colors ${
               activeTab === "input" && isOpen
-                ? "bg-[#0B0E14] text-indigo-400 border-t-2 border-t-indigo-500"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                ? "bg-white text-indigo-600 border-t-2 border-t-indigo-500"
+                : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
             }`}
           >
             <Database className="w-3.5 h-3.5" />
@@ -572,7 +551,7 @@ const ExecuteBottomPanel: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="h-10 w-10 flex items-center justify-center text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          className="h-10 w-10 flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
         >
           {isOpen ? (
             <ChevronDown className="w-4 h-4" />
@@ -588,7 +567,7 @@ const ExecuteBottomPanel: React.FC = () => {
             activeTab === "console" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
           }`}
         >
-          <div className="flex-1 overflow-auto p-4 font-mono text-xs text-slate-300">
+          <div className="flex-1 overflow-auto p-4 font-mono text-xs text-slate-700">
             {logLines.length === 0 ? (
               <div className="text-slate-500 italic">暂无执行日志。</div>
             ) : (
@@ -602,7 +581,7 @@ const ExecuteBottomPanel: React.FC = () => {
             activeTab === "output" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
           }`}
         >
-          <div className="flex-1 min-h-0 overflow-hidden bg-[#0B0E14]">
+          <div className="flex-1 min-h-0 overflow-hidden bg-white">
             <Output variant="execute" />
           </div>
         </div>
@@ -612,7 +591,7 @@ const ExecuteBottomPanel: React.FC = () => {
             activeTab === "input" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
           }`}
         >
-          <div className="flex-1 min-h-0 overflow-hidden bg-[#0B0E14]">
+          <div className="flex-1 min-h-0 overflow-hidden bg-white">
             {currentFile ? (
               <DatasetView file={currentFile} />
             ) : (
@@ -735,19 +714,19 @@ const ExecuteWorkspace: React.FC = () => {
         >
           <div
             className={`w-[1px] h-full transition-colors duration-300 ${
-              isLeftPanelOpen ? "bg-slate-800" : "bg-slate-700"
+              isLeftPanelOpen ? "bg-slate-200" : "bg-slate-200"
             } group-hover:bg-blue-500/50`}
           ></div>
-          <div className="absolute top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-5 h-10 bg-[#0B0E14] border border-slate-700 rounded-full transition-all duration-300 group-hover:border-blue-500/50 shadow-sm">
+          <div className="absolute top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-5 h-10 bg-white border border-slate-200 rounded-full transition-all duration-300 group-hover:border-blue-300 shadow-sm">
             {isLeftPanelOpen ? (
-              <ChevronLeft className="w-3 h-3 text-slate-500 group-hover:text-blue-400" />
+              <ChevronLeft className="w-3 h-3 text-slate-500 group-hover:text-blue-600" />
             ) : (
-              <ChevronRight className="w-3 h-3 text-slate-500 group-hover:text-blue-400" />
+              <ChevronRight className="w-3 h-3 text-slate-500 group-hover:text-blue-600" />
             )}
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-[#0B0E14] border border-slate-800 rounded-lg h-full min-h-0 relative shadow-xl shadow-black/20 min-w-0">
+        <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-lg h-full min-h-0 relative shadow-sm min-w-0">
           <PipelineGUI variant="execute" />
         </div>
       </div>
@@ -771,7 +750,6 @@ const WebSocketWrapper: React.FC<{ children: React.ReactNode }> = ({
 export default function ExecutePage() {
   return (
     <ThemeProvider>
-      <ExecuteThemeSetter />
       <PipelineProvider>
         <PipelineStoreProvider>
           <WebSocketWrapper>

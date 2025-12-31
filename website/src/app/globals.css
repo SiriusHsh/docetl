@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 211 100% 98%;
-    --foreground: 211 5% 0%;
-    --card: 211 50% 95%;
-    --card-foreground: 211 5% 10%;
-    --popover: 211 100% 98%;
-    --popover-foreground: 211 100% 0%;
-    --primary: 211 100% 50%;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 220 90% 56%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 211 30% 70%;
-    --secondary-foreground: 0 0% 0%;
-    --muted: 173 30% 85%;
-    --muted-foreground: 211 5% 35%;
-    --accent: 173 30% 80%;
-    --accent-foreground: 211 5% 10%;
-    --destructive: 0 100% 30%;
-    --destructive-foreground: 211 5% 90%;
-    --border: 211 30% 50%;
-    --input: 211 30% 18%;
-    --ring: 211 100% 50%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 90% 56%;
     --radius: 0.5rem;
 
     /* Chart colors now use theme variables */

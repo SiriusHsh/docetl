@@ -238,13 +238,13 @@ export default function DataCenterDatasetDetailPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/console/data-center"
-            className="rounded-md border border-white/10 px-3 py-2 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10"
+            className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50"
           >
             返回
           </Link>
-          <Database className="h-6 w-6 text-slate-200" />
+          <Database className="h-6 w-6 text-slate-600" />
           <div>
-            <h1 className="text-2xl font-semibold text-white">
+            <h1 className="text-2xl font-semibold text-slate-900">
               {dataset?.name || "数据集"}
             </h1>
             <p className="mt-1 text-xs text-slate-400">
@@ -258,7 +258,7 @@ export default function DataCenterDatasetDetailPage() {
           <button
             type="button"
             onClick={() => void openPreview()}
-            className="rounded-md border border-white/10 px-3 py-2 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+            className="rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
             disabled={!datasetId || dataset?.ingest_status !== "ready"}
           >
             预览
@@ -266,7 +266,7 @@ export default function DataCenterDatasetDetailPage() {
           <button
             type="button"
             onClick={() => setDeleteOpen(true)}
-            className="rounded-md border border-rose-500/40 px-3 py-2 text-xs text-rose-200 hover:border-rose-400/70 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-rose-200 px-3 py-2 text-xs text-rose-600 hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
             disabled={!datasetId || deleting}
           >
             {deleting ? "删除中..." : "删除"}
@@ -280,15 +280,15 @@ export default function DataCenterDatasetDetailPage() {
           正在加载数据集...
         </div>
       ) : error ? (
-        <div className="mt-8 text-sm text-rose-300">{error}</div>
+        <div className="mt-8 text-sm text-rose-600">{error}</div>
       ) : dataset ? (
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
-            <div className="flex items-center gap-2 text-sm text-slate-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
               <Table2 className="h-4 w-4" />
               <span>数据集概览</span>
             </div>
-            <div className="mt-4 grid gap-4 text-sm text-slate-200 sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 text-sm text-slate-700 sm:grid-cols-2">
               <div>
                 <div className="text-xs text-slate-400">状态</div>
                 <div className="mt-1">
@@ -299,7 +299,7 @@ export default function DataCenterDatasetDetailPage() {
               {ingestProgress ? (
                 <div>
                   <div className="text-xs text-slate-400">进度</div>
-                  <div className="mt-1 text-sm text-slate-200">
+                  <div className="mt-1 text-sm text-slate-700">
                     {progressStateLabels[ingestProgress.state || "processing"] ||
                       ingestProgress.state ||
                       "处理中"}
@@ -310,7 +310,7 @@ export default function DataCenterDatasetDetailPage() {
                       ? ` · ${Math.round(ingestProgress.percent)}%`
                       : ""}
                   </div>
-                  <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+                  <div className="mt-2 h-1.5 w-full rounded-full bg-slate-200">
                     <div
                       className="h-1.5 rounded-full bg-blue-500"
                       style={{
@@ -346,22 +346,22 @@ export default function DataCenterDatasetDetailPage() {
               </div>
               <div>
                 <div className="text-xs text-slate-400">数据集 ID</div>
-                <div className="mt-1 break-all text-xs text-slate-300">
+                <div className="mt-1 break-all text-xs text-slate-500">
                   {dataset.id}
                 </div>
               </div>
             </div>
             {dataset.error ? (
-              <div className="mt-4 text-xs text-rose-300">{dataset.error}</div>
+              <div className="mt-4 text-xs text-rose-600">{dataset.error}</div>
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
-            <div className="flex items-center gap-2 text-sm text-slate-200">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
               <GitBranch className="h-4 w-4" />
               <span>血缘</span>
             </div>
-            <div className="mt-4 text-sm text-slate-200">
+            <div className="mt-4 text-sm text-slate-700">
               {hasLineage ? (
                 <>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -385,21 +385,21 @@ export default function DataCenterDatasetDetailPage() {
                     </div>
                     <div className="sm:col-span-2">
                       <div className="text-xs text-slate-400">输出路径</div>
-                      <div className="mt-1 break-all text-xs text-slate-300">
+                      <div className="mt-1 break-all text-xs text-slate-500">
                         {(typeof lineage?.output_path === "string" &&
                           lineage?.output_path) ||
                           "-"}
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-3 text-xs text-slate-100">
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
                     <pre className="whitespace-pre-wrap">
                       {JSON.stringify(lineage, null, 2)}
                     </pre>
                   </div>
                 </>
               ) : (
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-500">
                   当前数据集暂无血缘信息。
                 </div>
               )}
@@ -424,7 +424,7 @@ export default function DataCenterDatasetDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                 disabled={previewLoading || previewOffset <= 0 || previewSampleMode}
                 onClick={() =>
                   fetchPreview({
@@ -437,7 +437,7 @@ export default function DataCenterDatasetDetailPage() {
               </button>
               <button
                 type="button"
-                className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                 disabled={
                   previewLoading ||
                   previewSampleMode ||
@@ -454,7 +454,7 @@ export default function DataCenterDatasetDetailPage() {
               </button>
               <button
                 type="button"
-                className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+                className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                 disabled={previewLoading}
                 onClick={() =>
                   fetchPreview({
@@ -466,9 +466,9 @@ export default function DataCenterDatasetDetailPage() {
                 随机抽样
               </button>
             </div>
-            <div className="rounded-lg border border-white/10 bg-black/40 p-3 text-xs text-slate-100">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
               {previewLoading ? (
-                <div className="flex items-center gap-2 text-slate-300">
+                <div className="flex items-center gap-2 text-slate-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   正在加载预览...
                 </div>
@@ -483,21 +483,21 @@ export default function DataCenterDatasetDetailPage() {
       </Dialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent className="border border-white/10 bg-slate-950 text-slate-100 shadow-xl">
+        <AlertDialogContent className="border border-slate-200 bg-white text-slate-900 shadow-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-slate-100">
+            <AlertDialogTitle className="text-slate-900">
               删除数据集
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
+            <AlertDialogDescription className="text-slate-600">
               将永久删除{" "}
-              <span className="font-semibold text-slate-200">
+              <span className="font-semibold text-slate-900">
                 {dataset?.name}
               </span>{" "}
               及其存储文件，无法恢复。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 text-slate-200 hover:bg-white/5">
+            <AlertDialogCancel className="border-slate-200 text-slate-700 hover:bg-slate-100">
               取消
             </AlertDialogCancel>
             <AlertDialogAction
