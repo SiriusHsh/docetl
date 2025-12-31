@@ -33,7 +33,7 @@ export function useOptimizeCheck({
       setTaskId(response.data.task_id);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to submit task";
+        err instanceof Error ? err.message : "提交任务失败";
       setError(errorMessage);
       onError?.(errorMessage);
     } finally {
@@ -49,7 +49,7 @@ export function useOptimizeCheck({
       setTaskId(null);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to cancel task";
+        err instanceof Error ? err.message : "取消任务失败";
       setError(errorMessage);
       onError?.(errorMessage);
     }
@@ -81,7 +81,7 @@ export function useOptimizeCheck({
         }
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : "Failed to fetch task status";
+          err instanceof Error ? err.message : "获取任务状态失败";
         setError(errorMessage);
         onError?.(errorMessage);
         setTaskId(null);

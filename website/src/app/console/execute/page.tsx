@@ -93,7 +93,7 @@ const formatDatasetSource = (source: string) => {
   if (source === "user_upload") {
     return "用户上传";
   }
-  return "Data Center";
+  return "数据中心";
 };
 
 const DataSourceIcon = ({ type }: { type: DataSourceItem["type"] }) => {
@@ -435,7 +435,7 @@ const ExecuteLeftPanel: React.FC<{
           <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
             {availableDataSources.length === 0 ? (
               <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-700 rounded-lg">
-                Data Center 暂无可用数据集
+                数据中心暂无可用数据集
               </div>
             ) : (
               availableDataSources.map((ds) => {
@@ -657,7 +657,7 @@ const ExecuteWorkspace: React.FC = () => {
         );
         if (!response.ok) {
           const detail = await response.text();
-          throw new Error(detail || "Failed to load datasets");
+          throw new Error(detail || "加载数据集失败");
         }
         const data = (await response.json()) as DataCenterDataset[];
         const normalized = data.filter(
@@ -668,7 +668,7 @@ const ExecuteWorkspace: React.FC = () => {
       } catch (err) {
         setDataCenterDatasets([]);
         setDataCenterError(
-          err instanceof Error ? err.message : "Failed to load datasets"
+          err instanceof Error ? err.message : "加载数据集失败"
         );
       } finally {
         setDataCenterLoading(false);
@@ -690,7 +690,7 @@ const ExecuteWorkspace: React.FC = () => {
           name: dataset.name,
           path: dataset.path,
           type: "json",
-          parentFolder: "Data Center",
+          parentFolder: "数据中心",
         },
       })
     );

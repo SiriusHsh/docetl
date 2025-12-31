@@ -84,9 +84,16 @@ type DatasetRecord = {
 };
 
 const scheduleTypeLabels: Record<ScheduleType, string> = {
-  cron: "Cron",
-  interval: "Interval",
-  once: "Once",
+  cron: "定时表达式",
+  interval: "间隔",
+  once: "单次",
+};
+
+const scheduleUnitLabels: Record<string, string> = {
+  seconds: "秒",
+  minutes: "分钟",
+  hours: "小时",
+  days: "天",
 };
 
 const formatTimestamp = (value?: number | null) => {
@@ -97,13 +104,14 @@ const formatTimestamp = (value?: number | null) => {
 const formatSchedule = (deployment: DeploymentRecord) => {
   const schedule = deployment.schedule || {};
   if (deployment.schedule_type === "cron") {
-    return `Cron: ${schedule.cron || "-"}`;
+    return `定时表达式：${schedule.cron || "-"}`;
   }
   if (deployment.schedule_type === "interval") {
-    return `Every ${schedule.every || "-"} ${schedule.unit || ""}`;
+    const unitLabel = scheduleUnitLabels[String(schedule.unit || "")] || schedule.unit || "";
+    return `每 ${schedule.every || "-"} ${unitLabel}`;
   }
   if (deployment.schedule_type === "once") {
-    return `Once: ${schedule.run_at || "-"}`;
+    return `单次：${schedule.run_at || "-"}`;
   }
   return "-";
 };
@@ -163,8 +171,8 @@ export default function DeploymentsPage() {
       setDeployments(data);
     } catch (err) {
       toast({
-        title: "Failed to load deployments",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: "加载部署失败",
+        description: err instanceof Error ? err.message : "未知错误",
         variant: "destructive",
       });
     } finally {
@@ -290,8 +298,8 @@ export default function DeploymentsPage() {
     if (!namespace) return;
     if (!formName.trim() || !formPipelineId) {
       toast({
-        title: "Missing fields",
-        description: "Deployment name and pipeline are required.",
+        title: "缺少必填项",
+        description: "需要填写部署名称与流水线。",
         variant: "destructive",
       });
       return;
@@ -322,13 +330,13 @@ export default function DeploymentsPage() {
       if (!response.ok) {
         throw new Error(await response.text());
       }
-      toast({ title: "Deployment saved" });
+      toast({ title: "部署已保存" });
       setDialogOpen(false);
       await loadDeployments();
     } catch (err) {
       toast({
-        title: "Save failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: "保存失败",
+        description: err instanceof Error ? err.message : "未知错误",
         variant: "destructive",
       });
     } finally {
@@ -356,8 +364,8 @@ export default function DeploymentsPage() {
       await loadDeployments();
     } catch (err) {
       toast({
-        title: "Update failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: "更新失败",
+        description: err instanceof Error ? err.message : "未知错误",
         variant: "destructive",
       });
     }
@@ -372,18 +380,18 @@ export default function DeploymentsPage() {
       if (!response.ok) {
         throw new Error(await response.text());
       }
-      toast({ title: "Run triggered" });
+      toast({ title: "已触发运行" });
     } catch (err) {
       toast({
-        title: "Trigger failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: "触发失败",
+        description: err instanceof Error ? err.message : "未知错误",
         variant: "destructive",
       });
     }
   };
 
   const handleDelete = async (deployment: DeploymentRecord) => {
-    if (!window.confirm(`Delete deployment "${deployment.name}"?`)) return;
+    if (!window.confirm(`确认删除部署“${deployment.name}”吗？`)) return;
     try {
       const response = await backendFetch(
         `${backendUrl}/deployments/${deployment.id}`,
@@ -392,12 +400,12 @@ export default function DeploymentsPage() {
       if (!response.ok && response.status !== 204) {
         throw new Error(await response.text());
       }
-      toast({ title: "Deployment deleted" });
+      toast({ title: "部署已删除" });
       await loadDeployments();
     } catch (err) {
       toast({
-        title: "Delete failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: "删除失败",
+        description: err instanceof Error ? err.message : "未知错误",
         variant: "destructive",
       });
     }
@@ -409,10 +417,10 @@ export default function DeploymentsPage() {
         <div>
           <div className="flex items-center gap-3">
             <CalendarClock className="h-6 w-6 text-slate-200" />
-            <h1 className="text-2xl font-semibold text-white">Deployments</h1>
+            <h1 className="text-2xl font-semibold text-white">部署</h1>
           </div>
           <p className="mt-2 text-sm text-slate-400">
-            Schedule pipelines to run automatically.
+            配置流水线自动运行。
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -428,7 +436,7 @@ export default function DeploymentsPage() {
             ) : (
               <RefreshCw className="mr-2 h-4 w-4" />
             )}
-            Refresh
+            刷新
           </Button>
           <Button
             type="button"
@@ -436,7 +444,7 @@ export default function DeploymentsPage() {
             className="bg-blue-600 hover:bg-blue-500"
           >
             <Plus className="mr-2 h-4 w-4" />
-            New Deployment
+            新建部署
           </Button>
         </div>
       </div>
@@ -444,22 +452,22 @@ export default function DeploymentsPage() {
       <div className="rounded-2xl border border-slate-800 bg-[#151921]">
         {loading ? (
           <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading deployments...
+            <Loader2 className="h-4 w-4 animate-spin" /> 正在加载部署...
           </div>
         ) : deployments.length === 0 ? (
           <div className="p-6 text-sm text-slate-400">
-            No deployments yet. Create one to schedule a pipeline.
+            暂无部署，可创建后自动调度流水线。
           </div>
         ) : (
           <Table>
             <TableHeader className="bg-[#11141c]">
               <TableRow className="border-slate-800">
-                <TableHead className="text-slate-300">Deployment</TableHead>
-                <TableHead className="text-slate-300">Schedule</TableHead>
-                <TableHead className="text-slate-300">Next Run</TableHead>
-                <TableHead className="text-slate-300">Last Run</TableHead>
-                <TableHead className="text-slate-300">Status</TableHead>
-                <TableHead className="text-slate-300 text-right">Actions</TableHead>
+                <TableHead className="text-slate-300">部署</TableHead>
+                <TableHead className="text-slate-300">调度</TableHead>
+                <TableHead className="text-slate-300">下次运行</TableHead>
+                <TableHead className="text-slate-300">上次运行</TableHead>
+                <TableHead className="text-slate-300">状态</TableHead>
+                <TableHead className="text-slate-300 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -470,7 +478,7 @@ export default function DeploymentsPage() {
                       {deployment.name}
                     </div>
                     <div className="text-xs text-slate-500">
-                      Pipeline {deployment.pipeline_id}
+                      流水线 {deployment.pipeline_id}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -510,7 +518,7 @@ export default function DeploymentsPage() {
                           deployment.enabled ? "text-emerald-400" : "text-slate-500"
                         )}
                       >
-                        {deployment.enabled ? "Enabled" : "Disabled"}
+                        {deployment.enabled ? "启用" : "停用"}
                       </span>
                     </div>
                   </TableCell>
@@ -523,7 +531,7 @@ export default function DeploymentsPage() {
                         onClick={() => handleTrigger(deployment)}
                       >
                         <Play className="mr-2 h-4 w-4" />
-                        Run
+                        运行
                       </Button>
                       <Button
                         size="sm"
@@ -532,7 +540,7 @@ export default function DeploymentsPage() {
                         onClick={() => openEditDialog(deployment)}
                       >
                         <Settings className="mr-2 h-4 w-4" />
-                        Edit
+                        编辑
                       </Button>
                       <Button
                         size="sm"
@@ -541,7 +549,7 @@ export default function DeploymentsPage() {
                         onClick={() => handleDelete(deployment)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
+                        删除
                       </Button>
                     </div>
                   </TableCell>
@@ -556,13 +564,13 @@ export default function DeploymentsPage() {
         <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-100">
-              {editingDeployment ? "Edit Deployment" : "Create Deployment"}
+              {editingDeployment ? "编辑部署" : "创建部署"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Name</Label>
+                <Label className="text-xs text-slate-400">名称</Label>
                 <Input
                   value={formName}
                   onChange={(event) => setFormName(event.target.value)}
@@ -570,10 +578,10 @@ export default function DeploymentsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Pipeline</Label>
+                <Label className="text-xs text-slate-400">流水线</Label>
                 <Select value={formPipelineId} onValueChange={setFormPipelineId}>
                   <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
-                    <SelectValue placeholder="Select pipeline" />
+                    <SelectValue placeholder="选择流水线" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
                     {pipelines.map((pipeline) => (
@@ -585,7 +593,7 @@ export default function DeploymentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Schedule Type</Label>
+                <Label className="text-xs text-slate-400">调度类型</Label>
                 <Select
                   value={formScheduleType}
                   onValueChange={(value) => setFormScheduleType(value as ScheduleType)}
@@ -603,7 +611,7 @@ export default function DeploymentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Timezone</Label>
+                <Label className="text-xs text-slate-400">时区</Label>
                 <Input
                   value={formTimezone}
                   onChange={(event) => setFormTimezone(event.target.value)}
@@ -614,7 +622,7 @@ export default function DeploymentsPage() {
 
             {formScheduleType === "cron" ? (
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Cron Expression</Label>
+                <Label className="text-xs text-slate-400">定时表达式</Label>
                 <Input
                   value={formCron}
                   onChange={(event) => setFormCron(event.target.value)}
@@ -627,7 +635,7 @@ export default function DeploymentsPage() {
             {formScheduleType === "interval" ? (
               <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">Every</Label>
+                  <Label className="text-xs text-slate-400">间隔</Label>
                   <Input
                     value={formIntervalEvery}
                     onChange={(event) => setFormIntervalEvery(event.target.value)}
@@ -635,7 +643,7 @@ export default function DeploymentsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">Unit</Label>
+                  <Label className="text-xs text-slate-400">单位</Label>
                   <Select
                     value={formIntervalUnit}
                     onValueChange={setFormIntervalUnit}
@@ -644,10 +652,10 @@ export default function DeploymentsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
-                      <SelectItem value="seconds">Seconds</SelectItem>
-                      <SelectItem value="minutes">Minutes</SelectItem>
-                      <SelectItem value="hours">Hours</SelectItem>
-                      <SelectItem value="days">Days</SelectItem>
+                      <SelectItem value="seconds">秒</SelectItem>
+                      <SelectItem value="minutes">分钟</SelectItem>
+                      <SelectItem value="hours">小时</SelectItem>
+                      <SelectItem value="days">天</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -656,7 +664,7 @@ export default function DeploymentsPage() {
 
             {formScheduleType === "once" ? (
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Run At (local time)</Label>
+                <Label className="text-xs text-slate-400">运行时间（本地）</Label>
                 <Input
                   type="datetime-local"
                   value={formRunAt}
@@ -668,16 +676,16 @@ export default function DeploymentsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Input Dataset</Label>
+                <Label className="text-xs text-slate-400">输入数据集</Label>
                 <Select
                   value={formInputDatasetId}
                   onValueChange={setFormInputDatasetId}
                 >
                   <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
-                    <SelectValue placeholder="Use pipeline default" />
+                    <SelectValue placeholder="使用流水线默认" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
-                    <SelectItem value="none">Use pipeline default</SelectItem>
+                    <SelectItem value="none">使用流水线默认</SelectItem>
                     {datasets.map((dataset) => (
                       <SelectItem key={dataset.id} value={dataset.id}>
                         {dataset.name}
@@ -687,14 +695,14 @@ export default function DeploymentsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Enabled</Label>
+                <Label className="text-xs text-slate-400">启用</Label>
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={formEnabled}
                     onCheckedChange={setFormEnabled}
                   />
                   <span className="text-xs text-slate-400">
-                    {formEnabled ? "Enabled" : "Disabled"}
+                    {formEnabled ? "已启用" : "已停用"}
                   </span>
                 </div>
               </div>
@@ -702,7 +710,7 @@ export default function DeploymentsPage() {
 
             <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-slate-400">Data Center Output</div>
+                <div className="text-xs text-slate-400">输出到数据中心</div>
                 <Switch
                   checked={formOutputToDataCenter}
                   onCheckedChange={setFormOutputToDataCenter}
@@ -711,7 +719,7 @@ export default function DeploymentsPage() {
               {formOutputToDataCenter ? (
                 <div className="space-y-2">
                   <Label className="text-xs text-slate-400">
-                    Output Dataset Name Template (optional)
+                    输出数据集名称模板（可选）
                   </Label>
                   <Input
                     value={formOutputTemplate}
@@ -725,14 +733,14 @@ export default function DeploymentsPage() {
 
             <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-slate-400">Retry Policy</div>
+                <div className="text-xs text-slate-400">重试策略</div>
                 <span className="text-xs text-slate-500">
-                  Max attempts & backoff
+                  最大重试与退避
                 </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">Max attempts</Label>
+                  <Label className="text-xs text-slate-400">最大重试次数</Label>
                   <Input
                     type="number"
                     min={1}
@@ -743,7 +751,7 @@ export default function DeploymentsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-slate-400">
-                    Backoff (seconds)
+                    退避秒数
                   </Label>
                   <Input
                     type="number"
@@ -755,7 +763,7 @@ export default function DeploymentsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-slate-400">
-                    Backoff multiplier
+                    退避倍率
                   </Label>
                   <Input
                     type="number"
@@ -768,7 +776,7 @@ export default function DeploymentsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-slate-400">
-                    Max backoff (seconds)
+                    最大退避秒数
                   </Label>
                   <Input
                     type="number"
@@ -786,13 +794,13 @@ export default function DeploymentsPage() {
                     onCheckedChange={setFormNotifyOnFinalFailure}
                   />
                   <span className="text-xs text-slate-400">
-                    Notify on final failure
+                    最终失败通知
                   </span>
                 </div>
                 <Input
                   value={formNotifyWebhookUrl}
                   onChange={(event) => setFormNotifyWebhookUrl(event.target.value)}
-                  placeholder="Webhook URL (optional)"
+                  placeholder="回调地址（可选）"
                   className="bg-[#0f1116] border-slate-800 text-slate-200 md:max-w-sm"
                 />
               </div>
@@ -807,7 +815,7 @@ export default function DeploymentsPage() {
               {saving ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {editingDeployment ? "Save Changes" : "Create Deployment"}
+              {editingDeployment ? "保存更改" : "创建部署"}
             </Button>
           </div>
         </DialogContent>

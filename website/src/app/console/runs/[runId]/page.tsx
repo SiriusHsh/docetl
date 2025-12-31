@@ -45,11 +45,11 @@ type RunRecord = {
 };
 
 const statusLabelMap: Record<RunStatus, string> = {
-  pending: "Pending",
-  running: "Running",
-  completed: "Completed",
-  failed: "Failed",
-  cancelled: "Cancelled",
+  pending: "等待中",
+  running: "运行中",
+  completed: "已完成",
+  failed: "失败",
+  cancelled: "已取消",
 };
 
 const statusClassMap: Record<RunStatus, string> = {
@@ -69,13 +69,13 @@ const formatDuration = (run?: RunRecord | null) => {
   if (!run?.started_at) return "-";
   const end = run.ended_at ? run.ended_at * 1000 : Date.now();
   const seconds = Math.max(0, Math.round((end - run.started_at * 1000) / 1000));
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return `${seconds}秒`;
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
-  if (minutes < 60) return `${minutes}m ${remaining}s`;
+  if (minutes < 60) return `${minutes}分 ${remaining}秒`;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
+  return `${hours}小时 ${mins}分`;
 };
 
 const formatCost = (value?: number | null) => {
@@ -88,7 +88,7 @@ const stringifyJson = (value?: Record<string, unknown> | null) => {
   try {
     return JSON.stringify(value, null, 2);
   } catch {
-    return "[metadata]";
+    return "【元数据】";
   }
 };
 
@@ -124,7 +124,7 @@ const FilePreviewDialog = ({
         );
         if (!response.ok) {
           const detail = await response.text();
-          throw new Error(detail || "Failed to load file");
+          throw new Error(detail || "加载文件失败");
         }
         const data = (await response.json()) as {
           content: string;
@@ -137,7 +137,7 @@ const FilePreviewDialog = ({
         setHasMore(data.hasMore);
         setPage(data.page);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load file");
+        setError(err instanceof Error ? err.message : "加载文件失败");
       } finally {
         setLoading(false);
       }
@@ -169,7 +169,7 @@ const FilePreviewDialog = ({
             ) : (
               <ScrollArea className="h-[360px] rounded-lg border border-slate-800 bg-[#0f1116] p-3">
                 <pre className="text-xs text-slate-200 whitespace-pre-wrap">
-                  {content || (loading ? "Loading..." : "No content")}
+                  {content || (loading ? "加载中..." : "暂无内容")}
                 </pre>
               </ScrollArea>
             )}
@@ -187,7 +187,7 @@ const FilePreviewDialog = ({
                 }}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Open Full File
+                打开完整文件
               </Button>
               <Button
                 type="button"
@@ -198,12 +198,12 @@ const FilePreviewDialog = ({
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Load More
+                加载更多
               </Button>
             </div>
           </div>
         ) : (
-          <div className="text-sm text-slate-400">No file available.</div>
+          <div className="text-sm text-slate-400">暂无文件。</div>
         )}
       </DialogContent>
     </Dialog>
@@ -231,12 +231,12 @@ export default function RunDetailPage() {
       const response = await backendFetch(`${backendUrl}/runs/${runId}`);
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load run");
+        throw new Error(detail || "加载运行详情失败");
       }
       const data = (await response.json()) as RunRecord;
       setRun(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load run");
+      setError(err instanceof Error ? err.message : "加载运行详情失败");
     } finally {
       setLoading(false);
     }
@@ -248,7 +248,7 @@ export default function RunDetailPage() {
 
   const handleCancel = async () => {
     if (!runId) return;
-    const confirmed = window.confirm("Cancel this run?");
+    const confirmed = window.confirm("确认取消该运行吗？");
     if (!confirmed) return;
     setPendingCancel(true);
     try {
@@ -257,14 +257,14 @@ export default function RunDetailPage() {
       });
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to cancel run");
+        throw new Error(detail || "取消运行失败");
       }
-      toast({ title: "Cancellation requested" });
+      toast({ title: "已提交取消请求" });
       await loadRun();
     } catch (err) {
       toast({
-        title: "Cancel failed",
-        description: err instanceof Error ? err.message : "Failed to cancel run",
+        title: "取消失败",
+        description: err instanceof Error ? err.message : "取消运行失败",
         variant: "destructive",
       });
     } finally {
@@ -284,7 +284,7 @@ export default function RunDetailPage() {
             className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-slate-100"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Runs
+            返回运行记录
           </Link>
           {run ? (
             <span
@@ -310,7 +310,7 @@ export default function RunDetailPage() {
             ) : (
               <RefreshCw className="mr-2 h-4 w-4" />
             )}
-            Refresh
+            刷新
           </Button>
           {canCancel ? (
             <Button
@@ -325,7 +325,7 @@ export default function RunDetailPage() {
               ) : (
                 <Square className="mr-2 h-4 w-4" />
               )}
-              Cancel
+              取消
             </Button>
           ) : null}
         </div>
@@ -337,7 +337,7 @@ export default function RunDetailPage() {
         </div>
       ) : loading && !run ? (
         <div className="rounded-2xl border border-slate-800 bg-[#151921] p-6 text-sm text-slate-400 flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading run details...
+          <Loader2 className="h-4 w-4 animate-spin" /> 正在加载运行详情...
         </div>
       ) : run ? (
         <>
@@ -345,52 +345,52 @@ export default function RunDetailPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-xs uppercase tracking-wider text-slate-500">
-                  Run
+                  运行
                 </div>
                 <h1 className="text-2xl font-semibold text-white mt-1">
                   {run.id}
                 </h1>
               </div>
               <div className="text-sm text-slate-400">
-                Created {formatTimestamp(run.created_at)}
+                创建时间 {formatTimestamp(run.created_at)}
               </div>
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
-                <div className="text-xs text-slate-500">Pipeline</div>
+                <div className="text-xs text-slate-500">流水线</div>
                 <div className="mt-1 text-sm text-white">
-                  {run.pipeline_name || "Untitled pipeline"}
+                  {run.pipeline_name || "未命名流水线"}
                 </div>
                 <div className="text-xs text-slate-500">
                   {run.pipeline_id || "-"}
                 </div>
               </div>
               <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
-                <div className="text-xs text-slate-500">Trigger</div>
+                <div className="text-xs text-slate-500">触发方式</div>
                 <div className="mt-1 text-sm text-white">{run.trigger}</div>
                 <div className="text-xs text-slate-500">
-                  Deployment {run.deployment_id || "-"}
+                  部署 {run.deployment_id || "-"}
                 </div>
               </div>
               <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
-                <div className="text-xs text-slate-500">Timing</div>
+                <div className="text-xs text-slate-500">时间</div>
                 <div className="mt-1 text-sm text-white">
-                  Started {formatTimestamp(run.started_at)}
+                  开始 {formatTimestamp(run.started_at)}
                 </div>
                 <div className="text-xs text-slate-500">
-                  Ended {formatTimestamp(run.ended_at)}
+                  结束 {formatTimestamp(run.ended_at)}
                 </div>
                 <div className="text-xs text-slate-500">
-                  Duration {formatDuration(run)}
+                  耗时 {formatDuration(run)}
                 </div>
               </div>
               <div className="rounded-xl border border-slate-800 bg-[#0f1116] p-4">
-                <div className="text-xs text-slate-500">Costs</div>
+                <div className="text-xs text-slate-500">成本</div>
                 <div className="mt-1 text-sm text-white">
                   {formatCost(run.cost)}
                 </div>
                 <div className="text-xs text-slate-500">
-                  Attempt {run.attempt ?? 1}
+                  尝试次数 {run.attempt ?? 1}
                   {run.max_attempts ? ` / ${run.max_attempts}` : ""}
                 </div>
               </div>
@@ -401,7 +401,7 @@ export default function RunDetailPage() {
             <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-5 text-sm text-red-200 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 mt-0.5" />
               <div>
-                <div className="font-semibold text-red-100">Run failed</div>
+                <div className="font-semibold text-red-100">运行失败</div>
                 <div className="mt-1 text-xs text-red-200 whitespace-pre-wrap">
                   {run.error}
                 </div>
@@ -411,10 +411,10 @@ export default function RunDetailPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5 space-y-3">
-              <div className="text-sm font-semibold text-white">Artifacts</div>
+              <div className="text-sm font-semibold text-white">产物</div>
               <div className="space-y-3 text-sm text-slate-300">
                 <div>
-                  <div className="text-xs text-slate-500">Output Path</div>
+                  <div className="text-xs text-slate-500">输出路径</div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-slate-200 break-all">
                       {run.output_path || "-"}
@@ -427,13 +427,13 @@ export default function RunDetailPage() {
                         className="border-slate-700 text-slate-200 hover:bg-slate-800"
                         onClick={() => setOutputOpen(true)}
                       >
-                        Preview
+                        预览
                       </Button>
                     ) : null}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500">Log Path</div>
+                  <div className="text-xs text-slate-500">日志路径</div>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-slate-200 break-all">
                       {run.log_path || "-"}
@@ -446,7 +446,7 @@ export default function RunDetailPage() {
                         className="border-slate-700 text-slate-200 hover:bg-slate-800"
                         onClick={() => setLogOpen(true)}
                       >
-                        Preview
+                        预览
                       </Button>
                     ) : null}
                   </div>
@@ -455,7 +455,7 @@ export default function RunDetailPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
-              <div className="text-sm font-semibold text-white">Metadata</div>
+              <div className="text-sm font-semibold text-white">元数据</div>
               <ScrollArea className="mt-3 h-[220px] rounded-lg border border-slate-800 bg-[#0f1116] p-3">
                 <pre className="text-xs text-slate-200 whitespace-pre-wrap">
                   {stringifyJson(run.metadata)}
@@ -465,14 +465,14 @@ export default function RunDetailPage() {
           </div>
 
           <FilePreviewDialog
-            title="Output Preview"
+            title="输出预览"
             path={run.output_path}
             open={outputOpen}
             onOpenChange={setOutputOpen}
             backendUrl={backendUrl}
           />
           <FilePreviewDialog
-            title="Log Preview"
+            title="日志预览"
             path={run.log_path}
             open={logOpen}
             onOpenChange={setLogOpen}
@@ -481,7 +481,7 @@ export default function RunDetailPage() {
         </>
       ) : (
         <div className="rounded-2xl border border-slate-800 bg-[#151921] p-6 text-sm text-slate-400">
-          Run not found.
+          未找到运行记录。
         </div>
       )}
     </div>

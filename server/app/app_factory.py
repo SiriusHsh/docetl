@@ -38,11 +38,15 @@ def create_app() -> FastAPI:
         init_metadata_db()
         from server.app.scheduler import deployment_scheduler
         await deployment_scheduler.start()
+        from server.app.routes.data_center import data_center_ingest_queue
+        await data_center_ingest_queue.start()
 
     @app.on_event("shutdown")
     async def _shutdown() -> None:
         from server.app.scheduler import deployment_scheduler
         await deployment_scheduler.stop()
+        from server.app.routes.data_center import data_center_ingest_queue
+        await data_center_ingest_queue.stop()
 
     from server.app.routes import audit as audit_routes
     from server.app.routes import auth as auth_routes

@@ -36,11 +36,11 @@ export function WorkspaceSidebar({
           <TabsList className="h-8">
             <TabsTrigger value="files" className="h-7 gap-2 px-3">
               <Folder className="h-4 w-4" />
-              <span className="text-sm">Files</span>
+              <span className="text-sm">文件</span>
             </TabsTrigger>
             <TabsTrigger value="notes" className="h-7 gap-2 px-3">
               <StickyNote className="h-4 w-4" />
-              <span className="text-sm">Notes</span>
+              <span className="text-sm">备注</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -65,4 +65,3 @@ export function WorkspaceSidebar({
     </div>
   );
 }
-

@@ -97,7 +97,7 @@ export default function LoginPage() {
 
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || `Login failed (${response.status})`);
+        throw new Error(detail || `登录失败（${response.status}）`);
       }
 
       const data = (await response.json()) as AuthResponse;
@@ -134,13 +134,13 @@ export default function LoginPage() {
         // Ignore failures; user can still set namespace manually.
       }
 
-      toast({ title: "Logged in" });
+      toast({ title: "登录成功" });
       router.replace("/console/dashboard");
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        title: "登录失败",
+        description: error instanceof Error ? error.message : "未知错误",
       });
     } finally {
       setSubmitting(false);
@@ -151,41 +151,41 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Use your account to access the platform</CardDescription>
+          <CardTitle>登录</CardTitle>
+          <CardDescription>使用账号登录平台</CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">用户名</Label>
               <Input
                 id="username"
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="请输入用户名"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">密码</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="请输入密码"
                 required
               />
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-between gap-3">
             <Link href="/register" className="text-sm text-muted-foreground hover:underline">
-              Create account
+              创建账号
             </Link>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Signing in..." : "Sign in"}
+              {submitting ? "登录中..." : "登录"}
             </Button>
           </CardFooter>
         </form>

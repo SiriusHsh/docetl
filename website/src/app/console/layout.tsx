@@ -51,11 +51,11 @@ type MembershipRecord = {
 };
 
 const MAIN_NAV: NavItem[] = [
-  { label: "Dashboard", href: "/console/dashboard", icon: LayoutDashboard },
-  { label: "Runs", href: "/console/runs", icon: ListChecks },
-  { label: "Execute", href: "/console/execute", icon: Play },
-  { label: "Deployments", href: "/console/deployments", icon: Rocket },
-  { label: "Data Center", href: "/console/data-center", icon: Database },
+  { label: "仪表盘", href: "/console/dashboard", icon: LayoutDashboard },
+  { label: "运行记录", href: "/console/runs", icon: ListChecks },
+  { label: "执行", href: "/console/execute", icon: Play },
+  { label: "部署", href: "/console/deployments", icon: Rocket },
+  { label: "数据中心", href: "/console/data-center", icon: Database },
 ];
 
 export default function ConsoleLayout({
@@ -111,7 +111,7 @@ export default function ConsoleLayout({
         const response = await backendFetch(`${backendUrl}/auth/me`);
         if (!response.ok) {
           const detail = await response.text();
-          throw new Error(detail || "Failed to load memberships");
+          throw new Error(detail || "加载权限失败");
         }
         const data = (await response.json()) as {
           memberships?: MembershipRecord[];
@@ -125,7 +125,7 @@ export default function ConsoleLayout({
       } catch (error) {
         if (!cancelled) {
           setMembershipError(
-            error instanceof Error ? error.message : "Failed to load memberships"
+            error instanceof Error ? error.message : "加载权限失败"
           );
         }
       } finally {
@@ -144,9 +144,9 @@ export default function ConsoleLayout({
   const secondaryNav = useMemo<NavItem[]>(() => {
     const items: NavItem[] = [];
     if (isAdmin) {
-      items.push({ label: "Admin", href: "/console/admin", icon: Shield });
+      items.push({ label: "管理员", href: "/console/admin", icon: Shield });
     }
-    items.push({ label: "Settings", href: "/console/settings", icon: Settings });
+    items.push({ label: "设置", href: "/console/settings", icon: Settings });
     return items;
   }, [isAdmin]);
 
@@ -158,7 +158,9 @@ export default function ConsoleLayout({
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sky-300 via-cyan-200 to-emerald-200 text-[#0f1116] flex items-center justify-center font-bold">
               D
             </div>
-            <div className="text-lg font-semibold tracking-wide">DocETL</div>
+            <div className="text-lg font-semibold tracking-wide">
+              Zhongjing Dataflow
+            </div>
           </div>
           <nav className="px-3 py-2">
             {MAIN_NAV.map((item) => {
@@ -209,7 +211,7 @@ export default function ConsoleLayout({
             <div className="sticky top-0 z-20 border-b border-white/5 bg-[#0f1116]/95 backdrop-blur">
               <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3">
                 <div className="text-sm text-slate-400">
-                  Workspace:{" "}
+                  工作区：{" "}
                   <span className="text-slate-200">
                     {activeNamespace || "-"}
                   </span>
@@ -219,7 +221,7 @@ export default function ConsoleLayout({
                     <span className="text-xs text-red-400">{membershipError}</span>
                   ) : memberships.length === 0 ? (
                     <span className="text-xs text-slate-500">
-                      No namespace access
+                      暂无可用工作区
                     </span>
                   ) : (
                     <>
@@ -229,7 +231,7 @@ export default function ConsoleLayout({
                         disabled={loadingMemberships}
                       >
                         <SelectTrigger className="h-8 w-[220px] bg-[#11131a] border-white/10 text-slate-200">
-                          <SelectValue placeholder="Select namespace" />
+                          <SelectValue placeholder="选择工作区" />
                         </SelectTrigger>
                         <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
                           {memberships.map((membership) => (
@@ -258,7 +260,7 @@ export default function ConsoleLayout({
                           setActiveNamespace(selectedNamespace);
                         }}
                       >
-                        Apply
+                        应用
                       </Button>
                     </>
                   )}

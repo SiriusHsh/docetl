@@ -63,12 +63,12 @@ type PipelineRecord = {
 };
 
 const STATUS_OPTIONS: Array<{ value: RunStatus | "all"; label: string }> = [
-  { value: "all", label: "All statuses" },
-  { value: "pending", label: "Pending" },
-  { value: "running", label: "Running" },
-  { value: "completed", label: "Completed" },
-  { value: "failed", label: "Failed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "all", label: "全部状态" },
+  { value: "pending", label: "等待中" },
+  { value: "running", label: "运行中" },
+  { value: "completed", label: "已完成" },
+  { value: "failed", label: "失败" },
+  { value: "cancelled", label: "已取消" },
 ];
 
 const formatTimestamp = (value?: number | null) => {
@@ -80,13 +80,13 @@ const formatDuration = (run: RunRecord) => {
   if (!run.started_at) return "-";
   const end = run.ended_at ? run.ended_at * 1000 : Date.now();
   const seconds = Math.max(0, Math.round((end - run.started_at * 1000) / 1000));
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return `${seconds}秒`;
   const minutes = Math.floor(seconds / 60);
   const remaining = seconds % 60;
-  if (minutes < 60) return `${minutes}m ${remaining}s`;
+  if (minutes < 60) return `${minutes}分 ${remaining}秒`;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
+  return `${hours}小时 ${mins}分`;
 };
 
 const formatCost = (value?: number | null) => {
@@ -95,11 +95,11 @@ const formatCost = (value?: number | null) => {
 };
 
 const statusLabelMap: Record<RunStatus, string> = {
-  pending: "Pending",
-  running: "Running",
-  completed: "Completed",
-  failed: "Failed",
-  cancelled: "Cancelled",
+  pending: "等待中",
+  running: "运行中",
+  completed: "已完成",
+  failed: "失败",
+  cancelled: "已取消",
 };
 
 const statusClassMap: Record<RunStatus, string> = {
@@ -140,14 +140,14 @@ export default function RunsPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load pipelines");
+        throw new Error(detail || "加载流水线失败");
       }
       const data = (await response.json()) as PipelineRecord[];
       setPipelines(data);
     } catch (err) {
       toast({
-        title: "Failed to load pipelines",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: "加载流水线失败",
+        description: err instanceof Error ? err.message : "未知错误",
         variant: "destructive",
       });
     }
@@ -164,12 +164,12 @@ export default function RunsPage() {
       const response = await backendFetch(`${backendUrl}/runs?${params.toString()}`);
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load runs");
+        throw new Error(detail || "加载运行记录失败");
       }
       const data = (await response.json()) as RunRecord[];
       setRuns(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load runs");
+      setError(err instanceof Error ? err.message : "加载运行记录失败");
     } finally {
       setLoading(false);
     }
@@ -199,7 +199,7 @@ export default function RunsPage() {
   }, [runs, search]);
 
   const handleCancel = async (runId: string) => {
-    const confirmed = window.confirm("Cancel this run?");
+    const confirmed = window.confirm("确认取消该运行吗？");
     if (!confirmed) return;
     setPendingActions((prev) => ({ ...prev, [runId]: true }));
     try {
@@ -208,14 +208,14 @@ export default function RunsPage() {
       });
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to cancel run");
+        throw new Error(detail || "取消运行失败");
       }
-      toast({ title: "Cancellation requested" });
+      toast({ title: "已提交取消请求" });
       await loadRuns();
     } catch (err) {
       toast({
-        title: "Cancel failed",
-        description: err instanceof Error ? err.message : "Failed to cancel run",
+        title: "取消失败",
+        description: err instanceof Error ? err.message : "取消运行失败",
         variant: "destructive",
       });
     } finally {
@@ -227,9 +227,9 @@ export default function RunsPage() {
     <div className="px-6 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Runs</h1>
+          <h1 className="text-2xl font-semibold text-white">运行记录</h1>
           <p className="mt-2 text-sm text-slate-400">
-            Track pipeline executions and manage run lifecycle.
+            跟踪流水线执行并管理运行生命周期。
           </p>
         </div>
         <Button
@@ -244,7 +244,7 @@ export default function RunsPage() {
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          Refresh
+          刷新
         </Button>
       </div>
 
@@ -255,7 +255,7 @@ export default function RunsPage() {
             onValueChange={(value) => setStatusFilter(value as RunStatus | "all")}
           >
             <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="状态" />
             </SelectTrigger>
             <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
               {STATUS_OPTIONS.map((option) => (
@@ -268,10 +268,10 @@ export default function RunsPage() {
 
           <Select value={pipelineFilter} onValueChange={setPipelineFilter}>
             <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
-              <SelectValue placeholder="Pipeline" />
+              <SelectValue placeholder="流水线" />
             </SelectTrigger>
             <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
-              <SelectItem value="all">All pipelines</SelectItem>
+              <SelectItem value="all">全部流水线</SelectItem>
               {pipelines.map((pipeline) => (
                 <SelectItem key={pipeline.id} value={pipeline.id}>
                   {pipeline.name}
@@ -283,7 +283,7 @@ export default function RunsPage() {
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by run id, pipeline, trigger"
+            placeholder="按运行 ID / 流水线 / 触发方式搜索"
             className="bg-[#0f1116] border-slate-800 text-slate-200"
           />
         </div>
@@ -294,24 +294,24 @@ export default function RunsPage() {
           <div className="p-6 text-sm text-red-400">{error}</div>
         ) : loading ? (
           <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading runs...
+            <Loader2 className="h-4 w-4 animate-spin" /> 正在加载运行记录...
           </div>
         ) : filteredRuns.length === 0 ? (
           <div className="p-6 text-sm text-slate-400">
-            No runs found for the current filters.
+            当前筛选条件下暂无运行记录。
           </div>
         ) : (
           <Table>
             <TableHeader className="bg-[#11141c]">
               <TableRow className="border-slate-800">
-                <TableHead className="text-slate-300">Run</TableHead>
-                <TableHead className="text-slate-300">Pipeline</TableHead>
-                <TableHead className="text-slate-300">Status</TableHead>
-                <TableHead className="text-slate-300">Trigger</TableHead>
-                <TableHead className="text-slate-300">Started</TableHead>
-                <TableHead className="text-slate-300">Duration</TableHead>
-                <TableHead className="text-slate-300">Cost</TableHead>
-                <TableHead className="text-slate-300 text-right">Actions</TableHead>
+                <TableHead className="text-slate-300">运行</TableHead>
+                <TableHead className="text-slate-300">流水线</TableHead>
+                <TableHead className="text-slate-300">状态</TableHead>
+                <TableHead className="text-slate-300">触发方式</TableHead>
+                <TableHead className="text-slate-300">开始时间</TableHead>
+                <TableHead className="text-slate-300">耗时</TableHead>
+                <TableHead className="text-slate-300">成本</TableHead>
+                <TableHead className="text-slate-300 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -330,7 +330,7 @@ export default function RunsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-slate-200">
-                        {run.pipeline_name || "Untitled pipeline"}
+                        {run.pipeline_name || "未命名流水线"}
                       </div>
                       <div className="text-xs text-slate-500">
                         {run.pipeline_id || "-"}
@@ -373,14 +373,14 @@ export default function RunsPage() {
                             ) : (
                               <Square className="mr-2 h-3.5 w-3.5" />
                             )}
-                            Cancel
+                            取消
                           </Button>
                         ) : null}
                         <Link
                           href={`/console/runs/${run.id}`}
                           className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200"
                         >
-                          View
+                          查看
                           <ChevronRight className="h-3.5 w-3.5" />
                         </Link>
                       </div>
@@ -396,7 +396,7 @@ export default function RunsPage() {
       {!namespace ? (
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" />
-          Set a namespace to view runs.
+          请先选择工作区查看运行记录。
         </div>
       ) : null}
     </div>

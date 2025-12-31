@@ -299,7 +299,7 @@ export const WordCountHistogram = memo(
                 (value / totalCount) *
                 100
               ).toFixed(1)}%)`,
-              "Count",
+              "数量",
             ]}
             labelFormatter={(_, payload) =>
               payload[0]?.payload?.fullRange || ""
@@ -371,7 +371,7 @@ export const CategoricalBarChart = memo(
                 (value / totalCount) *
                 100
               ).toFixed(1)}%)`,
-              "Count",
+              "数量",
             ]}
             labelFormatter={(_, payload) =>
               payload[0]?.payload?.fullValue || ""
@@ -435,15 +435,15 @@ const ColumnHeader = memo(
           case "number":
             return "";
           case "array":
-            return " items";
+            return " 项";
           case "boolean":
             return "";
           case "string-chars":
-            return " chars";
+            return " 字符";
           case "string-words":
-            return " words";
+            return " 词";
           default:
-            return " words";
+            return " 词";
         }
       };
 
@@ -451,14 +451,14 @@ const ColumnHeader = memo(
       if (stats.type === "boolean") {
         return [
           {
-            range: "False",
+            range: "否",
             count: stats.distribution[0],
-            fullRange: "False",
+            fullRange: "否",
           },
           {
-            range: "True",
+            range: "是",
             count: stats.distribution[1],
-            fullRange: "True",
+            fullRange: "是",
           },
         ];
       }
@@ -574,7 +574,7 @@ const ColumnHeader = memo(
               <Search className="h-3 w-3 text-muted-foreground ml-1.5" />
             </div>
             <Input
-              placeholder="Filter..."
+              placeholder="筛选..."
               value={filterValue}
               onChange={(e) => onFilter(e.target.value)}
               className={`h-6 text-xs border-none shadow-none focus-visible:ring-0 ${
@@ -588,29 +588,29 @@ const ColumnHeader = memo(
             <div className="flex justify-between text-[10px] text-muted-foreground">
               {stats.isLowCardinality ? (
                 <span className="w-full text-center">
-                  {stats.distinctCount} distinct values
+                  {stats.distinctCount} 个不同值
                 </span>
               ) : (
                 <>
                   <span>
                     {stats.min}
                     {stats.type === "array"
-                      ? " items"
+                      ? " 项"
                       : stats.type === "string-words"
-                      ? " words"
+                      ? " 词"
                       : stats.type === "string-chars"
-                      ? " chars"
+                      ? " 字符"
                       : ""}
                   </span>
-                  <span>avg: {Math.round(stats.avg)}</span>
+                  <span>平均: {Math.round(stats.avg)}</span>
                   <span>
                     {stats.max}
                     {stats.type === "array"
-                      ? " items"
+                      ? " 项"
                       : stats.type === "string-words"
-                      ? " words"
+                      ? " 词"
                       : stats.type === "string-chars"
-                      ? " chars"
+                      ? " 字符"
                       : ""}
                   </span>
                 </>
@@ -724,7 +724,7 @@ const ObservabilityIndicator = memo(
         >
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">
-              LLM Call(s) for {currentOperation}
+              {currentOperation} 的 LLM 调用
             </h3>
             <div className="space-y-2">
               {observabilityEntries.map(([key, value]) => (
@@ -1094,7 +1094,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                   size="sm"
                   className="flex items-center ml-2 h-7"
                 >
-                  Show/Hide Columns
+                  显示/隐藏列
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1120,7 +1120,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
               className="h-7"
               onClick={resetColumnWidths}
             >
-              Reset Widths
+              重置宽度
             </Button>
           </div>
           <div className="flex items-center space-x-2">
@@ -1133,10 +1133,10 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
-                  <ChevronLeft className="mr-1 h-3 w-3" /> Previous
+                  <ChevronLeft className="mr-1 h-3 w-3" /> 上一页
                 </Button>
                 <span className="text-xs text-gray-600">
-                  Page {pageIndex + 1} of {pageCount}
+                  第 {pageIndex + 1} 页 / 共 {pageCount} 页
                 </span>
                 <Button
                   variant="outline"
@@ -1145,7 +1145,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
-                  Next <ChevronRight className="ml-1 h-3 w-3" />
+                  下一页 <ChevronRight className="ml-1 h-3 w-3" />
                 </Button>
               </div>
             )}
@@ -1361,11 +1361,11 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+            <ChevronLeft className="mr-2 h-4 w-4" /> 上一页
           </Button>
           <span className="text-sm text-gray-600">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
+            第 {table.getState().pagination.pageIndex + 1} 页 / 共{" "}
+            {table.getPageCount()} 页
           </span>
           <Button
             variant="outline"
@@ -1373,7 +1373,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next <ChevronRight className="ml-2 h-4 w-4" />
+            下一页 <ChevronRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       )}

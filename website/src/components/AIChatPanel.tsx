@@ -41,10 +41,10 @@ interface Message {
 }
 
 const DEFAULT_SUGGESTIONS = [
-  "Go over current outputs",
-  "Help me refine my current operation prompt",
-  "Am I doing this right?",
-  "Help me with jinja2 templating",
+  "检查当前输出",
+  "帮我优化当前操作的提示词",
+  "我这样做对吗？",
+  "帮我处理 jinja2 模板",
 ];
 
 const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
@@ -103,7 +103,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
       console.error("Chat error:", error);
       setError(error.message);
       toast({
-        title: "Error",
+        title: "错误",
         description: error.message,
         variant: "destructive",
       });
@@ -171,8 +171,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({ onClose }) => {
 
     if (!hasOpenAIKey && !usePersonalOpenAI) {
       toast({
-        title: "OpenAI API Key Required",
-        description: "Please add your OpenAI API key in Edit > Edit API Keys",
+        title: "需要 OpenAI API Key",
+        description: "请在 编辑 > 编辑 API Key 中添加你的 OpenAI API Key",
         variant: "destructive",
       });
       return;
@@ -326,7 +326,7 @@ Remember, all the output fields have been converted to strings, even if they wer
                 htmlFor="use-personal-openai"
                 className="text-[10px] text-muted-foreground whitespace-nowrap"
               >
-                Personal OpenAI Key
+                个人 OpenAI Key
               </Label>
             </div>
             <Popover>
@@ -337,21 +337,21 @@ Remember, all the output fields have been converted to strings, even if they wer
                     size="sm"
                     className="h-4 px-2 text-xs"
                   >
-                    {highLevelGoal ? "Edit Analysis Goal" : "Set Analysis Goal"}
+                    {highLevelGoal ? "编辑分析目标" : "设置分析目标"}
                   </Button>
                 </span>
               </PopoverTrigger>
               <PopoverContent className="w-80 z-[10000]" side="top" align="end">
                 <div className="space-y-2">
-                  <h4 className="font-medium text-sm">Pipeline Goal</h4>
+                  <h4 className="font-medium text-sm">流水线目标</h4>
                   <Textarea
-                    placeholder="Describe the high-level goal of your pipeline..."
+                    placeholder="描述流水线的总体目标..."
                     className="min-h-[100px]"
                     value={localGoal}
                     onChange={(e) => handleGoalUpdate(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    This helps the assistant provide more relevant suggestions.
+                    有助于助手给出更相关的建议。
                   </p>
                 </div>
               </PopoverContent>
@@ -361,7 +361,7 @@ Remember, all the output fields have been converted to strings, even if they wer
               size="sm"
               className="h-4 w-4 p-0"
               onClick={handleClearMessages}
-              title="Clear messages"
+              title="清空对话"
             >
               <RefreshCw size={12} />
             </Button>
@@ -382,7 +382,7 @@ Remember, all the output fields have been converted to strings, even if they wer
                 <div className="flex gap-2">
                   <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium">Error</p>
+                    <p className="font-medium">错误</p>
                     <p className="mt-1">{error}</p>
                   </div>
                 </div>
@@ -396,10 +396,10 @@ Remember, all the output fields have been converted to strings, even if they wer
                     <div className="flex gap-2">
                       <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium">OpenAI API Key Required</p>
+                        <p className="font-medium">需要 OpenAI API Key</p>
                         <p className="mt-1">
-                          To use your personal OpenAI account, please add your
-                          OpenAI API key in Edit {">"} Edit API Keys.
+                          要使用个人 OpenAI 账户，请在 编辑 {">"} 编辑 API Key
+                          中添加 OpenAI API Key。
                         </p>
                       </div>
                     </div>
@@ -486,10 +486,10 @@ Remember, all the output fields have been converted to strings, even if they wer
               onChange={handleInputChange}
               placeholder={
                 error
-                  ? "Try again..."
+                  ? "请重试..."
                   : !hasOpenAIKey && !usePersonalOpenAI
-                  ? "Add OpenAI API key to continue..."
-                  : "Ask a question..."
+                  ? "请先添加 OpenAI API Key..."
+                  : "请输入问题..."
               }
               className="flex-1 text-s h-7"
               disabled={!hasOpenAIKey && !usePersonalOpenAI}
@@ -500,7 +500,7 @@ Remember, all the output fields have been converted to strings, even if they wer
               disabled={isLoading || (!hasOpenAIKey && !usePersonalOpenAI)}
               className="h-7 text-s text-white"
             >
-              Send
+              发送
             </Button>
           </form>
         </div>

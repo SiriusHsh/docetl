@@ -103,40 +103,39 @@ export function APIKeysDialog({ open, onOpenChange }: APIKeysDialogProps) {
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex items-center gap-2">
             <Key className="h-5 w-5" />
-            API Keys Configuration
+            API Key 配置
           </DialogTitle>
           <DialogDescription>
-            Set your API keys for LLM providers. These are only stored in memory
-            and will be cleared when you refresh the page.
+            设置 LLM 提供方的 API Key。仅保存在内存中，刷新页面会清除。
           </DialogDescription>
           <Alert variant="destructive" className="mt-2">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex flex-col gap-1">
               <span>
-                For security, we don&apos;t save API keys. To avoid re-entering
-                them, run DocETL{" "}
+                出于安全考虑，系统不会保存 API Key。若想避免重复输入，
+                请在本地运行 DocETL{" "}
                 <a
                   href="https://ucbepic.github.io/docetl/playground/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline hover:text-primary"
                 >
-                  locally
+                  本地版本
                 </a>{" "}
-                and set them as environment variables.
+                并将其配置为环境变量。
               </span>
               <span className="text-xs mt-1">
-                Need to use a different model? Check the{" "}
+                需要使用其他模型？请查看{" "}
                 <a
                   href="https://docs.litellm.ai/docs/providers"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline hover:text-primary"
                 >
-                  LiteLLM provider list
+                  LiteLLM 提供方列表
                 </a>{" "}
-                for supported models and their environment variable names (e.g.,
-                FIREWORKS_API_KEY for Fireworks AI).
+                了解可用模型及其环境变量名称（例如 Fireworks AI 的
+                FIREWORKS_API_KEY）。
               </span>
             </AlertDescription>
           </Alert>
@@ -152,7 +151,7 @@ export function APIKeysDialog({ open, onOpenChange }: APIKeysDialogProps) {
             }
           >
             <ExternalLink className="h-4 w-4 mr-1" />
-            LiteLLM Docs
+            LiteLLM 文档
           </Button>
         </div>
 
@@ -169,7 +168,7 @@ export function APIKeysDialog({ open, onOpenChange }: APIKeysDialogProps) {
                       htmlFor={`key-name-${index}`}
                       className="text-xs text-muted-foreground"
                     >
-                      Variable Name
+                      变量名
                     </Label>
                     <Input
                       id={`key-name-${index}`}
@@ -177,7 +176,7 @@ export function APIKeysDialog({ open, onOpenChange }: APIKeysDialogProps) {
                       onChange={(e) =>
                         handleInputChange(index, "name", e.target.value)
                       }
-                      placeholder="e.g., OPENAI_API_KEY"
+                      placeholder="例如：OPENAI_API_KEY"
                       className="font-mono text-sm h-8 mt-1"
                     />
                   </div>
@@ -194,7 +193,7 @@ export function APIKeysDialog({ open, onOpenChange }: APIKeysDialogProps) {
                       onChange={(e) =>
                         handleInputChange(index, "value", e.target.value)
                       }
-                      placeholder="Enter key value"
+                      placeholder="请输入 Key 值"
                       className="font-mono text-sm h-8 mt-1"
                     />
                   </div>
@@ -218,7 +217,7 @@ export function APIKeysDialog({ open, onOpenChange }: APIKeysDialogProps) {
                   className="text-xs"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Add Custom Key
+                  添加自定义 Key
                 </Button>
               </div>
               <div className="h-8" />
@@ -228,7 +227,7 @@ export function APIKeysDialog({ open, onOpenChange }: APIKeysDialogProps) {
         </div>
 
         <DialogFooter>
-          <Button onClick={handleSave}>Save Keys</Button>
+          <Button onClick={handleSave}>保存</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

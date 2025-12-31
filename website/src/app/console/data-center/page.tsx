@@ -22,6 +22,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type DatasetRecord = {
   id: string;
@@ -30,6 +40,14 @@ type DatasetRecord = {
   format: string;
   original_format?: string | null;
   ingest_status: string;
+  ingest_config?: {
+    progress?: {
+      state?: string;
+      percent?: number;
+      message?: string;
+      queue_position?: number;
+    };
+  } | null;
   row_count?: number | null;
   created_at: number;
 };
@@ -57,6 +75,9 @@ export default function DataCenterPage() {
   );
   const [previewDatasetId, setPreviewDatasetId] = useState<string | null>(null);
   const [previewSampleMode, setPreviewSampleMode] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [datasetToDelete, setDatasetToDelete] =
+    useState<DatasetRecord | null>(null);
 
   useEffect(() => {
     setNamespace(readNamespace());
@@ -81,12 +102,12 @@ export default function DataCenterPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load datasets");
+        throw new Error(detail || "加载数据集失败");
       }
       const data = (await response.json()) as DatasetRecord[];
       setDatasets(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load datasets");
+      setError(err instanceof Error ? err.message : "加载数据集失败");
     } finally {
       setLoading(false);
     }
@@ -140,7 +161,7 @@ export default function DataCenterPage() {
 
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Upload failed");
+        throw new Error(detail || "上传失败");
       }
 
       setFile(null);
@@ -151,9 +172,30 @@ export default function DataCenterPage() {
       setMaxRows("");
       await loadDatasets();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "上传失败");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDelete = async (dataset: DatasetRecord) => {
+    if (!namespace) return;
+    setDeletingId(dataset.id);
+    setError(null);
+    try {
+      const response = await backendFetch(
+        `/api/data-center/datasets/${dataset.id}`,
+        { method: "DELETE" }
+      );
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "删除数据集失败");
+      }
+      await loadDatasets();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "删除失败");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -182,7 +224,7 @@ export default function DataCenterPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to preview dataset");
+        throw new Error(detail || "预览数据集失败");
       }
       const data = (await response.json()) as {
         items: unknown[];
@@ -197,7 +239,7 @@ export default function DataCenterPage() {
       setPreviewLimit(data.limit);
       setPreviewSampleMode(data.sample);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Preview failed");
+      setError(err instanceof Error ? err.message : "预览失败");
     } finally {
       setPreviewLoading(false);
     }
@@ -218,40 +260,61 @@ export default function DataCenterPage() {
   const formatTimestamp = (value: number) =>
     new Date(value * 1000).toLocaleString();
 
+  const ingestStatusLabels: Record<string, string> = {
+    ready: "就绪",
+    failed: "失败",
+    processing: "处理中",
+    pending: "等待中",
+  };
+
+  const progressStateLabels: Record<string, string> = {
+    queued: "排队中",
+    processing: "处理中",
+    parsing: "解析中",
+    writing: "写入中",
+    finalizing: "收尾中",
+    retrying: "重试中",
+    failed: "失败",
+    completed: "已完成",
+  };
+
+  const sourceLabels: Record<string, string> = {
+    user_upload: "用户上传",
+    pipeline_generated: "流水线产出",
+  };
+
   return (
     <div className="px-6 py-6">
       <div className="flex items-center gap-3">
         <Database className="h-6 w-6 text-slate-200" />
-        <h1 className="text-2xl font-semibold text-white">Data Center</h1>
+        <h1 className="text-2xl font-semibold text-white">数据中心</h1>
       </div>
       <p className="mt-2 text-sm text-slate-400">
-        Upload datasets and normalize Excel/CSV/JSON files into a reusable
-        dataset registry.
+        上传数据集并将 Excel/CSV/JSON 规范化为可复用的数据集。
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
         <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
           <div className="flex items-center gap-2 text-sm text-slate-200">
             <UploadCloud className="h-4 w-4" />
-            <span>User Uploads</span>
+            <span>用户上传</span>
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Upload Excel, CSV, or JSON. Customize sheet and header settings for
-            Excel files.
+            上传 Excel、CSV 或 JSON。Excel 文件可配置工作表与表头信息。
           </p>
 
           <div className="mt-4 space-y-3 text-sm text-slate-200">
             <div>
-              <label className="text-xs text-slate-400">Dataset name</label>
+              <label className="text-xs text-slate-400">数据集名称</label>
               <input
                 value={datasetName}
                 onChange={(event) => setDatasetName(event.target.value)}
                 className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white"
-                placeholder="Optional display name"
+                placeholder="可选显示名称"
               />
             </div>
             <div>
-              <label className="text-xs text-slate-400">File</label>
+              <label className="text-xs text-slate-400">文件</label>
               <input
                 type="file"
                 accept=".json,.csv,.xlsx,.xls"
@@ -264,43 +327,43 @@ export default function DataCenterPage() {
 
             <div className={cn("grid gap-3 md:grid-cols-2", !isExcel && "opacity-60")}>
               <div>
-                <label className="text-xs text-slate-400">Sheet name</label>
+                <label className="text-xs text-slate-400">工作表名称</label>
                 <input
                   value={sheetName}
                   onChange={(event) => setSheetName(event.target.value)}
                   disabled={!isExcel}
                   className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
-                  placeholder="Default: first sheet"
+                  placeholder="默认：首个工作表"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">Sheet index</label>
+                <label className="text-xs text-slate-400">工作表序号</label>
                 <input
                   value={sheetIndex}
                   onChange={(event) => setSheetIndex(event.target.value)}
                   disabled={!isExcel}
                   className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
-                  placeholder="0-based index"
+                  placeholder="从 0 开始的序号"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">Header row</label>
+                <label className="text-xs text-slate-400">表头行</label>
                 <input
                   value={headerRow}
                   onChange={(event) => setHeaderRow(event.target.value)}
                   disabled={!isExcel}
                   className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
-                  placeholder="Default: 0"
+                  placeholder="默认：0"
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400">Max rows</label>
+                <label className="text-xs text-slate-400">最大行数</label>
                 <input
                   value={maxRows}
                   onChange={(event) => setMaxRows(event.target.value)}
                   disabled={!isExcel}
                   className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white disabled:text-slate-500"
-                  placeholder="Optional limit"
+                  placeholder="可选限制"
                 />
               </div>
             </div>
@@ -311,7 +374,7 @@ export default function DataCenterPage() {
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Upload Dataset
+              上传数据集
             </button>
             {error ? <div className="text-xs text-rose-300">{error}</div> : null}
           </div>
@@ -320,10 +383,10 @@ export default function DataCenterPage() {
         <div className="rounded-2xl border border-white/5 bg-white/5 p-5">
           <div className="flex items-center gap-2 text-sm text-slate-200">
             <FileText className="h-4 w-4" />
-            <span>Pipeline Outputs</span>
+            <span>流水线输出</span>
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            Generated datasets from pipelines will appear here.
+            流水线生成的数据集会显示在这里。
           </p>
         </div>
       </div>
@@ -331,51 +394,94 @@ export default function DataCenterPage() {
       <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-5">
         <div className="flex items-center gap-2 text-sm text-slate-200">
           <Table2 className="h-4 w-4" />
-          <span>Datasets</span>
+          <span>数据集</span>
         </div>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-200">
             <thead className="text-xs uppercase text-slate-400">
               <tr>
-                <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">Source</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Rows</th>
-                <th className="py-2 pr-4">Created</th>
-                <th className="py-2 pr-4">Preview</th>
-                <th className="py-2 pr-4">Details</th>
+                <th className="py-2 pr-4">名称</th>
+                <th className="py-2 pr-4">来源</th>
+                <th className="py-2 pr-4">状态</th>
+                <th className="py-2 pr-4">行数</th>
+                <th className="py-2 pr-4">创建时间</th>
+                <th className="py-2 pr-4">预览</th>
+                <th className="py-2 pr-4">详情</th>
+                <th className="py-2 pr-4">删除</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-4 text-slate-400">
-                    Loading datasets...
+                  <td colSpan={8} className="py-4 text-slate-400">
+                    正在加载数据集...
                   </td>
                 </tr>
               ) : datasets.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-4 text-slate-400">
-                    No datasets yet.
+                  <td colSpan={8} className="py-4 text-slate-400">
+                    暂无数据集。
                   </td>
                 </tr>
               ) : (
                 datasets.map((dataset) => (
                   <tr key={dataset.id} className="border-t border-white/5">
                     <td className="py-3 pr-4">{dataset.name}</td>
-                    <td className="py-3 pr-4">{dataset.source}</td>
                     <td className="py-3 pr-4">
-                      <span
-                        className={cn(
-                          "text-xs",
-                          dataset.ingest_status === "ready" && "text-emerald-400",
-                          dataset.ingest_status === "failed" && "text-rose-400",
-                          dataset.ingest_status === "processing" &&
-                            "text-amber-300"
-                        )}
-                      >
-                        {dataset.ingest_status}
-                      </span>
+                      {sourceLabels[dataset.source] || dataset.source}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={cn(
+                            "text-xs",
+                            dataset.ingest_status === "ready" &&
+                              "text-emerald-400",
+                            dataset.ingest_status === "failed" &&
+                              "text-rose-400",
+                            dataset.ingest_status === "processing" &&
+                              "text-amber-300"
+                          )}
+                        >
+                          {ingestStatusLabels[dataset.ingest_status] ||
+                            dataset.ingest_status}
+                        </span>
+                        {dataset.ingest_status === "processing" &&
+                        dataset.ingest_config?.progress ? (
+                          <>
+                            <span className="text-[10px] text-slate-500">
+                              {progressStateLabels[
+                                dataset.ingest_config.progress.state ||
+                                  "processing"
+                              ] || dataset.ingest_config.progress.state || "处理中"}
+                              {typeof dataset.ingest_config.progress.queue_position ===
+                              "number"
+                                ? ` (#${dataset.ingest_config.progress.queue_position})`
+                                : ""}
+                              {typeof dataset.ingest_config.progress.percent ===
+                              "number"
+                                ? ` · ${Math.round(
+                                    dataset.ingest_config.progress.percent
+                                  )}%`
+                                : ""}
+                            </span>
+                            <div className="h-1.5 w-28 rounded-full bg-white/10">
+                              <div
+                                className="h-1.5 rounded-full bg-blue-500"
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    Math.max(
+                                      0,
+                                      dataset.ingest_config.progress.percent ?? 0
+                                    )
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="py-3 pr-4">{dataset.row_count ?? "-"}</td>
                     <td className="py-3 pr-4">
@@ -388,7 +494,7 @@ export default function DataCenterPage() {
                         className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
                         disabled={dataset.ingest_status !== "ready"}
                       >
-                        Preview
+                        预览
                       </button>
                     </td>
                     <td className="py-3 pr-4">
@@ -396,8 +502,18 @@ export default function DataCenterPage() {
                         href={`/console/data-center/${dataset.id}`}
                         className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-200 hover:border-white/20 hover:bg-white/10"
                       >
-                        Details
+                        详情
                       </Link>
+                    </td>
+                    <td className="py-3 pr-4">
+                      <button
+                        type="button"
+                        onClick={() => setDatasetToDelete(dataset)}
+                        className="rounded-md border border-rose-500/40 px-2 py-1 text-xs text-rose-200 hover:border-rose-400/70 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={deletingId === dataset.id}
+                      >
+                        {deletingId === dataset.id ? "删除中..." : "删除"}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -411,14 +527,14 @@ export default function DataCenterPage() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
-              Preview: {previewDatasetName || "Dataset"}
+              预览：{previewDatasetName || "数据集"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-              <span>Total rows: {previewTotal}</span>
-              <span>Showing: {previewItems.length}</span>
-              {previewSampleMode ? <span>Sample mode</span> : null}
+              <span>总行数：{previewTotal}</span>
+              <span>当前显示：{previewItems.length}</span>
+              {previewSampleMode ? <span>抽样模式</span> : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -435,7 +551,7 @@ export default function DataCenterPage() {
                     : null
                 }
               >
-                Previous
+                上一页
               </button>
               <button
                 type="button"
@@ -456,7 +572,7 @@ export default function DataCenterPage() {
                     : null
                 }
               >
-                Next
+                下一页
               </button>
               <button
                 type="button"
@@ -472,14 +588,14 @@ export default function DataCenterPage() {
                     : null
                 }
               >
-                Random Sample
+                随机抽样
               </button>
             </div>
             <div className="rounded-lg border border-white/10 bg-black/40 p-3 text-xs text-slate-100">
               {previewLoading ? (
                 <div className="flex items-center gap-2 text-slate-300">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading preview...
+                  正在加载预览...
                 </div>
               ) : (
                 <pre className="max-h-72 overflow-auto whitespace-pre-wrap">
@@ -490,6 +606,47 @@ export default function DataCenterPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={datasetToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDatasetToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="border border-white/10 bg-slate-950 text-slate-100 shadow-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-100">
+              删除数据集
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              将永久删除{" "}
+              <span className="font-semibold text-slate-200">
+                {datasetToDelete?.name}
+              </span>{" "}
+              及其存储文件，无法恢复。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/10 text-slate-200 hover:bg-white/5">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (datasetToDelete) {
+                  void handleDelete(datasetToDelete);
+                }
+                setDatasetToDelete(null);
+              }}
+              className="bg-rose-600 text-white hover:bg-rose-500"
+              disabled={!!deletingId}
+            >
+              {deletingId ? "删除中..." : "删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

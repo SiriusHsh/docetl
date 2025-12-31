@@ -20,7 +20,7 @@ export const RowNavigator = React.memo(
     onNavigate,
     onJumpToRow,
     disabled = false,
-    label = "Row",
+    label = "行",
     compact = false,
   }: RowNavigatorProps) => {
     const [isEditing, setIsEditing] = useState(false);
@@ -107,7 +107,7 @@ export const RowNavigator = React.memo(
               compact ? "text-xs" : "text-sm"
             } text-muted-foreground`}
           >
-            of {totalRows}
+            共 {totalRows} 行
           </span>
         </div>
 

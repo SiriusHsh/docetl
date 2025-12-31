@@ -58,15 +58,15 @@ const InlineEditingButton: React.FC<InlineEditingButtonProps> = ({
         >
           <div className="space-y-4">
             <div className="text-sm text-muted-foreground">
-              Selected text: {selectedText}
+              已选文本：{selectedText}
             </div>
             <Textarea
-              placeholder="Enter your instruction for editing..."
+              placeholder="输入编辑指令..."
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
             />
             <Button type="submit" className="w-full">
-              Submit
+              提交
             </Button>
           </div>
         </form>

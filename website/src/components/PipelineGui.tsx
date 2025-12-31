@@ -98,7 +98,7 @@ const OperationMenuItem: React.FC<OperationMenuItemProps> = ({
       </HoverCardTrigger>
       <HoverCardContent side="right" align="start" className="w-72 p-2">
         <div className="space-y-1">
-          <h4 className="font-medium text-sm">{name} Operation</h4>
+          <h4 className="font-medium text-sm">{name} 操作</h4>
           <p className="text-xs text-muted-foreground leading-snug">
             {description}
           </p>
@@ -117,6 +117,23 @@ interface AddOperationDropdownProps {
   trigger: React.ReactNode;
 }
 
+const OPERATION_TYPE_LABELS: Record<string, string> = {
+  map: "映射",
+  reduce: "归约",
+  resolve: "消歧",
+  filter: "过滤",
+  parallel_map: "并行映射",
+  rank: "排序",
+  extract: "抽取",
+  unnest: "展开",
+  split: "拆分",
+  gather: "汇聚",
+  sample: "抽样",
+  code_map: "代码映射",
+  code_reduce: "代码归约",
+  code_filter: "代码过滤",
+};
+
 const AddOperationDropdown: React.FC<AddOperationDropdownProps> = ({
   onAddOperation,
   trigger,
@@ -126,92 +143,92 @@ const AddOperationDropdown: React.FC<AddOperationDropdownProps> = ({
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuLabel className="font-bold text-sm bg-muted/50 py-2">
-          Add LLM Operation
+          添加 LLM 操作
         </DropdownMenuLabel>
         <OperationMenuItem
-          name="Map"
-          description="Transforms each input item for complex data processing and insight extraction. 1 to 1 operation (each document gets one result, but the output of the operation can be any type, like a list)."
-          onClick={() => onAddOperation("LLM", "map", "Untitled Map")}
+          name="映射"
+          description="对每条输入进行变换，适合复杂处理与信息提取。1 对 1 操作（每个文档产生一个结果，但输出可以是任意类型，例如列表）。"
+          onClick={() => onAddOperation("LLM", "map", "未命名映射")}
         />
         <OperationMenuItem
-          name="Reduce"
-          description="Aggregates data by key for summarization or folding. Many to 1 operation (many documents get combined into one result)."
-          onClick={() => onAddOperation("LLM", "reduce", "Untitled Reduce")}
+          name="归约"
+          description="按键聚合用于汇总或折叠。多对一操作（多个文档合并成一个结果）。"
+          onClick={() => onAddOperation("LLM", "reduce", "未命名归约")}
         />
         <OperationMenuItem
-          name="Resolve"
-          description="Identifies and merges duplicate entities for data consistency. Keeps the same number of documents; just resolves values."
-          onClick={() => onAddOperation("LLM", "resolve", "Untitled Resolve")}
+          name="消歧"
+          description="识别并合并重复实体以保证数据一致性。文档数量不变，仅对值进行消歧合并。"
+          onClick={() => onAddOperation("LLM", "resolve", "未命名消歧")}
         />
         <OperationMenuItem
-          name="Filter"
-          description="Selectively includes or excludes data based on specific conditions. This is like a map operation, but with a boolean output schema. The size of your dataset may decrease, as documents that evaluate to false based on the prompt will be dropped from the dataset."
-          onClick={() => onAddOperation("LLM", "filter", "Untitled Filter")}
+          name="过滤"
+          description="按条件筛选数据，类似 Map，但输出为布尔 schema。结果为 false 的文档会被丢弃，数据量可能减少。"
+          onClick={() => onAddOperation("LLM", "filter", "未命名过滤")}
         />
         <OperationMenuItem
-          name="Parallel Map"
-          description="Like a Map operation, but processes multiple documents in parallel for improved performance. Best used when documents can be processed independently."
+          name="并行映射"
+          description="类似 Map，但并行处理多个文档以提升性能，适用于文档可独立处理的场景。"
           onClick={() =>
-            onAddOperation("LLM", "parallel_map", "Untitled Parallel Map")
+            onAddOperation("LLM", "parallel_map", "未命名并行映射")
           }
         />
         <OperationMenuItem
-          name="Rank"
-          description="Sorts documents based on the given criteria. This may drop documents if you are using the `k` parameter; otherwise it returns the same documents, but in a sorted order."
-          onClick={() => onAddOperation("LLM", "rank", "Untitled Rank")}
+          name="排序"
+          description="按给定条件对文档排序。若使用 `k` 参数可能会裁剪文档；否则返回相同文档但顺序已排序。"
+          onClick={() => onAddOperation("LLM", "rank", "未命名排序")}
         />
         <OperationMenuItem
-          name="Extract"
-          description="Extracts specific sections of text from documents based on provided criteria."
-          onClick={() => onAddOperation("LLM", "extract", "Untitled Extract")}
+          name="抽取"
+          description="按给定条件从文档中抽取指定内容。"
+          onClick={() => onAddOperation("LLM", "extract", "未命名抽取")}
         />
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="font-bold text-sm bg-muted/50 py-2">
-          Add Non-LLM Operation
+          添加非 LLM 操作
         </DropdownMenuLabel>
         <OperationMenuItem
-          name="Unnest"
-          description="Flattens nested arrays or objects in your documents, creating new documents for each nested item."
-          onClick={() => onAddOperation("non-LLM", "unnest", "Untitled Unnest")}
+          name="展开"
+          description="展开文档中的嵌套数组或对象，为每个嵌套项生成新的文档。"
+          onClick={() => onAddOperation("non-LLM", "unnest", "未命名展开")}
         />
         <OperationMenuItem
-          name="Split"
-          description="Divides documents into multiple parts based on specified criteria, creating new documents for each part."
-          onClick={() => onAddOperation("non-LLM", "split", "Untitled Split")}
+          name="拆分"
+          description="按指定条件将文档拆分为多个部分，每个部分生成新的文档。"
+          onClick={() => onAddOperation("non-LLM", "split", "未命名拆分")}
         />
         <OperationMenuItem
-          name="Gather"
-          description="Collects and groups related data from multiple documents into a single document based on a common key."
-          onClick={() => onAddOperation("non-LLM", "gather", "Untitled Gather")}
+          name="汇聚"
+          description="基于公共键将多个文档的相关数据汇聚到一个文档中。"
+          onClick={() => onAddOperation("non-LLM", "gather", "未命名汇聚")}
         />
         <OperationMenuItem
-          name="Sample"
-          description="Randomly selects a subset of documents from your dataset for testing or analysis."
-          onClick={() => onAddOperation("non-LLM", "sample", "Untitled Sample")}
+          name="抽样"
+          description="从数据集中随机抽取子集用于测试或分析。"
+          onClick={() => onAddOperation("non-LLM", "sample", "未命名抽样")}
         />
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="font-bold text-sm bg-muted/50 py-2">
-          Code Operations
+          代码操作
         </DropdownMenuLabel>
         <OperationMenuItem
-          name="Code Map"
-          description="Like the LLM Map operation, but uses a Python function instead of an LLM. Write custom Python code to transform each document."
+          name="代码映射"
+          description="类似 LLM Map，但使用 Python 函数。编写自定义代码对每个文档进行转换。"
           onClick={() =>
-            onAddOperation("non-LLM", "code_map", "Untitled Code Map")
+            onAddOperation("non-LLM", "code_map", "未命名代码映射")
           }
         />
         <OperationMenuItem
-          name="Code Reduce"
-          description="Like the LLM Reduce operation, but uses a Python function instead of an LLM. Write custom Python code to aggregate multiple documents into one."
+          name="代码归约"
+          description="类似 LLM Reduce，但使用 Python 函数。编写自定义代码将多个文档聚合为一个结果。"
           onClick={() =>
-            onAddOperation("non-LLM", "code_reduce", "Untitled Code Reduce")
+            onAddOperation("non-LLM", "code_reduce", "未命名代码归约")
           }
         />
         <OperationMenuItem
-          name="Code Filter"
-          description="Like the LLM Filter operation, but uses a Python function instead of an LLM. Write custom Python code to determine which documents to keep."
+          name="代码过滤"
+          description="类似 LLM Filter，但使用 Python 函数。编写自定义代码决定保留哪些文档。"
           onClick={() =>
-            onAddOperation("non-LLM", "code_filter", "Untitled Code Filter")
+            onAddOperation("non-LLM", "code_filter", "未命名代码过滤")
           }
         />
       </DropdownMenuContent>
@@ -305,8 +322,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
 
       if (result.should_optimize) {
         toast({
-          title: `Hey! Consider decomposing ${operations[operations.length - 1].name
-            }`,
+          title: `建议拆分 ${operations[operations.length - 1].name}`,
           description: (
             <span
               className="cursor-pointer text-blue-500 hover:text-blue-700"
@@ -315,7 +331,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                 setOptimizationDialog({
                   isOpen: true,
                   content: result.should_optimize,
-                  prompt: lastOp.prompt || "No prompt specified",
+                  prompt: lastOp.prompt || "未设置提示词",
                   operationName: lastOp.name,
                   operationId: lastOp.id,
                   inputData: result.input_data,
@@ -323,7 +339,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                 });
               }}
             >
-              Click here to see why.
+              点击查看原因
             </span>
           ),
           duration: Infinity,
@@ -332,7 +348,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
     },
     onError: (error) => {
       toast({
-        title: "Optimization Check Failed",
+        title: "优化检查失败",
         description: error,
         variant: "destructive",
       });
@@ -399,7 +415,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                   ? "LLM"
                   : "non-LLM",
               type: type,
-              name: name || "Untitled Operation",
+              name: name || "未命名操作",
               prompt: prompt,
               output: output
                 ? {
@@ -433,8 +449,8 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
 
         setCost((prevCost) => prevCost + runCost);
         toast({
-          title: "Operation Complete",
-          description: `The operation cost $${runCost.toFixed(4)}`,
+          title: "操作完成",
+          description: `本次操作成本 $${runCost.toFixed(4)}`,
           duration: 3000,
         });
 
@@ -447,10 +463,10 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
         if (description.includes("Connection error")) {
           description =
             description +
-            " Consider checking your API keys (Edit > Edit API Keys) and ensuring you have a stable internet connection.";
+            " 建议检查 API Key（编辑 > 编辑 API Key），并确保网络连接稳定。";
         }
         toast({
-          title: "Execution Error",
+          title: "执行错误",
           description: description,
           variant: "destructive",
           duration: Infinity,
@@ -593,7 +609,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to export pipeline configuration");
+        throw new Error("导出流水线配置失败");
       }
 
       const { pipelineConfig } = await response.json();
@@ -610,15 +626,15 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
       document.body.removeChild(a);
 
       toast({
-        title: "Pipeline Exported",
-        description: `Your pipeline configuration has been exported successfully to ${pipelineName}.yaml.`,
+        title: "已导出流水线",
+        description: `流水线配置已成功导出为 ${pipelineName}.yaml。`,
         duration: 3000,
       });
     } catch (error) {
       console.error("Error exporting pipeline configuration:", error);
       toast({
-        title: "Error",
-        description: "Failed to export pipeline configuration",
+        title: "错误",
+        description: "导出流水线配置失败",
         variant: "destructive",
       });
     }
@@ -633,10 +649,10 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
         (!apiKeys || Object.keys(apiKeys).length === 0)
       ) {
         toast({
-          title: "Cost Limit Exceeded",
-          description: `You're trying to run operations that may exceed the cost limit of $${DOCWRANGLER_HOSTED_COST_LIMIT.toFixed(
+          title: "成本超出限制",
+          description: `当前操作可能超过 $${DOCWRANGLER_HOSTED_COST_LIMIT.toFixed(
             2
-          )}. Please add your API keys in settings to continue.`,
+          )} 的费用限制，请在设置中添加 API Key 后继续。`,
           variant: "destructive",
           duration: 5000,
         });
@@ -715,7 +731,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
       } catch (error) {
         console.error("Error writing pipeline config:", error);
         toast({
-          title: "Error",
+          title: "错误",
           description: error.message,
           variant: "destructive",
         });
@@ -812,7 +828,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
     } catch (error) {
       console.error("Error optimizing operation:", error);
       toast({
-        title: "Error",
+        title: "错误",
         description: error.message,
         variant: "destructive",
       });
@@ -977,10 +993,10 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-72">
-                        <DropdownMenuLabel>选择 Pipeline</DropdownMenuLabel>
+                        <DropdownMenuLabel>选择流水线</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {pipelines.length === 0 ? (
-                          <DropdownMenuItem disabled>暂无管线</DropdownMenuItem>
+                          <DropdownMenuItem disabled>暂无流水线</DropdownMenuItem>
                         ) : (
                           pipelines.map((pipeline) => (
                             <DropdownMenuItem
@@ -1020,13 +1036,13 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => createPipeline()}>
                           <PlusCircle size={14} className="mr-2" />
-                          新建 Pipeline
+                          新建流水线
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => {
                             if (activePipelineId) {
                               const confirmed = window.confirm(
-                                "确定要删除当前 pipeline 吗？此操作不可恢复。"
+                                "确定要删除当前流水线吗？此操作不可恢复。"
                               );
                               if (confirmed) {
                                 void deletePipeline(activePipelineId);
@@ -1074,7 +1090,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                           className="h-8 whitespace-nowrap"
                         >
                           <GitBranch size={14} className="mr-2" />
-                          Overview
+                          概览
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent
@@ -1084,10 +1100,10 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                       >
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
-                            <h4 className="font-medium">Pipeline Flow</h4>
+                            <h4 className="font-medium">流水线流程</h4>
                             <span className="text-xs text-muted-foreground">
                               {operations.filter((op) => op.visibility).length}{" "}
-                              operations
+                              个操作
                             </span>
                           </div>
                           <div className="bg-muted p-3 rounded-md space-y-2">
@@ -1099,7 +1115,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                                     <div className="flex-1 bg-background p-2 rounded-md text-sm">
                                       <div className="font-medium">{op.name}</div>
                                       <div className="text-xs text-muted-foreground">
-                                        {op.type}
+                                        {OPERATION_TYPE_LABELS[op.type] ?? op.type}
                                       </div>
                                     </div>
                                     {index < arr.length - 1 && (
@@ -1111,7 +1127,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                                 ))
                             ) : (
                               <div className="text-sm text-muted-foreground">
-                                No operations in the pipeline
+                                流水线中暂无操作
                               </div>
                             )}
                           </div>
@@ -1127,18 +1143,17 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                           className="h-8 whitespace-nowrap"
                         >
                           <Brain size={14} className="mr-2" />
-                          System Prompts
+                          系统提示词
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-88">
                         <div className="grid gap-3">
                           <div className="space-y-1">
                             <h4 className="text-lg font-semibold">
-                              System Configuration
+                              系统配置
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              This will be in the system prompt for <b>every</b>{" "}
-                              operation!
+                              以下内容会加入每个操作的系统提示词。
                             </p>
                           </div>
                           <div className="grid gap-3">
@@ -1147,11 +1162,11 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                                 htmlFor="datasetDescription"
                                 className="text-sm font-medium"
                               >
-                                Dataset Description
+                                数据集描述
                               </Label>
                               <Textarea
                                 id="datasetDescription"
-                                placeholder="a collection of documents"
+                                placeholder="一组文档集合"
                                 defaultValue={systemPrompt.datasetDescription}
                                 onBlur={(e) => {
                                   const value = e.target.value;
@@ -1170,11 +1185,11 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                                 htmlFor="persona"
                                 className="text-sm font-medium"
                               >
-                                Persona
+                                角色设定
                               </Label>
                               <Textarea
                                 id="persona"
-                                placeholder="a helpful assistant"
+                                placeholder="一个有帮助的助手"
                                 defaultValue={systemPrompt.persona}
                                 onBlur={(e) => {
                                   const value = e.target.value;
@@ -1213,13 +1228,13 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                                   );
                                 }}
                                 className="w-12 h-6 text-xs border-0 p-0 focus-visible:ring-0"
-                                placeholder="All"
+                                placeholder="全部"
                               />
                             </Button>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
-                          <p>Run pipeline on a sample of documents</p>
+                          <p>在样本文档上运行流水线</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -1240,7 +1255,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">
-                            <p>Load from YAML</p>
+                            <p>从 YAML 导入</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1264,7 +1279,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">
-                            <p>Save to YAML</p>
+                            <p>导出为 YAML</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1290,7 +1305,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                       variant="outline"
                       className="rounded-sm whitespace-nowrap"
                     >
-                      Add Operation <Plus size={16} className="ml-2" />
+                      添加操作 <Plus size={16} className="ml-2" />
                     </Button>
                   }
                 />
@@ -1304,7 +1319,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                     disabled={!isLoadingOutputs}
                   >
                     <StopCircle size={16} className="mr-2" />
-                    Stop
+                    停止
                   </Button>
                   <TooltipProvider>
                     <Tooltip>
@@ -1321,11 +1336,11 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                           ) : (
                             <RefreshCw size={16} className="mr-2" />
                           )}
-                          Run Fresh
+                          清空重跑
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom" className="w-72">
-                        <p>Run pipeline after clearing all cached results</p>
+                        <p>清空缓存后运行流水线</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -1341,7 +1356,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                     ) : (
                       <Play size={16} className="mr-2" />
                     )}
-                    Run
+                    运行
                   </Button>
                 </div>
               </div>
@@ -1378,7 +1393,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                 )}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                {variant === "execute" ? "添加操作" : "Add Operation"}
+                添加操作
               </Button>
             }
           />

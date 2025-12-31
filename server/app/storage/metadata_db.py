@@ -1701,6 +1701,10 @@ def update_dataset(
     return _row_to_dataset(row)
 
 
+def delete_dataset(conn: sqlite3.Connection, dataset_id: str) -> None:
+    conn.execute("DELETE FROM datasets WHERE id = ?", (dataset_id,))
+
+
 def get_dataset(conn: sqlite3.Connection, dataset_id: str) -> DatasetRow | None:
     row = conn.execute(
         f"SELECT {_DATASET_COLUMNS} FROM datasets WHERE id = ?",

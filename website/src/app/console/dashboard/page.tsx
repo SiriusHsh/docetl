@@ -119,25 +119,25 @@ export default function DashboardPage() {
           const data = (await summaryResponse.json()) as RunSummary;
           setSummary(data);
         } else {
-          setError("Unable to load run summary");
+          setError("无法加载运行汇总");
         }
 
         if (pipelinesResponse.ok) {
           const pipelines = (await pipelinesResponse.json()) as Array<unknown>;
           setPipelineCount(pipelines.length);
         } else {
-          setError((prev) => prev || "Unable to load pipelines");
+          setError((prev) => prev || "无法加载流水线列表");
         }
 
         if (runsResponse.ok) {
           const runsData = (await runsResponse.json()) as RunRecord[];
           setRuns(runsData);
         } else {
-          setError((prev) => prev || "Unable to load runs");
+          setError((prev) => prev || "无法加载运行记录");
         }
       } catch (err) {
         if (!cancelled) {
-          setError("Failed to load dashboard data");
+          setError("加载仪表盘数据失败");
         }
       } finally {
         if (!cancelled) {
@@ -154,7 +154,15 @@ export default function DashboardPage() {
 
   const lastRunText = summary?.last_run_at
     ? new Date(summary.last_run_at * 1000).toLocaleString()
-    : "No runs yet";
+    : "暂无运行记录";
+
+  const runStatusLabels: Record<RunRecord["status"], string> = {
+    pending: "等待中",
+    running: "运行中",
+    completed: "已完成",
+    failed: "失败",
+    cancelled: "已取消",
+  };
 
   const trendData = useMemo(() => {
     const days = 14;
@@ -190,7 +198,7 @@ export default function DashboardPage() {
   const topPipelines = useMemo(() => {
     const counts = new Map<string, { name: string; total: number; failed: number }>();
     runs.forEach((run) => {
-      const name = run.pipeline_name || run.pipeline_id || "Unknown pipeline";
+      const name = run.pipeline_name || run.pipeline_id || "未知流水线";
       const entry = counts.get(name) || { name, total: 0, failed: 0 };
       entry.total += 1;
       if (run.status === "failed") {
@@ -209,36 +217,36 @@ export default function DashboardPage() {
   return (
     <div className="px-6 py-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-white">仪表盘</h1>
         <p className="text-sm text-slate-400">
-          {namespace ? `Active namespace: ${namespace}` : "Set a namespace in Execute to continue"}
+          {namespace ? `当前工作区：${namespace}` : "请在执行页选择工作区后继续"}
         </p>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Pipelines"
+          label="流水线"
           value={pipelineCount}
-          helper="Registered pipelines"
+          helper="已登记流水线"
           icon={Layers}
         />
         <StatCard
-          label="Running"
+          label="运行中"
           value={summary?.running ?? null}
-          helper={loading ? "Loading..." : "Active runs"}
+          helper={loading ? "加载中..." : "进行中的运行"}
           icon={Activity}
           highlight
         />
         <StatCard
-          label="Failed"
+          label="失败"
           value={summary?.failed ?? null}
-          helper="Runs needing attention"
+          helper="需要关注的运行"
           icon={AlertTriangle}
         />
         <StatCard
-          label="Total Runs"
+          label="总运行数"
           value={summary?.total ?? null}
-          helper="All-time executions"
+          helper="累计执行"
           icon={PlayCircle}
         />
       </div>
@@ -246,12 +254,12 @@ export default function DashboardPage() {
       <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-5">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-slate-300">Last Run</div>
+            <div className="text-sm text-slate-300">最近一次运行</div>
             <div className="mt-1 text-lg font-medium text-white">{lastRunText}</div>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
             <Timer className="h-3 w-3" />
-            <span>{loading ? "Syncing" : "Synced"}</span>
+            <span>{loading ? "同步中" : "已同步"}</span>
           </div>
         </div>
         {error ? (
@@ -263,17 +271,17 @@ export default function DashboardPage() {
         <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-slate-300">Run Volume</div>
-              <div className="text-xs text-slate-500">Last 14 days</div>
+              <div className="text-sm text-slate-300">运行趋势</div>
+              <div className="text-xs text-slate-500">最近 14 天</div>
             </div>
             <div className="text-xs text-slate-500">
-              {runs.length} runs loaded
+              已加载 {runs.length} 次运行
             </div>
           </div>
           <div className="mt-4 h-[220px]">
             {trendData.every((item) => item.runs === 0) ? (
               <div className="h-full rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-sm text-slate-500">
-                No run activity yet
+                暂无运行活动
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -319,10 +327,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
-          <div className="text-sm text-slate-300">Top Pipelines</div>
+          <div className="text-sm text-slate-300">热门流水线</div>
           <div className="mt-4 space-y-4">
             {topPipelines.length === 0 ? (
-              <div className="text-sm text-slate-500">No pipeline activity yet.</div>
+              <div className="text-sm text-slate-500">暂无流水线活动。</div>
             ) : (
               topPipelines.map((pipeline) => {
                 const failureRate =
@@ -336,7 +344,7 @@ export default function DashboardPage() {
                         {pipeline.name}
                       </div>
                       <div className="text-xs text-slate-500">
-                        {pipeline.total} runs · {failureRate}% failed
+                        {pipeline.total} 次运行 · {failureRate}% 失败
                       </div>
                     </div>
                     <div className="h-1.5 rounded-full bg-slate-800">
@@ -357,17 +365,17 @@ export default function DashboardPage() {
 
       <div className="mt-6 rounded-2xl border border-slate-800 bg-[#151921] p-5">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-slate-300">Recent Runs</div>
+          <div className="text-sm text-slate-300">最近运行</div>
           <Link
             href="/console/runs"
             className="text-xs text-blue-300 hover:text-blue-200"
           >
-            View all
+            查看全部
           </Link>
         </div>
         <div className="mt-4 space-y-3">
           {recentRuns.length === 0 ? (
-            <div className="text-sm text-slate-500">No runs yet.</div>
+            <div className="text-sm text-slate-500">暂无运行记录。</div>
           ) : (
             recentRuns.map((run) => (
               <Link
@@ -377,14 +385,14 @@ export default function DashboardPage() {
               >
                 <div>
                   <div className="text-sm text-slate-200">
-                    {run.pipeline_name || "Untitled pipeline"}
+                    {run.pipeline_name || "未命名流水线"}
                   </div>
                   <div className="text-xs text-slate-500">
                     {new Date(run.created_at * 1000).toLocaleString()}
                   </div>
                 </div>
                 <div className="text-xs text-slate-400">
-                  {run.status}
+                  {runStatusLabels[run.status] || run.status}
                 </div>
               </Link>
             ))

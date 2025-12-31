@@ -40,7 +40,7 @@ export function Toaster() {
                     navigator.clipboard.writeText(text);
                   }
                 }}
-                title="Copy message"
+                title="复制内容"
               >
                 <Copy size={12} />
               </Button>

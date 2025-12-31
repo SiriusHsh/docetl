@@ -59,7 +59,7 @@ export const LLMContextPopover: React.FC = () => {
     <Popover onOpenChange={handlePopoverOpen}>
       <PopoverTrigger asChild>
         <button className="text-xs text-blue-500 hover:underline">
-          Show LLM Context
+          查看 LLM 上下文
         </button>
       </PopoverTrigger>
       <PopoverContent

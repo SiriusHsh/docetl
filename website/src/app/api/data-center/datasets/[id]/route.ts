@@ -30,3 +30,35 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const res = await fetch(
+      `${getBackendUrl()}/data-center/datasets/${params.id}`,
+      {
+        method: "DELETE",
+        headers: buildFastApiProxyHeaders(request),
+      }
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      return NextResponse.json(
+        { error: `Failed to delete dataset: ${text}` },
+        { status: res.status }
+      );
+    }
+
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Error deleting dataset:", error);
+    return NextResponse.json(
+      { error: "Failed to delete dataset" },
+      { status: 500 }
+    );
+  }
+}

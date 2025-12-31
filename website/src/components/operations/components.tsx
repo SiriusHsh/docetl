@@ -145,7 +145,7 @@ export const MapFilterOperationComponent: React.FC<OperationComponentProps> = ({
       <div className="mt-4 space-y-2">
         <div className="flex items-center gap-2">
           <Label htmlFor="pdf-url-key" className="text-xs font-semibold">
-            PDF URL Key
+            PDF URL 字段
           </Label>
           <HoverCard>
             <HoverCardTrigger>
@@ -153,22 +153,19 @@ export const MapFilterOperationComponent: React.FC<OperationComponentProps> = ({
             </HoverCardTrigger>
             <HoverCardContent className="w-80">
               <div className="space-y-2">
-                <h4 className="font-medium">PDF Processing</h4>
+                <h4 className="font-medium">PDF 处理</h4>
                 <p className="text-sm text-muted-foreground">
-                  Specify the key in your data that contains PDF URLs or file
-                  paths. Leave blank to disable PDF processing.
+                  指定数据中包含 PDF URL 或文件路径的字段名。留空将关闭 PDF 处理。
                 </p>
                 <div className="mt-2 rounded-md bg-muted p-2">
-                  <p className="text-sm font-medium">Example:</p>
+                  <p className="text-sm font-medium">示例：</p>
                   <p className="text-xs text-muted-foreground">
-                    If your input data has a <code>{"url"}</code> key or column,
-                    and the values are urls to PDF, enter <code>{"url"}</code>{" "}
-                    here.
+                    如果输入数据包含 <code>{"url"}</code> 字段/列，且值为 PDF 的
+                    URL，请在此填写 <code>{"url"}</code>。
                   </p>
                 </div>
                 <p className="text-xs text-gray-600 font-medium mt-1">
-                  Note: PDF processing is only available with Claude and Gemini
-                  models.
+                  注意：PDF 处理仅支持 Claude 和 Gemini 模型。
                 </p>
                 <a
                   href="https://ucbepic.github.io/docetl/operators/map/#pdf-processing"
@@ -176,7 +173,7 @@ export const MapFilterOperationComponent: React.FC<OperationComponentProps> = ({
                   rel="noopener noreferrer"
                   className="text-xs text-blue-500 hover:underline flex items-center gap-1 pt-2"
                 >
-                  <span>Learn more about PDF processing</span>
+                  <span>了解 PDF 处理详情</span>
                   <Info className="h-3 w-3" />
                 </a>
               </div>
@@ -188,7 +185,7 @@ export const MapFilterOperationComponent: React.FC<OperationComponentProps> = ({
           type="text"
           value={operation.otherKwargs?.pdf_url_key || ""}
           onChange={(e) => handlePdfUrlKeyChange(e.target.value)}
-          placeholder="e.g. url or pdf_path"
+          placeholder="例如：url 或 pdf_path"
         />
       </div>
     </>
@@ -240,7 +237,7 @@ export const ReduceOperationComponent: React.FC<OperationComponentProps> = ({
       <div className="mb-4">
         <div className="flex items-center space-x-2">
           <Label htmlFor="reduce-keys" className="w-1/4">
-            Reduce Key(s)
+            归约键
           </Label>
           <div className="flex-grow flex items-center space-x-2 overflow-x-auto">
             <div className="flex-nowrap flex items-center space-x-2">
@@ -262,7 +259,7 @@ export const ReduceOperationComponent: React.FC<OperationComponentProps> = ({
                           newKeys[index] = e.target.value;
                           handleReduceKeysChange(newKeys);
                         }}
-                        placeholder="Enter reduce key"
+                        placeholder="请输入归约键"
                         className={`w-full pr-8 ${
                           !key.trim() ? "border-red-500 focus:ring-red-500" : ""
                         }`}
@@ -286,8 +283,7 @@ export const ReduceOperationComponent: React.FC<OperationComponentProps> = ({
                     </div>
                     {!key.trim() && (
                       <p className="text-red-500 text-sm mt-1">
-                        There must be a reduce key. Set "_all" if you want all
-                        documents in a group.
+                        必须设置归约键；若要将所有文档归为一组，请使用 “_all”。
                       </p>
                     )}
                   </div>
@@ -373,7 +369,7 @@ export const ResolveOperationComponent: React.FC<OperationComponentProps> = ({
             htmlFor="comparison-prompt"
             className="block text-sm font-medium text-gray-700"
           >
-            Comparison Prompt
+            对比提示词
           </label>
           <PromptInput
             prompt={operation.otherKwargs?.comparison_prompt || ""}
@@ -385,7 +381,7 @@ export const ResolveOperationComponent: React.FC<OperationComponentProps> = ({
             htmlFor="resolution-prompt"
             className="block text-sm font-medium text-gray-700"
           >
-            Resolution Prompt
+            消歧提示词
           </label>
           <PromptInput
             prompt={operation.otherKwargs?.resolution_prompt || ""}
@@ -400,7 +396,7 @@ export const ResolveOperationComponent: React.FC<OperationComponentProps> = ({
               htmlFor="blocking-threshold"
               className="block text-sm font-medium text-gray-700"
             >
-              Blocking Threshold
+              阻塞阈值
             </label>
             <TooltipProvider>
               <Tooltip delayDuration={300}>
@@ -410,9 +406,7 @@ export const ResolveOperationComponent: React.FC<OperationComponentProps> = ({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent className="w-64 p-2 text-xs">
-                  Unsure of what value to set here? Click the lightning button
-                  to optimize this operation, which will automatically determine
-                  the blocking threshold.
+                  不确定填什么值？点击闪电按钮优化该操作，系统会自动确定阻塞阈值。
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -442,7 +436,7 @@ export const ResolveOperationComponent: React.FC<OperationComponentProps> = ({
       </div>
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Blocking Keys
+          阻塞字段
         </label>
         <div className="flex flex-wrap gap-2">
           {(operation.otherKwargs?.blocking_keys || []).map(
@@ -463,7 +457,7 @@ export const ResolveOperationComponent: React.FC<OperationComponentProps> = ({
                       },
                     });
                   }}
-                  placeholder="Enter blocking key"
+                  placeholder="请输入阻塞字段"
                   className="w-40"
                 />
                 <Button
@@ -608,7 +602,7 @@ export const SplitOperationComponent: React.FC<OperationComponentProps> = ({
     <div className="space-y-4">
       <div className="flex items-center gap-4">
         <Label htmlFor="split-key" className="w-24">
-          Split Key
+          拆分键
         </Label>
         <Input
           id="split-key"
@@ -619,23 +613,23 @@ export const SplitOperationComponent: React.FC<OperationComponentProps> = ({
       </div>
       <div className="flex items-center gap-4">
         <Label htmlFor="method" className="w-24">
-          Method
+          方法
         </Label>
         <Select
           onValueChange={handleMethodChange}
           value={operation.otherKwargs?.method || ""}
         >
           <SelectTrigger className="w-64">
-            <SelectValue placeholder="Select a method" />
+            <SelectValue placeholder="选择方法" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="delimiter">Delimiter</SelectItem>
-            <SelectItem value="token_count">Token Count</SelectItem>
+            <SelectItem value="delimiter">分隔符</SelectItem>
+            <SelectItem value="token_count">Token 数</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <div className="flex items-center gap-4">
-        <Label className="w-24">Method Args</Label>
+        <Label className="w-24">方法参数</Label>
         <div className="flex-1 space-y-2">
           {Object.entries(operation.otherKwargs?.method_kwargs || {}).map(
             ([key, value]) => (
@@ -688,7 +682,7 @@ export const SplitOperationComponent: React.FC<OperationComponentProps> = ({
             )
           )}
           <Button size="sm" variant="outline" onClick={addMethodKwarg}>
-            <Plus size={16} className="mr-2" /> Add Argument
+            <Plus size={16} className="mr-2" /> 添加参数
           </Button>
         </div>
       </div>
@@ -735,13 +729,13 @@ export const UnnestOperationComponent: React.FC<OperationComponentProps> = ({
       <div className="flex items-center space-x-4">
         <div className="w-1/2">
           <Label htmlFor="unnest-key" className="text-sm font-medium">
-            Unnest Key
+            展开键
           </Label>
           <Input
             id="unnest-key"
             value={operation.otherKwargs?.unnest_key || ""}
             onChange={(e) => handleUnnestKeyChange(e.target.value)}
-            placeholder="Enter the key to flatten documents along"
+            placeholder="请输入用于展开文档的字段"
             className="mt-1"
           />
         </div>
@@ -752,7 +746,7 @@ export const UnnestOperationComponent: React.FC<OperationComponentProps> = ({
             htmlFor="recursive"
             className="text-sm font-medium cursor-pointer"
           >
-            Recursive
+            递归
           </Label>
           <Checkbox
             id="recursive"
@@ -762,14 +756,14 @@ export const UnnestOperationComponent: React.FC<OperationComponentProps> = ({
         </div>
         <div className="flex items-center space-x-2">
           <Label htmlFor="depth" className="text-sm font-medium">
-            Depth
+            深度
           </Label>
           <Input
             id="depth"
             type="number"
             value={operation.otherKwargs?.depth || ""}
             onChange={(e) => handleDepthChange(Number(e.target.value))}
-            placeholder="Max depth"
+            placeholder="最大深度"
             className="w-32"
           />
         </div>
@@ -822,13 +816,19 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
     });
   };
 
+  const chunkLabels: Record<"head" | "middle" | "tail", string> = {
+    head: "开头",
+    middle: "中间",
+    tail: "结尾",
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
         <div className="w-1/3">
           <div className="flex items-center space-x-2">
             <Label htmlFor="content-key" className="text-sm font-medium">
-              Content Key
+              内容字段
             </Label>
             <TooltipProvider>
               <Tooltip>
@@ -837,8 +837,7 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    Append _chunk to the split_key you used in the split
-                    operation
+                    在 split 操作使用的 split_key 后追加 _chunk
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -848,14 +847,14 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
             id="content-key"
             value={operation.otherKwargs?.content_key || ""}
             onChange={(e) => handleInputChange("content_key", e.target.value)}
-            placeholder="Enter the content key"
+            placeholder="请输入内容字段"
             className="mt-1"
           />
         </div>
         <div className="w-1/3">
           <div className="flex items-center space-x-2">
             <Label htmlFor="doc-id-key" className="text-sm font-medium">
-              Document ID Key
+              文档 ID 字段
             </Label>
             <TooltipProvider>
               <Tooltip>
@@ -864,8 +863,7 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    Append _id to the name of the split operation you previously
-                    defined
+                    在已定义的 split 操作名称后追加 _id
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -875,14 +873,14 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
             id="doc-id-key"
             value={operation.otherKwargs?.doc_id_key || ""}
             onChange={(e) => handleInputChange("doc_id_key", e.target.value)}
-            placeholder="Enter the document ID key"
+            placeholder="请输入文档 ID 字段"
             className="mt-1"
           />
         </div>
         <div className="w-1/3">
           <div className="flex items-center space-x-2">
             <Label htmlFor="order-key" className="text-sm font-medium">
-              Order Key
+              顺序字段
             </Label>
             <TooltipProvider>
               <Tooltip>
@@ -891,8 +889,7 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    Append _chunk_num to the name of the split operation you
-                    previously defined
+                    在已定义的 split 操作名称后追加 _chunk_num
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -902,33 +899,33 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
             id="order-key"
             value={operation.otherKwargs?.order_key || ""}
             onChange={(e) => handleInputChange("order_key", e.target.value)}
-            placeholder="Enter the order key"
+            placeholder="请输入顺序字段"
             className="mt-1"
           />
         </div>
       </div>
       <div className="space-y-2">
         <div className="flex items-center space-x-2">
-          <Label className="text-sm font-medium">Peripheral Chunks</Label>
+          <Label className="text-sm font-medium">前后文片段</Label>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
                 <Info className="h-4 w-4 text-gray-500" />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Note: Values can be left empty to not include any context</p>
+                <p>注意：可留空以不包含上下文</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
         <div className="flex space-x-4">
           <div className="w-1/2 space-y-2">
-            <Label className="text-sm font-medium">Previous</Label>
+            <Label className="text-sm font-medium">前文</Label>
             <div className="pl-4 space-y-2">
               {["head", "middle", "tail"].map((subsection) => (
                 <div key={subsection} className="flex items-center space-x-2">
                   <Label className="text-sm font-medium w-20">
-                    {subsection.charAt(0).toUpperCase() + subsection.slice(1)}
+                    {chunkLabels[subsection as "head" | "middle" | "tail"]}
                   </Label>
                   <Input
                     value={
@@ -944,7 +941,7 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
                         e.target.value
                       )
                     }
-                    placeholder="Content key"
+                    placeholder="内容字段"
                     className="w-40"
                   />
                   {subsection !== "middle" && (
@@ -959,11 +956,11 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
                         handlePeripheralChunksChange(
                           "previous",
                           subsection as "head" | "middle" | "tail",
-                          "count",
-                          Number(e.target.value)
-                        )
-                      }
-                      placeholder="Count"
+                        "count",
+                        Number(e.target.value)
+                      )
+                    }
+                      placeholder="数量"
                       className="w-20"
                     />
                   )}
@@ -972,12 +969,12 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
             </div>
           </div>
           <div className="w-1/2 space-y-2">
-            <Label className="text-sm font-medium">Next</Label>
+            <Label className="text-sm font-medium">后文</Label>
             <div className="pl-4 space-y-2">
               {["head", "middle", "tail"].map((subsection) => (
                 <div key={subsection} className="flex items-center space-x-2">
                   <Label className="text-sm font-medium w-20">
-                    {subsection.charAt(0).toUpperCase() + subsection.slice(1)}
+                    {chunkLabels[subsection as "head" | "middle" | "tail"]}
                   </Label>
                   <Input
                     value={
@@ -993,7 +990,7 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
                         e.target.value
                       )
                     }
-                    placeholder="Content key"
+                    placeholder="内容字段"
                     className="w-40"
                   />
                   {subsection !== "middle" && (
@@ -1008,11 +1005,11 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
                         handlePeripheralChunksChange(
                           "next",
                           subsection as "head" | "middle" | "tail",
-                          "count",
-                          Number(e.target.value)
-                        )
-                      }
-                      placeholder="Count"
+                        "count",
+                        Number(e.target.value)
+                      )
+                    }
+                      placeholder="数量"
                       className="w-20"
                     />
                   )}
@@ -1109,7 +1106,7 @@ export const ParallelMapOperationComponent: React.FC<
         (prompt: PromptConfig, index: number) => (
           <div key={index} className="border p-2 rounded space-y-2">
             <div className="flex justify-between items-center">
-              <Label className="text-sm font-medium">Prompt {index + 1}</Label>
+              <Label className="text-sm font-medium">提示词 {index + 1}</Label>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1124,7 +1121,7 @@ export const ParallelMapOperationComponent: React.FC<
             />
             <div className="flex items-center space-x-2">
               <div className="flex-grow">
-                <Label className="text-sm font-medium">Output Keys</Label>
+                <Label className="text-sm font-medium">输出字段</Label>
                 <div className="flex flex-wrap gap-2 mt-1">
                   {prompt.output_keys?.map((key: string, keyIndex: number) => (
                     <div key={keyIndex} className="flex items-center">
@@ -1166,13 +1163,13 @@ export const ParallelMapOperationComponent: React.FC<
                 </div>
               </div>
               <div>
-                <Label className="text-sm font-medium">Model</Label>
+                <Label className="text-sm font-medium">模型</Label>
                 <Input
                   value={prompt.model || ""}
                   onChange={(e) =>
                     handlePromptChange(index, "model", e.target.value)
                   }
-                  placeholder="Model"
+                  placeholder="模型"
                   className="w-48 mt-1"
                 />
               </div>
@@ -1181,7 +1178,7 @@ export const ParallelMapOperationComponent: React.FC<
         )
       )}
       <Button onClick={addPrompt} size="sm">
-        Add Prompt
+        添加提示词
       </Button>
       <OutputSchema
         schema={operation.output?.schema || []}
@@ -1234,30 +1231,30 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
     <div className="space-y-4 mb-2">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="method">Method</Label>
+          <Label htmlFor="method">方法</Label>
           <Select
             value={operation.otherKwargs?.method || ""}
             onValueChange={(value) => handleChange("method", value)}
           >
             <SelectTrigger id="method">
-              <SelectValue placeholder="Select a method" />
+              <SelectValue placeholder="选择方法" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="uniform">Uniform</SelectItem>
-              <SelectItem value="stratify">Stratify</SelectItem>
-              <SelectItem value="outliers">Outliers</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
+              <SelectItem value="uniform">均匀</SelectItem>
+              <SelectItem value="stratify">分层</SelectItem>
+              <SelectItem value="outliers">异常值</SelectItem>
+              <SelectItem value="custom">自定义</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label htmlFor="samples">Samples</Label>
+          <Label htmlFor="samples">样本数</Label>
           {operation.otherKwargs?.method === "custom" ? (
             <Textarea
               id="samples"
               value={operation.otherKwargs?.samples || ""}
               onChange={(e) => handleChange("samples", e.target.value)}
-              placeholder="Enter JSON key-value pairs"
+              placeholder="请输入 JSON 键值对"
               className={`font-mono ${(() => {
                 try {
                   const value = operation.otherKwargs?.samples;
@@ -1281,14 +1278,14 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
               type="text"
               value={operation.otherKwargs?.samples || ""}
               onChange={(e) => handleChange("samples", e.target.value)}
-              placeholder="Number or fraction of samples"
+              placeholder="样本数量或比例"
             />
           )}
         </div>
       </div>
       {operation.otherKwargs?.method === "stratify" && (
         <div>
-          <Label htmlFor="stratify_key">Stratify Key</Label>
+          <Label htmlFor="stratify_key">分层字段</Label>
           <Input
             id="stratify_key"
             type="text"
@@ -1296,14 +1293,14 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
             onChange={(e) =>
               handleMethodKwargsChange("stratify_key", e.target.value)
             }
-            placeholder="Key to stratify by"
+            placeholder="用于分层的字段"
           />
         </div>
       )}
       {operation.otherKwargs?.method === "outliers" && (
         <>
           <div>
-            <Label htmlFor="embedding_keys">Embedding Keys</Label>
+            <Label htmlFor="embedding_keys">嵌入字段</Label>
             <Input
               id="embedding_keys"
               type="text"
@@ -1318,12 +1315,12 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
                   e.target.value.split(", ")
                 )
               }
-              placeholder="Comma-separated list of keys"
+              placeholder="用逗号分隔的字段列表"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="std">Standard Deviations</Label>
+              <Label htmlFor="std">标准差倍数</Label>
               <Input
                 id="std"
                 type="number"
@@ -1331,11 +1328,11 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
                 onChange={(e) =>
                   handleMethodKwargsChange("std", parseFloat(e.target.value))
                 }
-                placeholder="Number of standard deviations"
+                placeholder="标准差倍数"
               />
             </div>
             <div>
-              <Label htmlFor="keep">Keep Outliers</Label>
+              <Label htmlFor="keep">保留异常值</Label>
               <Select
                 value={
                   operation.otherKwargs?.method_kwargs?.keep?.toString() || ""
@@ -1345,11 +1342,11 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
                 }
               >
                 <SelectTrigger id="keep">
-                  <SelectValue placeholder="Select option" />
+                  <SelectValue placeholder="选择选项" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="true">Keep</SelectItem>
-                  <SelectItem value="false">Remove</SelectItem>
+                  <SelectItem value="true">保留</SelectItem>
+                  <SelectItem value="false">移除</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1438,20 +1435,20 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
           htmlFor="sorting-criteria"
           className="text-sm font-medium mb-1 block"
         >
-          Sorting Criteria
+          排序规则
         </Label>
         <PromptInput
           prompt={operation.prompt || ""}
           onChange={handlePromptChange}
           disableValidation={true}
-          placeholder="Detail criteria to sort by (e.g., sort these debate transcripts by how mean the candidates are in the debate)"
+          placeholder="描述排序依据（例如：按候选人在辩论中的攻击性排序）"
         />
       </div>
 
       <div className="mb-4">
         <div className="flex items-center space-x-2">
           <Label htmlFor="input-keys" className="text-sm font-medium">
-            Input Keys
+            输入字段
           </Label>
           <HoverCard>
             <HoverCardTrigger>
@@ -1459,21 +1456,18 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
             </HoverCardTrigger>
             <HoverCardContent className="w-80">
               <div className="space-y-2">
-                <h4 className="font-medium">Input Keys</h4>
+                <h4 className="font-medium">输入字段</h4>
                 <p className="text-sm text-muted-foreground">
-                  Specify which document fields to consider for ranking. These
-                  fields will be used by the LLM to rank documents.
+                  指定用于排序的文档字段，LLM 将基于这些字段进行比较排序。
                 </p>
                 <div className="mt-2 rounded-md bg-muted p-2">
-                  <p className="text-sm font-medium">Example:</p>
+                  <p className="text-sm font-medium">示例：</p>
                   <p className="text-xs text-muted-foreground">
-                    For a debate ranking task, you might include keys like
-                    &quot;content&quot; and &quot;title&quot;.
+                    辩论排序可包含 &quot;content&quot; 与 &quot;title&quot; 等字段。
                   </p>
                 </div>
                 <p className="text-xs text-gray-600 font-medium mt-1">
-                  Note: The ranking operation will only use these specified
-                  fields for comparison.
+                  注意：排序只会使用这些字段进行比较。
                 </p>
               </div>
             </HoverCardContent>
@@ -1494,7 +1488,7 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
                 className={`w-40 ${
                   !key.trim() ? "border-red-500 focus:ring-red-500" : ""
                 }`}
-                placeholder="Enter input key"
+                placeholder="请输入输入字段"
               />
               {(operation.otherKwargs?.input_keys?.length || 0) > 1 && (
                 <Button
@@ -1531,7 +1525,7 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
           operation.otherKwargs.input_keys.length === 0 ||
           operation.otherKwargs.input_keys.some((key) => !key.trim())) && (
           <div className="text-red-500 text-sm mt-1">
-            At least one non-empty input key is required for ranking
+            排序至少需要一个非空输入字段
           </div>
         )}
       </div>
@@ -1539,18 +1533,18 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
       <div className="grid grid-cols-2 gap-6" style={{ maxWidth: "500px" }}>
         <div>
           <Label htmlFor="direction" className="text-sm font-medium block mb-2">
-            Direction
+            方向
           </Label>
           <Select
             value={operation.otherKwargs?.direction || "desc"}
             onValueChange={handleDirectionChange}
           >
             <SelectTrigger id="direction">
-              <SelectValue placeholder="Select direction" />
+              <SelectValue placeholder="选择方向" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="asc">Ascending</SelectItem>
-              <SelectItem value="desc">Descending</SelectItem>
+              <SelectItem value="asc">升序</SelectItem>
+              <SelectItem value="desc">降序</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1558,7 +1552,7 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
         <div>
           <div className="flex items-center mb-2">
             <Label htmlFor="rerank-call-budget" className="text-sm font-medium">
-              Rerank Call Budget
+              重排调用上限
             </Label>
             <HoverCard>
               <HoverCardTrigger>
@@ -1566,23 +1560,19 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
               </HoverCardTrigger>
               <HoverCardContent className="w-80">
                 <div className="space-y-2">
-                  <h4 className="font-medium">Rerank Call Budget</h4>
+                  <h4 className="font-medium">重排调用上限</h4>
                   <p className="text-sm text-muted-foreground">
-                    Maximum number of LLM calls to make during the refinement
-                    phase of ranking.
+                    排序精修阶段允许的 LLM 调用最大次数。
                   </p>
                   <div className="mt-2 rounded-md bg-muted p-2">
-                    <p className="text-sm font-medium">How it works:</p>
+                    <p className="text-sm font-medium">工作方式：</p>
                     <p className="text-xs text-muted-foreground">
-                      The ranking operation first does an initial ranking pass,
-                      then refines the ranking using a sliding window approach.
-                      This parameter limits how many LLM calls are made during
-                      refinement.
+                      排序先做一次初排，再使用滑动窗口进行精修。本参数限制精修阶段的
+                      LLM 调用次数。
                     </p>
                   </div>
                   <p className="text-xs text-gray-600 font-medium mt-1">
-                    Note: Higher values give more accurate rankings but cost
-                    more.
+                    注意：值越大，排序更准确但成本更高。
                   </p>
                 </div>
               </HoverCardContent>
@@ -1594,7 +1584,7 @@ export const RankOperationComponent: React.FC<OperationComponentProps> = ({
             value={operation.otherKwargs?.rerank_call_budget || 10}
             onChange={(e) => handleRerankCallBudgetChange(e.target.value)}
             min="1"
-            placeholder="Default: 10"
+            placeholder="默认：10"
           />
         </div>
       </div>
@@ -1676,20 +1666,20 @@ export const ExtractOperationComponent: React.FC<OperationComponentProps> = ({
           htmlFor="extract-prompt"
           className="text-sm font-medium mb-1 block"
         >
-          Extraction Prompt
+          抽取提示词
         </Label>
         <PromptInput
           prompt={operation.prompt || ""}
           onChange={handlePromptChange}
           disableValidation={true}
-          placeholder="e.g., extract the portions from the paper that describe any experimental results"
+          placeholder="例如：抽取论文中描述实验结果的部分"
         />
       </div>
 
       <div className="mb-4">
         <div className="flex items-center space-x-2">
           <Label htmlFor="document-keys" className="text-sm font-medium">
-            Document Keys
+            文档字段
           </Label>
           <HoverCard>
             <HoverCardTrigger>
@@ -1697,17 +1687,16 @@ export const ExtractOperationComponent: React.FC<OperationComponentProps> = ({
             </HoverCardTrigger>
             <HoverCardContent className="w-80">
               <div className="space-y-2">
-                <h4 className="font-medium">Document Keys</h4>
+                <h4 className="font-medium">文档字段</h4>
                 <p className="text-sm text-muted-foreground">
-                  Specify document fields containing text to process for
-                  extraction. The extracted content will be added to new fields
-                  with the suffix "_extracted_{operation.name}".
+                  指定包含待抽取文本的字段。抽取结果会写入新的字段，
+                  字段名后缀为 "_extracted_{operation.name}"。
                 </p>
                 <div className="mt-2 rounded-md bg-muted p-2">
-                  <p className="text-sm font-medium">Example:</p>
+                  <p className="text-sm font-medium">示例：</p>
                   <p className="text-xs text-muted-foreground">
-                    If your documents have a &quot;content&quot; field with text
-                    to extract from, enter &quot;content&quot; here.
+                    如果文档中有 &quot;content&quot; 字段包含待抽取文本，
+                    请在此填写 &quot;content&quot;。
                   </p>
                 </div>
               </div>
@@ -1729,7 +1718,7 @@ export const ExtractOperationComponent: React.FC<OperationComponentProps> = ({
                 className={`w-40 ${
                   !key.trim() ? "border-red-500 focus:ring-red-500" : ""
                 }`}
-                placeholder="Enter document key"
+                placeholder="请输入文档字段"
               />
               {(operation.otherKwargs?.document_keys?.length || 0) > 1 && (
                 <Button
@@ -1766,7 +1755,7 @@ export const ExtractOperationComponent: React.FC<OperationComponentProps> = ({
           operation.otherKwargs.document_keys.length === 0 ||
           operation.otherKwargs.document_keys.some((key) => !key.trim())) && (
           <div className="text-red-500 text-sm mt-1">
-            At least one non-empty document key is required for extraction
+            抽取至少需要一个非空文档字段
           </div>
         )}
       </div>
@@ -1777,23 +1766,22 @@ export const ExtractOperationComponent: React.FC<OperationComponentProps> = ({
             htmlFor="extraction-method"
             className="text-sm font-medium block mb-2"
           >
-            Extraction Method
+            抽取方法
           </Label>
           <Select
             value={operation.otherKwargs?.extraction_method || "line_number"}
             onValueChange={handleExtractionMethodChange}
           >
             <SelectTrigger id="extraction-method">
-              <SelectValue placeholder="Select extraction method" />
+              <SelectValue placeholder="选择抽取方式" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="line_number">Line Number</SelectItem>
-              <SelectItem value="regex">Regex</SelectItem>
+              <SelectItem value="line_number">行号</SelectItem>
+              <SelectItem value="regex">正则</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground mt-1">
-            Line Number: Good for paragraphs or sections. Regex: Good for
-            structured data (e.g., dates, numbers).
+            行号适合段落/章节抽取；正则适合结构化数据（如日期、数字）。
           </p>
         </div>
 
@@ -1802,7 +1790,7 @@ export const ExtractOperationComponent: React.FC<OperationComponentProps> = ({
             htmlFor="format-extraction"
             className="text-sm font-medium block mb-2"
           >
-            Format Extraction
+            格式化抽取
           </Label>
           <Select
             value={
@@ -1815,18 +1803,17 @@ export const ExtractOperationComponent: React.FC<OperationComponentProps> = ({
             }
           >
             <SelectTrigger id="format-extraction">
-              <SelectValue placeholder="Select format type" />
+              <SelectValue placeholder="选择格式" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="true">String (Join with newlines)</SelectItem>
+              <SelectItem value="true">字符串（换行拼接）</SelectItem>
               <SelectItem value="false">
-                List (Keep as separate items)
+                列表（保持为独立项）
               </SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground mt-1">
-            String format for coherent content, list format for separate
-            processing of extractions.
+            字符串适合合并展示，列表适合逐条处理抽取结果。
           </p>
         </div>
       </div>
@@ -1873,7 +1860,7 @@ export const CodeOperationComponent: React.FC<OperationComponentProps> = ({
         <div className="mb-4">
           <div className="flex items-center space-x-2">
             <Label htmlFor="reduce-keys" className="w-1/4">
-              Reduce Key(s)
+              归约键
             </Label>
             <div className="flex-grow flex items-center space-x-2 overflow-x-auto">
               <div className="flex-nowrap flex items-center space-x-2">
@@ -1895,7 +1882,7 @@ export const CodeOperationComponent: React.FC<OperationComponentProps> = ({
                             newKeys[index] = e.target.value;
                             handleReduceKeysChange(newKeys);
                           }}
-                          placeholder="Enter reduce key"
+                          placeholder="请输入归约键"
                           className={`w-full pr-8 ${
                             !key.trim()
                               ? "border-red-500 focus:ring-red-500"
@@ -1922,8 +1909,7 @@ export const CodeOperationComponent: React.FC<OperationComponentProps> = ({
                       </div>
                       {!key.trim() && (
                         <p className="text-red-500 text-sm mt-1">
-                          There must be a reduce key. Set &quot;_all&quot; if
-                          you want all documents in a group.
+                          必须设置归约键；若要将所有文档归为一组，请使用 “_all”。
                         </p>
                       )}
                     </div>

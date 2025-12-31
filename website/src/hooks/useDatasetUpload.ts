@@ -24,15 +24,15 @@ export function useDatasetUpload({
     if (!["json", "csv"].includes(fileExtension || "")) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Please upload a JSON or CSV file",
+        title: "错误",
+        description: "请上传 JSON 或 CSV 文件",
       });
       return;
     }
 
     toast({
-      title: "Uploading dataset...",
-      description: "This may take a few seconds",
+      title: "正在上传数据集...",
+      description: "可能需要几秒钟",
     });
 
     setUploadingFiles((prev) => new Set(prev).add(file.name));
@@ -55,7 +55,7 @@ export function useDatasetUpload({
 
       if (!response.ok) {
         const errorDetails = await response.json().catch(() => ({}));
-        throw new Error(errorDetails.detail || "Upload failed");
+        throw new Error(errorDetails.detail || "上传失败");
       }
 
       const data = await response.json();
@@ -71,16 +71,16 @@ export function useDatasetUpload({
       setCurrentFile(newFile);
 
       toast({
-        title: "Success",
-        description: "Dataset uploaded successfully",
+        title: "成功",
+        description: "数据集上传成功",
       });
     } catch (error) {
       console.error("Upload error:", error);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "错误",
         description:
-          error instanceof Error ? error.message : "Failed to upload file",
+          error instanceof Error ? error.message : "上传文件失败",
       });
     } finally {
       setUploadingFiles((prev) => {
@@ -97,8 +97,8 @@ export function useDatasetUpload({
 
     try {
       toast({
-        title: "Downloading remote dataset...",
-        description: "This may take a few seconds",
+        title: "正在下载远程数据集...",
+        description: "可能需要几秒钟",
       });
 
       const formData = new FormData();
@@ -114,7 +114,7 @@ export function useDatasetUpload({
         // Get the response details
         const errorDetails = await response.json();
         throw new Error(
-          errorDetails.detail || "Failed to fetch remote dataset"
+          errorDetails.detail || "获取远程数据集失败"
         );
       }
 
@@ -131,18 +131,18 @@ export function useDatasetUpload({
       setCurrentFile(newFile);
 
       toast({
-        title: "Success",
-        description: "Remote dataset downloaded and processed successfully",
+        title: "成功",
+        description: "远程数据集下载并处理成功",
       });
     } catch (error) {
       console.error(error);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "错误",
         description:
           error instanceof Error
             ? error.message
-            : "Failed to fetch remote dataset",
+            : "获取远程数据集失败",
       });
     } finally {
       setUploadingFiles((prev) => {

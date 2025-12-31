@@ -122,9 +122,29 @@ const executeBadgeStyles: Partial<Record<Operation["type"], string>> = {
   code_filter: "bg-amber-500/20 text-amber-200 border-amber-500/30",
 };
 
+const OPERATION_TYPE_LABELS: Record<Operation["type"], string> = {
+  map: "映射",
+  reduce: "归约",
+  resolve: "消歧",
+  filter: "过滤",
+  parallel_map: "并行映射",
+  rank: "排序",
+  extract: "抽取",
+  unnest: "展开",
+  split: "拆分",
+  gather: "汇聚",
+  sample: "抽样",
+  code_map: "代码映射",
+  code_reduce: "代码归约",
+  code_filter: "代码过滤",
+};
+
 const getExecuteBadgeStyle = (type: Operation["type"]) =>
   executeBadgeStyles[type] ??
   "bg-slate-700/60 text-slate-200 border-slate-600/60";
+
+const getOperationTypeLabel = (type: Operation["type"]) =>
+  OPERATION_TYPE_LABELS[type] ?? type;
 
 const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
   ({
@@ -173,6 +193,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
           getExecuteBadgeStyle(type)
         )
       : undefined;
+    const typeLabel = getOperationTypeLabel(type);
 
     return (
       <div
@@ -190,7 +211,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
               variant={badgeVariant}
               className={badgeClassName}
             >
-              {type}
+              {typeLabel}
             </Badge>
 
             {/* Add help button for LLM operations */}
@@ -215,17 +236,17 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium">
                       {optimizeResult === undefined || optimizeResult === null
-                        ? "Analyzing Operation"
+                        ? "正在分析"
                         : optimizeResult === ""
-                        ? "Decomposition Status"
-                        : "Decomposition Recommended"}
+                        ? "拆分状态"
+                        : "建议拆分"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {optimizeResult === undefined || optimizeResult === null
-                        ? "Analyzing operation complexity..."
+                        ? "正在分析操作复杂度..."
                         : optimizeResult === ""
-                        ? "No decomposition needed for this operation"
-                        : "Recommended decomposition: " + optimizeResult}
+                        ? "该操作无需拆分"
+                        : "建议拆分：" + optimizeResult}
                     </p>
                   </div>
                 </HoverCardContent>
@@ -339,7 +360,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
           >
             <ListCollapse className="h-4 w-4" />
             <span className="hidden sm:inline">
-              {isExecute ? "显示输出" : "Show Outputs"}
+              显示输出
             </span>
           </Button>
 
@@ -357,7 +378,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
               onClick={onImprovePrompt}
             >
               <Wand2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Improve Prompt</span>
+              <span className="hidden sm:inline">改进提示词</span>
             </Button>
             )
           )}
@@ -394,7 +415,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                     onClick={onMoveUp}
                   >
                     <MoveUp className="mr-2 h-4 w-4" />
-                    Move Up
+                    上移
                   </Button>
                 )}
                 {!isLast && (
@@ -405,7 +426,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                     onClick={onMoveDown}
                   >
                     <MoveDown className="mr-2 h-4 w-4" />
-                    Move Down
+                    下移
                   </Button>
                 )}
                 {(!isFirst || !isLast) && (
@@ -428,8 +449,8 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                     >
                       <Shield className="mr-2 h-4 w-4" />
                       {isGuardrailsExpanded
-                        ? "Hide Guardrails"
-                        : "Show Guardrails"}
+                        ? "隐藏约束"
+                        : "显示约束"}
                     </Button>
 
                     {(type === "map" ||
@@ -443,8 +464,8 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                       >
                         <Shield className="mr-2 h-4 w-4" />
                         {isGleaningsExpanded
-                          ? "Hide Gleaning"
-                          : "Show Gleaning"}
+                          ? "隐藏复核"
+                          : "显示复核"}
                       </Button>
                     )}
                     <div
@@ -466,7 +487,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                     disabled={disabled}
                   >
                     <Zap className="mr-2 h-4 w-4" />
-                    Optimize Operation
+                    优化操作
                   </Button>
                 )}
 
@@ -478,7 +499,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   onClick={onToggleSettings}
                 >
                   <Settings className="mr-2 h-4 w-4" />
-                  Other Arguments
+                  其他参数
                 </Button>
 
                 {/* Visibility Toggle */}
@@ -491,12 +512,12 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   {visibility ? (
                     <>
                       <EyeOff className="mr-2 h-4 w-4" />
-                      Skip Operation
+                      跳过操作
                     </>
                   ) : (
                     <>
                       <Eye className="mr-2 h-4 w-4" />
-                      Include Operation
+                      纳入操作
                     </>
                   )}
                 </Button>
@@ -516,7 +537,7 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   onClick={onDelete}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                  删除
                 </Button>
               </div>
             </PopoverContent>
@@ -558,6 +579,7 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = React.memo(
   ({ opName, opType, isOpen, onClose, otherKwargs, onSettingsSave }) => {
+    const opTypeLabel = getOperationTypeLabel(opType as Operation["type"]);
     const [localSettings, setLocalSettings] = React.useState<
       Array<{ id: number; key: string; value: string }>
     >(
@@ -630,18 +652,17 @@ const SettingsModal: React.FC<SettingsModalProps> = React.memo(
           <DialogHeader>
             <DialogTitle>{opName}</DialogTitle>
             <DialogDescription>
-              Add or modify additional arguments for this {opType} operation.
-              For example, to set LiteLLM completion arguments, use
-              litellm_completion_kwargs as the key and {`{"temperature": 0}`} as
-              the value. See{" "}
+              为此 {opTypeLabel} 操作添加或修改额外参数。例如，设置 LiteLLM
+              completion 参数时，可使用 litellm_completion_kwargs 作为键，
+              {`{"temperature": 0}`} 作为值。参见{" "}
               <a
                 href="https://docs.litellm.ai/docs/completion/input"
                 target="_blank"
                 className="underline text-blue-500"
               >
-                LiteLLM completion arguments
+                LiteLLM completion 参数
               </a>{" "}
-              for all available options.
+              了解全部可用选项。
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -653,7 +674,7 @@ const SettingsModal: React.FC<SettingsModalProps> = React.memo(
                   onChange={(e) =>
                     handleSettingsChange(id, e.target.value, value)
                   }
-                  placeholder="Key"
+                  placeholder="键"
                 />
                 <Input
                   className="flex-grow font-mono"
@@ -661,7 +682,7 @@ const SettingsModal: React.FC<SettingsModalProps> = React.memo(
                   onChange={(e) =>
                     handleSettingsChange(id, key, e.target.value)
                   }
-                  placeholder="Value"
+                  placeholder="值"
                 />
                 <Button
                   variant="ghost"
@@ -672,14 +693,14 @@ const SettingsModal: React.FC<SettingsModalProps> = React.memo(
                 </Button>
               </div>
             ))}
-            <Button onClick={addSetting}>Add Setting</Button>
+            <Button onClick={addSetting}>新增参数</Button>
           </div>
           <DialogFooter>
             <Button onClick={handleSave} disabled={!isValidSettings()}>
-              Save
+              保存
             </Button>
             <Button variant="outline" onClick={onClose}>
-              Cancel
+              取消
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -974,7 +995,7 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
     } catch (error) {
       console.error("Error optimizing operation:", error);
       toast({
-        title: "Error",
+        title: "错误",
         description: error.message,
         variant: "destructive",
       });
@@ -1022,7 +1043,7 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get input and output paths");
+        throw new Error("获取输入/输出路径失败");
       }
 
       const { inputPath, outputPath } = await response.json();
@@ -1035,8 +1056,8 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
     } catch (error) {
       console.error("Error fetching input and output paths:", error);
       toast({
-        title: "Error",
-        description: "Failed to get input and output paths",
+        title: "错误",
+        description: "获取输入/输出路径失败",
         variant: "destructive",
       });
     }
@@ -1068,21 +1089,21 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to apply AI edit");
+          throw new Error("应用 AI 编辑失败");
         }
 
         const updatedOperation = await response.json();
         handleOperationUpdate(updatedOperation);
 
         toast({
-          title: "Success",
-          description: "Operation updated successfully",
+          title: "成功",
+          description: "操作已更新",
         });
       } catch (error) {
         console.error("Error applying AI edit:", error);
         toast({
-          title: "Error",
-          description: "Failed to apply AI edit",
+          title: "错误",
+          description: "应用 AI 编辑失败",
           variant: "destructive",
         });
       }
@@ -1165,10 +1186,10 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
 
     handleOperationUpdate(updatedOperation);
     toast({
-      title: "Success",
-      description: `Prompt${
-        operation.type === "resolve" ? "s" : ""
-      } and schema updated successfully`,
+      title: "成功",
+      description: `提示词${
+        operation.type === "resolve" ? "（多条）" : ""
+      }与 schema 已更新`,
     });
   };
 
@@ -1406,17 +1427,14 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>确定删除吗？</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              operation &quot;{operation.name}&quot; and remove it from the
-              pipeline. If you only want to hide the operation from the next
-              run, you can toggle the visibility of the operation in the
-              operation menu.
+              此操作不可撤销，将永久删除操作“{operation.name}”并从流水线中移除。
+              如果只是想在下次运行中隐藏该操作，请在操作菜单中切换可见性。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
@@ -1426,7 +1444,7 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
                 setShowDeleteDialog(false);
               }}
             >
-              Delete
+              删除
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1437,45 +1455,41 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Optimize Operation</AlertDialogTitle>
-            <AlertDialogDescription>
-              {!hasOpenAIKey && !isLocalMode ? (
-                <div className="space-y-2">
-                  <p className="text-destructive font-medium">
-                    OpenAI API Key Required
-                  </p>
-                  <p>
-                    To use the optimizer, please add your OpenAI API key in Edit{" "}
-                    {">"}
-                    Edit API Keys.
-                  </p>
-                  <button
-                    className="text-destructive underline hover:opacity-80 font-medium"
-                    onClick={() => setIsLocalMode(true)}
-                  >
-                    Ignore if running locally with environment variables
-                  </button>
-                </div>
-              ) : (
-                <p>
-                  This will analyze the operation and replace it with another
-                  pipeline that has higher accuracy (as determined by an
-                  LLM-as-a-judge), if it can be found. Do you want to proceed?
-                  The process may take between 2 and 10 minutes, depending on
-                  how complex your data is.
+          <AlertDialogTitle>优化操作</AlertDialogTitle>
+          <AlertDialogDescription>
+            {!hasOpenAIKey && !isLocalMode ? (
+              <div className="space-y-2">
+                <p className="text-destructive font-medium">
+                  需要 OpenAI API Key
                 </p>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleOptimizeConfirm}
-              disabled={!hasOpenAIKey && !isLocalMode}
-            >
-              Proceed
-            </AlertDialogAction>
-          </AlertDialogFooter>
+                <p>
+                  要使用优化器，请在 编辑 {">"} 编辑 API Key 中添加 OpenAI API Key。
+                </p>
+                <button
+                  className="text-destructive underline hover:opacity-80 font-medium"
+                  onClick={() => setIsLocalMode(true)}
+                >
+                  本地环境变量运行可忽略
+                </button>
+              </div>
+            ) : (
+              <p>
+                  系统将分析该操作，并在可行时用更高准确度的流水线替换（由
+                  LLM-as-a-judge 评估）。是否继续？该过程可能需要 2 到 10
+                  分钟，具体取决于数据复杂度。
+              </p>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleOptimizeConfirm}
+            disabled={!hasOpenAIKey && !isLocalMode}
+          >
+            继续
+          </AlertDialogAction>
+        </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

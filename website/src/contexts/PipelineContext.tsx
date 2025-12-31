@@ -200,7 +200,7 @@ const serializeState = async (state: PipelineState): Promise<string> => {
         `/api/readFile?path=${encodeURIComponent(state.output.path)}`
       );
       if (!outputResponse.ok) {
-        throw new Error("Failed to fetch output file");
+        throw new Error("获取输出文件失败");
       }
 
       const outputContent = await outputResponse.text();
@@ -679,9 +679,9 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
       window.location.href.includes("docetl.org")
     ) {
       toast({
-        title: "No API Keys Found",
+        title: "未找到 API Key",
         description:
-          "If you are accessing the playground using docetl.org, please add your API keys using Edit > Edit API Keys in the menu bar. Disregard this message if you are running DocETL locally.",
+          "如果你通过 docetl.org 使用 Playground，请在菜单栏 编辑 > 编辑 API Key 中添加 API Key。本地运行 DocETL 时可忽略此提示。",
         duration: 5000,
         variant: "destructive",
       });

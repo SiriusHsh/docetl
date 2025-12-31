@@ -97,7 +97,7 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
 
         <div className="flex items-center justify-between px-2">
           <div className="text-sm">
-            Row {startIndex + 1} of {data.length}
+            第 {startIndex + 1} 条 / 共 {data.length} 条
           </div>
           <div className="flex items-center space-x-1">
             <Button
@@ -107,7 +107,7 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
               disabled={currentPage === 1}
               className="px-2 py-1"
             >
-              Previous
+              上一页
               <ChevronLeft className="h-4 w-4 ml-1" />
             </Button>
             <Button
@@ -119,7 +119,7 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
               disabled={currentPage === totalPages}
               className="px-2 py-1"
             >
-              Next
+              下一页
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
@@ -138,11 +138,9 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0 border-b pb-4">
-          <DialogTitle className="text-xl">Operation Too Complex</DialogTitle>
+          <DialogTitle className="text-xl">操作过于复杂</DialogTitle>
           <p className="text-base mt-2">
-            This operation might be too complex for the LLM to handle
-            efficiently. We recommend breaking it down into smaller, more
-            manageable steps.
+            该操作可能超出 LLM 的高效处理范围，建议拆分为更小、更易管理的步骤。
           </p>
         </DialogHeader>
 
@@ -152,7 +150,7 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
               {operationName && (
                 <div className="flex items-center">
                   <span className="font-medium text-base mr-2">
-                    Current Operation:
+                    当前操作：
                   </span>
                   <span className="bg-primary/15 text-primary rounded-md px-3 py-1 text-base">
                     {operationName}
@@ -161,7 +159,7 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
               )}
               {prompt && (
                 <div className="space-y-2">
-                  <h3 className="font-medium text-base">Original Prompt:</h3>
+                  <h3 className="font-medium text-base">原始提示词：</h3>
                   <div className="bg-background rounded-lg p-3 text-base font-mono leading-relaxed">
                     {prompt}
                   </div>
@@ -173,18 +171,18 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
           <div className="space-y-6">
             {shouldShowInputData && inputData && (
               <section className="space-y-3">
-                <h3 className="text-base font-medium">Input Data Sample</h3>
+                <h3 className="text-base font-medium">输入样本</h3>
                 <div className="overflow-auto">{renderTable(inputData)}</div>
               </section>
             )}
             {outputData && (
               <section className="space-y-3">
-                <h3 className="text-base font-medium">Sample Output</h3>
+                <h3 className="text-base font-medium">输出样本</h3>
                 <div className="overflow-auto">{renderTable(outputData)}</div>
               </section>
             )}
             <section className="space-y-3">
-              <h3 className="text-base font-medium">Suggested Improvements</h3>
+              <h3 className="text-base font-medium">优化建议</h3>
               <div className="whitespace-pre-wrap text-base leading-relaxed">
                 {content}
               </div>
@@ -194,7 +192,7 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
 
         <div className="flex justify-end items-center gap-3 pt-4 border-t mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Ignore
+            忽略
           </Button>
           <Button
             onClick={() => {
@@ -202,7 +200,7 @@ export const OptimizationDialog: React.FC<OptimizationDialogProps> = ({
               onOpenChange(false);
             }}
           >
-            Automatically Decompose
+            自动拆分
           </Button>
         </div>
       </DialogContent>

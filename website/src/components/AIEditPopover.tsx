@@ -30,11 +30,11 @@ export const AIEditPopover: React.FC<AIEditPopoverProps> = React.memo(
         <form onSubmit={handleSubmit}>
           <div className="grid gap-2">
             <p className="text-sm text-muted-foreground">
-              Describe how you want to modify this operation.
+              描述你希望如何修改该操作。
             </p>
             <div className="grid gap-2">
               <Textarea
-                placeholder="e.g. Make the prompt more concise"
+                placeholder="例如：让提示词更简洁"
                 value={instruction}
                 onChange={(e) => setInstruction(e.target.value)}
                 disabled={isLoading}
@@ -43,7 +43,7 @@ export const AIEditPopover: React.FC<AIEditPopoverProps> = React.memo(
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
                 ) : (
-                  "Apply"
+                  "应用"
                 )}
               </Button>
             </div>

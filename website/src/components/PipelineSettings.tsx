@@ -124,7 +124,7 @@ type DataCenterDataset = {
   created_at: number;
 };
 
-const SAMPLE_YAML = `# Example configuration - delete or modify as needed
+const SAMPLE_YAML = `# 示例配置 - 可删除或按需修改
 rate_limits:
   llm_call:
     - count: 1000000
@@ -206,7 +206,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load Data Center datasets");
+        throw new Error(detail || "加载数据中心数据集失败");
       }
       const data = (await response.json()) as DataCenterDataset[];
       const normalized = data
@@ -218,7 +218,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
       setDataCenterError(
         err instanceof Error
           ? err.message
-          : "Failed to load Data Center datasets"
+          : "加载数据中心数据集失败"
       );
     } finally {
       setDataCenterLoading(false);
@@ -247,7 +247,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
           name: dataset.name,
           path: dataset.path,
           type: "json" as const,
-          parentFolder: "Data Center",
+          parentFolder: "数据中心",
         },
         origin: "data-center" as const,
         source: dataset.source,
@@ -330,7 +330,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
       return parsed as Record<string, unknown>;
     } catch (e) {
       const error = e as Error;
-      setYamlError(`Invalid YAML: ${error.message}`);
+      setYamlError(`YAML 无效：${error.message}`);
       return null;
     }
   }, []);
@@ -368,21 +368,21 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Pipeline Settings</DialogTitle>
+          <DialogTitle>流水线设置</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="pipelineName">Pipeline Name</Label>
+            <Label htmlFor="pipelineName">流水线名称</Label>
             <Input
               id="pipelineName"
               value={tempPipelineName}
               onChange={(e) => setTempPipelineName(e.target.value)}
-              placeholder="Enter pipeline name"
+              placeholder="请输入流水线名称"
             />
           </div>
 
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="currentFile">Dataset JSON</Label>
+            <Label htmlFor="currentFile">数据集 JSON</Label>
             <Select
               value={tempCurrentFile?.path || ""}
               onValueChange={(value) => {
@@ -393,12 +393,12 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a dataset" />
+                <SelectValue placeholder="选择数据集" />
               </SelectTrigger>
               <SelectContent>
                 {workspaceOptions.length > 0 ? (
                   <SelectGroup>
-                    <SelectLabel>Workspace</SelectLabel>
+                    <SelectLabel>工作区</SelectLabel>
                     {workspaceOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -410,15 +410,15 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                   <>
                     {workspaceOptions.length > 0 ? <SelectSeparator /> : null}
                     <SelectGroup>
-                      <SelectLabel>Data Center</SelectLabel>
+                      <SelectLabel>数据中心</SelectLabel>
                       {dataCenterOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           <span className="flex items-center justify-between gap-2">
                             <span>{option.label}</span>
                             <span className="text-xs text-muted-foreground">
                               {option.source === "pipeline_generated"
-                                ? "Generated"
-                                : "Uploaded"}
+                                ? "生成"
+                                : "上传"}
                             </span>
                           </span>
                         </SelectItem>
@@ -432,7 +432,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                       <SelectSeparator />
                     ) : null}
                     <SelectGroup>
-                      <SelectLabel>Selected</SelectLabel>
+                      <SelectLabel>已选择</SelectLabel>
                       <SelectItem value={fallbackOption.value}>
                         {fallbackOption.label}
                       </SelectItem>
@@ -441,20 +441,20 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                 ) : null}
                 {dataCenterLoading ? (
                   <div className="px-2 py-1 text-xs text-muted-foreground">
-                    Loading Data Center datasets...
+                    正在加载数据中心数据集...
                   </div>
                 ) : null}
                 {!dataCenterLoading &&
                 workspaceOptions.length === 0 &&
                 dataCenterOptions.length === 0 ? (
                   <div className="px-2 py-1 text-xs text-muted-foreground">
-                    No datasets available.
+                    暂无可用数据集。
                   </div>
                 ) : null}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Choose a workspace JSON file or a Data Center dataset.
+              选择工作区 JSON 文件或数据中心数据集。
             </p>
             {dataCenterError ? (
               <div className="text-xs text-rose-300">{dataCenterError}</div>
@@ -462,44 +462,42 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
           </div>
 
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="defaultModel">Default Model</Label>
+            <Label htmlFor="defaultModel">默认模型</Label>
             <ModelInput
               value={tempDefaultModel}
               onChange={setTempDefaultModel}
-              placeholder="Enter or select a model..."
+              placeholder="输入或选择模型..."
             />
             <p className="text-xs text-muted-foreground">
-              Enter any LiteLLM model name or select from suggestions. Make sure
-              you&apos;ve set your API keys in Edit {">"} Edit API Keys when
-              using our hosted app.{" "}
+              输入任意 LiteLLM 模型名或从推荐中选择。使用托管版本时，请在
+              编辑 {">"} 编辑 API Key 中配置密钥。{" "}
               <a
                 href="https://docs.litellm.ai/docs/providers"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:underline"
               >
-                View all supported models {String.fromCharCode(8594)}
+                查看支持的模型 {String.fromCharCode(8594)}
               </a>
             </p>
           </div>
 
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="optimize">Optimizer Model</Label>
+            <Label htmlFor="optimize">优化器模型</Label>
             {!hasOpenAIKey && !isLocalMode ? (
               <div className="bg-destructive/10 text-destructive rounded-md p-3 text-xs">
                 <div className="flex gap-2">
                   <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium">OpenAI API Key Required</p>
+                    <p className="font-medium">需要 OpenAI API Key</p>
                     <p className="mt-1">
-                      To use the optimizer, please add your OpenAI API key in
-                      Edit {">"} Edit API Keys.
+                      要使用优化器，请在 编辑 {">"} 编辑 API Key 中添加 OpenAI API Key。
                     </p>
                     <button
                       className="text-destructive underline hover:opacity-80 mt-1.5 font-medium"
                       onClick={() => setIsLocalMode(true)}
                     >
-                      Skip if running locally with environment variables
+                      本地环境变量运行可忽略
                     </button>
                   </div>
                 </div>
@@ -509,22 +507,19 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                 <ModelInput
                   value={tempOptimizerModel}
                   onChange={setTempOptimizerModel}
-                  placeholder="Enter optimizer model name..."
+                  placeholder="输入优化器模型名称..."
                   suggestions={["gpt-4o", "gpt-4o-mini"]}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Enter any LiteLLM model name (e.g., &quot;azure/gpt-4o&quot;)
-                  or select from suggestions above. Make sure the model supports
-                  JSON mode.
+                  输入任意 LiteLLM 模型名（例如 &quot;azure/gpt-4o&quot;）
+                  或从上方推荐中选择。请确保模型支持 JSON 模式。
                 </p>
               </div>
             )}
           </div>
 
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="autoOptimize">
-              Automatically Check Whether to Optimize
-            </Label>
+            <Label htmlFor="autoOptimize">自动检查是否需要优化</Label>
             <Switch
               id="autoOptimize"
               checked={tempAutoOptimizeCheck}
@@ -534,46 +529,41 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
           </div>
 
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="saveOutputToDataCenter">
-              Save Output to Data Center
-            </Label>
+            <Label htmlFor="saveOutputToDataCenter">保存输出到数据中心</Label>
             <Switch
               id="saveOutputToDataCenter"
               checked={tempSaveOutputToDataCenter}
               onCheckedChange={(checked) => setTempSaveOutputToDataCenter(checked)}
             />
             <p className="text-xs text-muted-foreground">
-              Registers pipeline output as a generated dataset with lineage.
+              将流水线输出登记为生成数据集并记录血缘。
             </p>
           </div>
 
           <div className="flex flex-col space-y-1.5">
             <div className="flex justify-between items-center">
-              <Label htmlFor="advancedSettings">
-                Advanced Pipeline Settings (YAML)
-              </Label>
+              <Label htmlFor="advancedSettings">高级流水线设置（YAML）</Label>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 text-xs"
                 onClick={() => setTempYamlSettings(SAMPLE_YAML)}
               >
-                Add Example
+                插入示例
               </Button>
             </div>
             <Textarea
               id="advancedSettings"
               value={tempYamlSettings}
               onChange={(e) => handleYamlChange(e.target.value)}
-              placeholder="Enter YAML configuration for rate limits and other advanced settings"
+              placeholder="输入 YAML 配置（限流等高级设置）"
               className="font-mono text-sm h-48 resize-y"
             />
             {yamlError && (
               <div className="text-sm text-destructive">{yamlError}</div>
             )}
             <p className="text-sm text-muted-foreground">
-              Configure rate limits and other advanced settings in YAML format.
-              These settings will be passed to the backend.
+              使用 YAML 配置限流等高级设置，这些配置会传递给后端。
             </p>
           </div>
         </div>
@@ -582,7 +572,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
             onClick={handleSettingsSave}
             disabled={!!yamlError && tempYamlSettings.trim() !== ""}
           >
-            Save changes
+            保存更改
           </Button>
         </DialogFooter>
       </DialogContent>

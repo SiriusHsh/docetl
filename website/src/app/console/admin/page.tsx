@@ -104,14 +104,14 @@ type AuditLogEntry = {
 };
 
 const PLATFORM_ROLES: Array<{ value: PlatformRole; label: string }> = [
-  { value: "platform_admin", label: "Platform admin" },
-  { value: "user", label: "User" },
+  { value: "platform_admin", label: "平台管理员" },
+  { value: "user", label: "用户" },
 ];
 
 const NAMESPACE_ROLES: Array<{ value: NamespaceRole; label: string }> = [
-  { value: "namespace_admin", label: "Namespace admin" },
-  { value: "editor", label: "Editor" },
-  { value: "viewer", label: "Viewer" },
+  { value: "namespace_admin", label: "工作区管理员" },
+  { value: "editor", label: "编辑者" },
+  { value: "viewer", label: "查看者" },
 ];
 
 const formatTimestamp = (value?: number | null) => {
@@ -124,7 +124,7 @@ const stringifyDetail = (detail?: Record<string, unknown> | null) => {
   try {
     return JSON.stringify(detail);
   } catch {
-    return "[detail]";
+    return "【详情】";
   }
 };
 
@@ -208,13 +208,13 @@ export default function AdminPage() {
       const response = await backendFetch(`${backendUrl}/users?limit=200`);
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load users");
+        throw new Error(detail || "加载用户失败");
       }
       const data = (await response.json()) as UserRecord[];
       setUsers(data);
     } catch (error) {
       setUsersError(
-        error instanceof Error ? error.message : "Failed to load users"
+        error instanceof Error ? error.message : "加载用户失败"
       );
     } finally {
       setUsersLoading(false);
@@ -235,13 +235,13 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load audit logs");
+        throw new Error(detail || "加载审计日志失败");
       }
       const data = (await response.json()) as AuditLogEntry[];
       setAuditLogs(data);
     } catch (error) {
       setAuditError(
-        error instanceof Error ? error.message : "Failed to load audit logs"
+        error instanceof Error ? error.message : "加载审计日志失败"
       );
     } finally {
       setAuditLoading(false);
@@ -255,13 +255,13 @@ export default function AdminPage() {
       const response = await backendFetch(`${backendUrl}/groups?limit=200`);
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load groups");
+        throw new Error(detail || "加载分组失败");
       }
       const data = (await response.json()) as GroupRecord[];
       setGroups(data);
     } catch (error) {
       setGroupsError(
-        error instanceof Error ? error.message : "Failed to load groups"
+        error instanceof Error ? error.message : "加载分组失败"
       );
     } finally {
       setGroupsLoading(false);
@@ -321,19 +321,19 @@ export default function AdminPage() {
       });
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to update user");
+        throw new Error(detail || "更新用户失败");
       }
       const updated = (await response.json()) as UserRecord;
       setUsers((prev) =>
         prev.map((item) => (item.id === updated.id ? updated : item))
       );
-      toast({ title: "User updated" });
+      toast({ title: "用户已更新" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Update failed",
+        title: "更新失败",
         description:
-          error instanceof Error ? error.message : "Failed to update user",
+          error instanceof Error ? error.message : "更新用户失败",
       });
     } finally {
       setPendingUsers((prev) => ({ ...prev, [userId]: false }));
@@ -344,16 +344,16 @@ export default function AdminPage() {
     if (!createUsername.trim() || !createPassword.trim()) {
       toast({
         variant: "destructive",
-        title: "Missing info",
-        description: "Username and password are required.",
+        title: "缺少信息",
+        description: "需要填写用户名与密码。",
       });
       return;
     }
     if (createPassword.trim().length < 8) {
       toast({
         variant: "destructive",
-        title: "Password too short",
-        description: "Password must be at least 8 characters.",
+        title: "密码过短",
+        description: "密码至少 8 位。",
       });
       return;
     }
@@ -371,7 +371,7 @@ export default function AdminPage() {
       });
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to create user");
+        throw new Error(detail || "创建用户失败");
       }
       const created = (await response.json()) as UserRecord;
       setUsers((prev) => [created, ...prev]);
@@ -380,13 +380,13 @@ export default function AdminPage() {
       setCreateEmail("");
       setCreatePassword("");
       setCreateRole("user");
-      toast({ title: "User created" });
+      toast({ title: "用户已创建" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Create failed",
+        title: "创建失败",
         description:
-          error instanceof Error ? error.message : "Failed to create user",
+          error instanceof Error ? error.message : "创建用户失败",
       });
     } finally {
       setCreateLoading(false);
@@ -398,8 +398,8 @@ export default function AdminPage() {
     if (resetPassword.trim().length < 8) {
       toast({
         variant: "destructive",
-        title: "Password too short",
-        description: "Password must be at least 8 characters.",
+        title: "密码过短",
+        description: "密码至少 8 位。",
       });
       return;
     }
@@ -415,17 +415,17 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to reset password");
+        throw new Error(detail || "重置密码失败");
       }
       setResetDialogOpen(false);
       setResetPassword("");
-      toast({ title: "Password reset" });
+      toast({ title: "密码已重置" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Reset failed",
+        title: "重置失败",
         description:
-          error instanceof Error ? error.message : "Failed to reset password",
+          error instanceof Error ? error.message : "重置密码失败",
       });
     } finally {
       setResetLoading(false);
@@ -440,16 +440,16 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load memberships");
+        throw new Error(detail || "加载权限失败");
       }
       const data = (await response.json()) as MembershipRecord[];
       setMemberships(data);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Load failed",
+        title: "加载失败",
         description:
-          error instanceof Error ? error.message : "Failed to load memberships",
+          error instanceof Error ? error.message : "加载权限失败",
       });
     } finally {
       setMembershipLoading(false);
@@ -469,7 +469,7 @@ export default function AdminPage() {
     if (!membershipNamespace.trim()) {
       toast({
         variant: "destructive",
-        title: "Namespace required",
+        title: "需要工作区",
       });
       return;
     }
@@ -488,18 +488,18 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to update membership");
+        throw new Error(detail || "更新权限失败");
       }
       await loadMemberships(selectedUser.id);
       setMembershipNamespace("");
       setMembershipRole("viewer");
-      toast({ title: "Access updated" });
+      toast({ title: "权限已更新" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Update failed",
+        title: "更新失败",
         description:
-          error instanceof Error ? error.message : "Failed to update membership",
+          error instanceof Error ? error.message : "更新权限失败",
       });
     } finally {
       setMembershipSaving(false);
@@ -523,7 +523,7 @@ export default function AdminPage() {
     if (!groupFormName.trim()) {
       toast({
         variant: "destructive",
-        title: "Group name required",
+        title: "需要分组名称",
       });
       return;
     }
@@ -547,7 +547,7 @@ export default function AdminPage() {
 
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to save group");
+        throw new Error(detail || "保存分组失败");
       }
       const saved = (await response.json()) as GroupRecord;
       setGroups((prev) => {
@@ -561,13 +561,13 @@ export default function AdminPage() {
       }
       setGroupDialogOpen(false);
       setEditingGroup(null);
-      toast({ title: "Group saved" });
+      toast({ title: "分组已保存" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Save failed",
+        title: "保存失败",
         description:
-          error instanceof Error ? error.message : "Failed to save group",
+          error instanceof Error ? error.message : "保存分组失败",
       });
     } finally {
       setGroupFormLoading(false);
@@ -587,20 +587,20 @@ export default function AdminPage() {
       });
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to delete group");
+        throw new Error(detail || "删除分组失败");
       }
       setGroups((prev) => prev.filter((item) => item.id !== group.id));
       if (activeGroup?.id === group.id) {
         setActiveGroup(null);
         setManageGroupOpen(false);
       }
-      toast({ title: "Group deleted" });
+      toast({ title: "分组已删除" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Delete failed",
+        title: "删除失败",
         description:
-          error instanceof Error ? error.message : "Failed to delete group",
+          error instanceof Error ? error.message : "删除分组失败",
       });
     }
   };
@@ -612,13 +612,13 @@ export default function AdminPage() {
       const response = await backendFetch(`${backendUrl}/groups/${groupId}/members`);
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load group members");
+        throw new Error(detail || "加载成员失败");
       }
       const data = (await response.json()) as GroupMemberRecord[];
       setGroupMembers(data);
     } catch (error) {
       setGroupMembersError(
-        error instanceof Error ? error.message : "Failed to load group members"
+        error instanceof Error ? error.message : "加载成员失败"
       );
     } finally {
       setGroupMembersLoading(false);
@@ -634,13 +634,13 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to load group access");
+        throw new Error(detail || "加载权限失败");
       }
       const data = (await response.json()) as GroupNamespaceAccessRecord[];
       setGroupAccess(data);
     } catch (error) {
       setGroupAccessError(
-        error instanceof Error ? error.message : "Failed to load group access"
+        error instanceof Error ? error.message : "加载权限失败"
       );
     } finally {
       setGroupAccessLoading(false);
@@ -670,17 +670,17 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to add member");
+        throw new Error(detail || "添加成员失败");
       }
       setMemberToAdd("");
       await loadGroupMembers(activeGroup.id);
-      toast({ title: "Member added" });
+      toast({ title: "成员已添加" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Add failed",
+        title: "添加失败",
         description:
-          error instanceof Error ? error.message : "Failed to add member",
+          error instanceof Error ? error.message : "添加成员失败",
       });
     } finally {
       setMemberSaving(false);
@@ -696,16 +696,16 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to remove member");
+        throw new Error(detail || "移除成员失败");
       }
       await loadGroupMembers(activeGroup.id);
-      toast({ title: "Member removed" });
+      toast({ title: "成员已移除" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Remove failed",
+        title: "移除失败",
         description:
-          error instanceof Error ? error.message : "Failed to remove member",
+          error instanceof Error ? error.message : "移除成员失败",
       });
     }
   };
@@ -715,7 +715,7 @@ export default function AdminPage() {
     if (!accessNamespace.trim()) {
       toast({
         variant: "destructive",
-        title: "Namespace required",
+        title: "需要工作区",
       });
       return;
     }
@@ -733,18 +733,18 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to save access");
+        throw new Error(detail || "保存权限失败");
       }
       setAccessNamespace("");
       setAccessRole("viewer");
       await loadGroupAccess(activeGroup.id);
-      toast({ title: "Access saved" });
+      toast({ title: "权限已保存" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Save failed",
+        title: "保存失败",
         description:
-          error instanceof Error ? error.message : "Failed to save access",
+          error instanceof Error ? error.message : "保存权限失败",
       });
     } finally {
       setAccessSaving(false);
@@ -762,16 +762,16 @@ export default function AdminPage() {
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "Failed to remove access");
+        throw new Error(detail || "移除权限失败");
       }
       await loadGroupAccess(activeGroup.id);
-      toast({ title: "Access removed" });
+      toast({ title: "权限已移除" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Remove failed",
+        title: "移除失败",
         description:
-          error instanceof Error ? error.message : "Failed to remove access",
+          error instanceof Error ? error.message : "移除权限失败",
       });
     }
   };
@@ -780,7 +780,7 @@ export default function AdminPage() {
     return (
       <div className="px-6 py-6">
         <div className="flex items-center gap-2 text-sm text-slate-400">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading admin console...
+          <Loader2 className="h-4 w-4 animate-spin" /> 正在加载管理后台...
         </div>
       </div>
     );
@@ -793,17 +793,17 @@ export default function AdminPage() {
           <div className="flex items-center gap-3">
             <Shield className="h-6 w-6 text-red-300" />
             <h1 className="text-xl font-semibold text-slate-100">
-              Access denied
+              无权限访问
             </h1>
           </div>
           <p className="mt-2 text-sm text-slate-300">
-            This page is only available to platform administrators.
+            仅平台管理员可访问该页面。
           </p>
           <Button
             className="mt-4"
             onClick={() => router.replace("/console/dashboard")}
           >
-            Back to Console
+            返回控制台
           </Button>
         </div>
       </div>
@@ -816,10 +816,10 @@ export default function AdminPage() {
         <div>
           <div className="flex items-center gap-3">
             <Users className="h-6 w-6 text-slate-200" />
-            <h1 className="text-2xl font-semibold text-white">Admin Console</h1>
+            <h1 className="text-2xl font-semibold text-white">管理后台</h1>
           </div>
           <p className="mt-2 text-sm text-slate-400">
-            Manage users, access controls, and audit logs.
+            管理用户、权限与审计日志。
           </p>
         </div>
         <Button
@@ -838,7 +838,7 @@ export default function AdminPage() {
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          Refresh
+          刷新
         </Button>
       </div>
 
@@ -848,19 +848,19 @@ export default function AdminPage() {
             value="users"
             className="data-[state=active]:bg-[#0f1116] data-[state=active]:text-white"
           >
-            Users
+            用户
           </TabsTrigger>
           <TabsTrigger
             value="audit"
             className="data-[state=active]:bg-[#0f1116] data-[state=active]:text-white"
           >
-            Audit Logs
+            审计日志
           </TabsTrigger>
           <TabsTrigger
             value="groups"
             className="data-[state=active]:bg-[#0f1116] data-[state=active]:text-white"
           >
-            Groups
+            分组
           </TabsTrigger>
         </TabsList>
 
@@ -868,11 +868,11 @@ export default function AdminPage() {
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="flex items-center gap-2 text-sm text-slate-300">
               <Users className="h-4 w-4" />
-              {users.length} users
+              共 {users.length} 位用户
             </div>
             <div className="flex items-center gap-3">
               <Input
-                placeholder="Search username/email"
+                placeholder="搜索用户名/邮箱"
                 value={userSearch}
                 onChange={(event) => setUserSearch(event.target.value)}
                 className="w-64 bg-[#0f1116] border-slate-800 text-slate-200"
@@ -883,7 +883,7 @@ export default function AdminPage() {
                 className="bg-blue-600 hover:bg-blue-500"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                New User
+                新建用户
               </Button>
             </div>
           </div>
@@ -893,19 +893,19 @@ export default function AdminPage() {
               <div className="p-6 text-sm text-red-400">{usersError}</div>
             ) : usersLoading ? (
               <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading users...
+                <Loader2 className="h-4 w-4 animate-spin" /> 正在加载用户...
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="p-6 text-sm text-slate-400">No users yet.</div>
+              <div className="p-6 text-sm text-slate-400">暂无用户。</div>
             ) : (
               <Table>
                 <TableHeader className="bg-[#11141c]">
                   <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-300">User</TableHead>
-                    <TableHead className="text-slate-300">Platform Role</TableHead>
-                    <TableHead className="text-slate-300">Status</TableHead>
-                    <TableHead className="text-slate-300">Last Login</TableHead>
-                    <TableHead className="text-slate-300">Actions</TableHead>
+                    <TableHead className="text-slate-300">用户</TableHead>
+                    <TableHead className="text-slate-300">平台角色</TableHead>
+                    <TableHead className="text-slate-300">状态</TableHead>
+                    <TableHead className="text-slate-300">最近登录</TableHead>
+                    <TableHead className="text-slate-300">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -961,11 +961,11 @@ export default function AdminPage() {
                                 user.is_active ? "text-emerald-400" : "text-slate-500"
                               )}
                             >
-                              {user.is_active ? "Active" : "Disabled"}
+                              {user.is_active ? "启用" : "停用"}
                             </span>
                             {isProtected ? (
                               <span className="text-[10px] text-slate-500">
-                                Protected
+                                受保护
                               </span>
                             ) : null}
                           </div>
@@ -981,7 +981,7 @@ export default function AdminPage() {
                               className="border-slate-700 text-slate-200 hover:bg-slate-800"
                               onClick={() => handleOpenMemberships(user)}
                             >
-                              Access
+                              权限
                             </Button>
                             <Button
                               size="sm"
@@ -992,7 +992,7 @@ export default function AdminPage() {
                                 setResetDialogOpen(true);
                               }}
                             >
-                              Reset Password
+                              重置密码
                             </Button>
                           </div>
                         </TableCell>
@@ -1009,29 +1009,29 @@ export default function AdminPage() {
           <div className="rounded-2xl border border-slate-800 bg-[#151921] p-5">
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-2">
-                <Label className="text-xs text-slate-400">Namespace</Label>
+                <Label className="text-xs text-slate-400">工作区</Label>
                 <Input
                   value={auditNamespace}
                   onChange={(event) => setAuditNamespace(event.target.value)}
-                  placeholder="namespace"
+                  placeholder="工作区"
                   className="w-48 bg-[#0f1116] border-slate-800 text-slate-200"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label className="text-xs text-slate-400">Action</Label>
+                <Label className="text-xs text-slate-400">动作</Label>
                 <Input
                   value={auditAction}
                   onChange={(event) => setAuditAction(event.target.value)}
-                  placeholder="action"
+                  placeholder="动作"
                   className="w-48 bg-[#0f1116] border-slate-800 text-slate-200"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label className="text-xs text-slate-400">Actor User ID</Label>
+                <Label className="text-xs text-slate-400">操作者 ID</Label>
                 <Input
                   value={auditActorUserId}
                   onChange={(event) => setAuditActorUserId(event.target.value)}
-                  placeholder="actor_user_id"
+                  placeholder="操作者 ID"
                   className="w-56 bg-[#0f1116] border-slate-800 text-slate-200"
                 />
               </div>
@@ -1040,7 +1040,7 @@ export default function AdminPage() {
                 onClick={() => void loadAuditLogs()}
                 className="bg-blue-600 hover:bg-blue-500"
               >
-                Apply Filters
+                应用筛选
               </Button>
             </div>
           </div>
@@ -1050,21 +1050,21 @@ export default function AdminPage() {
               <div className="p-6 text-sm text-red-400">{auditError}</div>
             ) : auditLoading ? (
               <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading audit logs...
+                <Loader2 className="h-4 w-4 animate-spin" /> 正在加载审计日志...
               </div>
             ) : auditLogs.length === 0 ? (
-              <div className="p-6 text-sm text-slate-400">No audit logs found.</div>
+              <div className="p-6 text-sm text-slate-400">暂无审计日志。</div>
             ) : (
               <Table>
                 <TableHeader className="bg-[#11141c]">
                   <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-300">Time</TableHead>
-                    <TableHead className="text-slate-300">Actor</TableHead>
-                    <TableHead className="text-slate-300">Action</TableHead>
-                    <TableHead className="text-slate-300">Resource</TableHead>
-                    <TableHead className="text-slate-300">Namespace</TableHead>
-                    <TableHead className="text-slate-300">Result</TableHead>
-                    <TableHead className="text-slate-300">Detail</TableHead>
+                    <TableHead className="text-slate-300">时间</TableHead>
+                    <TableHead className="text-slate-300">操作者</TableHead>
+                    <TableHead className="text-slate-300">动作</TableHead>
+                    <TableHead className="text-slate-300">资源</TableHead>
+                    <TableHead className="text-slate-300">工作区</TableHead>
+                    <TableHead className="text-slate-300">结果</TableHead>
+                    <TableHead className="text-slate-300">详情</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1100,7 +1100,7 @@ export default function AdminPage() {
                           ) : (
                             <AlertTriangle className="h-3 w-3" />
                           )}
-                          {log.success ? "Success" : "Failed"}
+                          {log.success ? "成功" : "失败"}
                         </span>
                       </TableCell>
                       <TableCell className="text-xs text-slate-400 max-w-[240px] truncate">
@@ -1118,11 +1118,11 @@ export default function AdminPage() {
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="flex items-center gap-2 text-sm text-slate-300">
               <Shield className="h-4 w-4" />
-              {groups.length} groups
+              共 {groups.length} 个分组
             </div>
             <div className="flex items-center gap-3">
               <Input
-                placeholder="Search group"
+                placeholder="搜索分组"
                 value={groupSearch}
                 onChange={(event) => setGroupSearch(event.target.value)}
                 className="w-64 bg-[#0f1116] border-slate-800 text-slate-200"
@@ -1133,7 +1133,7 @@ export default function AdminPage() {
                 className="bg-blue-600 hover:bg-blue-500"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                New Group
+                新建分组
               </Button>
             </div>
           </div>
@@ -1143,18 +1143,18 @@ export default function AdminPage() {
               <div className="p-6 text-sm text-red-400">{groupsError}</div>
             ) : groupsLoading ? (
               <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading groups...
+                <Loader2 className="h-4 w-4 animate-spin" /> 正在加载分组...
               </div>
             ) : filteredGroups.length === 0 ? (
-              <div className="p-6 text-sm text-slate-400">No groups yet.</div>
+              <div className="p-6 text-sm text-slate-400">暂无分组。</div>
             ) : (
               <Table>
                 <TableHeader className="bg-[#11141c]">
                   <TableRow className="border-slate-800">
-                    <TableHead className="text-slate-300">Group</TableHead>
-                    <TableHead className="text-slate-300">Description</TableHead>
-                    <TableHead className="text-slate-300">Updated</TableHead>
-                    <TableHead className="text-slate-300">Actions</TableHead>
+                    <TableHead className="text-slate-300">分组</TableHead>
+                    <TableHead className="text-slate-300">描述</TableHead>
+                    <TableHead className="text-slate-300">更新时间</TableHead>
+                    <TableHead className="text-slate-300">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1178,7 +1178,7 @@ export default function AdminPage() {
                             className="border-slate-700 text-slate-200 hover:bg-slate-800"
                             onClick={() => handleOpenManageGroup(group)}
                           >
-                            Manage
+                            管理
                           </Button>
                           <Button
                             size="sm"
@@ -1186,7 +1186,7 @@ export default function AdminPage() {
                             className="border-slate-700 text-slate-200 hover:bg-slate-800"
                             onClick={() => handleOpenGroupForm(group)}
                           >
-                            Edit
+                            编辑
                           </Button>
                           <Button
                             size="sm"
@@ -1194,7 +1194,7 @@ export default function AdminPage() {
                             className="border-red-500/40 text-red-300 hover:bg-red-500/10"
                             onClick={() => handleDeleteGroup(group)}
                           >
-                            Delete
+                            删除
                           </Button>
                         </div>
                       </TableCell>
@@ -1211,40 +1211,40 @@ export default function AdminPage() {
         <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-100">
-              Create User
+              创建用户
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Username</Label>
+              <Label className="text-xs text-slate-400">用户名</Label>
               <Input
                 value={createUsername}
                 onChange={(event) => setCreateUsername(event.target.value)}
-                placeholder="username"
+                placeholder="用户名"
                 className="bg-[#0f1116] border-slate-800 text-slate-200"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Email (optional)</Label>
+              <Label className="text-xs text-slate-400">邮箱（可选）</Label>
               <Input
                 value={createEmail}
                 onChange={(event) => setCreateEmail(event.target.value)}
-                placeholder="email"
+                placeholder="邮箱"
                 className="bg-[#0f1116] border-slate-800 text-slate-200"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Initial Password</Label>
+              <Label className="text-xs text-slate-400">初始密码</Label>
               <Input
                 value={createPassword}
                 onChange={(event) => setCreatePassword(event.target.value)}
-                placeholder="minimum 8 characters"
+                placeholder="至少 8 位"
                 type="password"
                 className="bg-[#0f1116] border-slate-800 text-slate-200"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Platform Role</Label>
+              <Label className="text-xs text-slate-400">平台角色</Label>
               <Select
                 value={createRole}
                 onValueChange={(value) => setCreateRole(value as PlatformRole)}
@@ -1272,7 +1272,7 @@ export default function AdminPage() {
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              Create
+              创建
             </Button>
           </div>
         </DialogContent>
@@ -1282,23 +1282,23 @@ export default function AdminPage() {
         <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-100">
-              Reset Password
+              重置密码
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-slate-300">
-              Set a new password for{" "}
+              为{" "}
               <span className="font-semibold text-white">
                 {selectedUser?.username}
               </span>
-              .
+              设置新密码。
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">New Password</Label>
+              <Label className="text-xs text-slate-400">新密码</Label>
               <Input
                 value={resetPassword}
                 onChange={(event) => setResetPassword(event.target.value)}
-                placeholder="minimum 8 characters"
+                placeholder="至少 8 位"
                 type="password"
                 className="bg-[#0f1116] border-slate-800 text-slate-200"
               />
@@ -1314,7 +1314,7 @@ export default function AdminPage() {
               ) : (
                 <KeyRound className="mr-2 h-4 w-4" />
               )}
-              Reset
+              重置
             </Button>
           </div>
         </DialogContent>
@@ -1324,24 +1324,24 @@ export default function AdminPage() {
         <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-[640px]">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-100">
-              Namespace Access
+              工作区权限
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-slate-300">
-              User:{" "}
+              用户：{" "}
               <span className="font-semibold text-white">
                 {selectedUser?.username}
               </span>
             </div>
             <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4">
-              <div className="text-xs text-slate-400 mb-2">Current Access</div>
+              <div className="text-xs text-slate-400 mb-2">当前权限</div>
               {membershipLoading ? (
                 <div className="text-sm text-slate-400 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+                  <Loader2 className="h-4 w-4 animate-spin" /> 加载中...
                 </div>
               ) : memberships.length === 0 ? (
-                <div className="text-sm text-slate-500">No access records.</div>
+                <div className="text-sm text-slate-500">暂无权限记录。</div>
               ) : (
                 <div className="space-y-2">
                   {memberships.map((item) => (
@@ -1365,7 +1365,7 @@ export default function AdminPage() {
                           setMembershipRole(item.role);
                         }}
                       >
-                        Edit
+                        编辑
                       </button>
                     </div>
                   ))}
@@ -1374,16 +1374,16 @@ export default function AdminPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Namespace</Label>
+                <Label className="text-xs text-slate-400">工作区</Label>
                 <Input
                   value={membershipNamespace}
                   onChange={(event) => setMembershipNamespace(event.target.value)}
-                  placeholder="namespace"
+                  placeholder="工作区"
                   className="bg-[#0f1116] border-slate-800 text-slate-200"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">Role</Label>
+                <Label className="text-xs text-slate-400">角色</Label>
                 <Select
                   value={membershipRole}
                   onValueChange={(value) => setMembershipRole(value as NamespaceRole)}
@@ -1412,10 +1412,10 @@ export default function AdminPage() {
               ) : (
                 <Shield className="mr-2 h-4 w-4" />
               )}
-              Save Access
+              保存权限
             </Button>
             <div className="text-xs text-slate-500">
-              Removing access is not supported yet.
+              暂不支持移除权限。
             </div>
           </div>
         </DialogContent>
@@ -1425,25 +1425,25 @@ export default function AdminPage() {
         <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-100">
-              {editingGroup ? "Edit Group" : "Create Group"}
+              {editingGroup ? "编辑分组" : "创建分组"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Group name</Label>
+              <Label className="text-xs text-slate-400">分组名称</Label>
               <Input
                 value={groupFormName}
                 onChange={(event) => setGroupFormName(event.target.value)}
-                placeholder="group name"
+                placeholder="分组名称"
                 className="bg-[#0f1116] border-slate-800 text-slate-200"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">Description</Label>
+              <Label className="text-xs text-slate-400">描述</Label>
               <Input
                 value={groupFormDescription}
                 onChange={(event) => setGroupFormDescription(event.target.value)}
-                placeholder="optional description"
+                placeholder="可选描述"
                 className="bg-[#0f1116] border-slate-800 text-slate-200"
               />
             </div>
@@ -1458,7 +1458,7 @@ export default function AdminPage() {
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              {editingGroup ? "Save Changes" : "Create Group"}
+              {editingGroup ? "保存更改" : "创建分组"}
             </Button>
           </div>
         </DialogContent>
@@ -1476,12 +1476,12 @@ export default function AdminPage() {
         <DialogContent className="bg-[#151921] border border-slate-800 text-slate-100 max-w-[880px]">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-100">
-              Manage Group
+              管理分组
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-slate-300">
-              Group:{" "}
+              分组：{" "}
               <span className="font-semibold text-white">
                 {activeGroup?.name || "-"}
               </span>
@@ -1489,17 +1489,17 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="text-xs uppercase tracking-wider text-slate-400">
-                  Members
+                  成员
                 </div>
                 <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4">
                   {groupMembersError ? (
                     <div className="text-sm text-red-400">{groupMembersError}</div>
                   ) : groupMembersLoading ? (
                     <div className="text-sm text-slate-400 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Loading members...
+                      <Loader2 className="h-4 w-4 animate-spin" /> 正在加载成员...
                     </div>
                   ) : groupMembers.length === 0 ? (
-                    <div className="text-sm text-slate-500">No members yet.</div>
+                    <div className="text-sm text-slate-500">暂无成员。</div>
                   ) : (
                     <div className="space-y-2">
                       {groupMembers.map((member) => (
@@ -1520,7 +1520,7 @@ export default function AdminPage() {
                             className="text-xs text-red-300 hover:text-red-200"
                             onClick={() => handleRemoveMember(member.user_id)}
                           >
-                            Remove
+                            移除
                           </button>
                         </div>
                       ))}
@@ -1530,12 +1530,12 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   <Select value={memberToAdd} onValueChange={setMemberToAdd}>
                     <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
-                      <SelectValue placeholder="Select user" />
+                      <SelectValue placeholder="选择用户" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
                       {availableMemberOptions.length === 0 ? (
                         <SelectItem value="__none" disabled>
-                          No available users
+                          暂无可添加用户
                         </SelectItem>
                       ) : (
                         availableMemberOptions.map((user) => (
@@ -1557,24 +1557,24 @@ export default function AdminPage() {
                     ) : (
                       <Plus className="mr-2 h-4 w-4" />
                     )}
-                    Add
+                    添加
                   </Button>
                 </div>
               </div>
 
               <div className="space-y-3">
                 <div className="text-xs uppercase tracking-wider text-slate-400">
-                  Namespace Access
+                  工作区权限
                 </div>
                 <div className="rounded-lg border border-slate-800 bg-[#0f1116] p-4">
                   {groupAccessError ? (
                     <div className="text-sm text-red-400">{groupAccessError}</div>
                   ) : groupAccessLoading ? (
                     <div className="text-sm text-slate-400 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Loading access...
+                      <Loader2 className="h-4 w-4 animate-spin" /> 正在加载权限...
                     </div>
                   ) : groupAccess.length === 0 ? (
-                    <div className="text-sm text-slate-500">No access entries.</div>
+                    <div className="text-sm text-slate-500">暂无权限记录。</div>
                   ) : (
                     <div className="space-y-2">
                       {groupAccess.map((entry) => (
@@ -1599,14 +1599,14 @@ export default function AdminPage() {
                                 setAccessRole(entry.role);
                               }}
                             >
-                              Edit
+                              编辑
                             </button>
                             <button
                               type="button"
                               className="text-xs text-red-300 hover:text-red-200"
                               onClick={() => handleRemoveGroupAccess(entry.namespace)}
                             >
-                              Remove
+                              移除
                             </button>
                           </div>
                         </div>
@@ -1618,7 +1618,7 @@ export default function AdminPage() {
                   <Input
                     value={accessNamespace}
                     onChange={(event) => setAccessNamespace(event.target.value)}
-                    placeholder="namespace"
+                    placeholder="工作区"
                     className="bg-[#0f1116] border-slate-800 text-slate-200"
                   />
                   <Select
@@ -1648,7 +1648,7 @@ export default function AdminPage() {
                   ) : (
                     <Shield className="mr-2 h-4 w-4" />
                   )}
-                  Save Access
+                  保存权限
                 </Button>
               </div>
             </div>

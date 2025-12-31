@@ -66,7 +66,7 @@ export default function SettingsPage() {
         const response = await backendFetch(`${backendUrl}/auth/me`);
         if (!response.ok) {
           const detail = await response.text();
-          throw new Error(detail || "Failed to load memberships");
+          throw new Error(detail || "加载权限失败");
         }
         const data = (await response.json()) as {
           memberships?: MembershipRecord[];
@@ -81,7 +81,7 @@ export default function SettingsPage() {
       } catch (error) {
         if (!cancelled) {
           setMembershipError(
-            error instanceof Error ? error.message : "Failed to load memberships"
+            error instanceof Error ? error.message : "加载权限失败"
           );
         }
       } finally {
@@ -112,16 +112,16 @@ export default function SettingsPage() {
     <div className="px-6 py-6">
       <div className="flex items-center gap-3">
         <User className="h-6 w-6 text-slate-200" />
-        <h1 className="text-2xl font-semibold text-white">Settings</h1>
+        <h1 className="text-2xl font-semibold text-white">设置</h1>
       </div>
       <p className="mt-2 text-sm text-slate-400">
-        Manage your profile and session.
+        管理个人信息与会话。
       </p>
 
       <div className="mt-6 rounded-2xl border border-white/5 bg-white/5 p-5">
-        <div className="text-sm text-slate-300">Current User</div>
+        <div className="text-sm text-slate-300">当前用户</div>
         <div className="mt-2 text-lg font-medium text-white">
-          {user?.username || "Unknown user"}
+          {user?.username || "未知用户"}
         </div>
         {user?.email ? (
           <div className="mt-1 text-sm text-slate-400">{user.email}</div>
@@ -132,7 +132,7 @@ export default function SettingsPage() {
           className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200 hover:border-white/20 hover:bg-white/10"
         >
           <LogOut className="h-4 w-4" />
-          Sign out
+          退出登录
         </button>
       </div>
 
@@ -141,23 +141,23 @@ export default function SettingsPage() {
           <Layers className="h-5 w-5 text-slate-200" />
           <div>
             <div className="text-sm font-medium text-slate-200">
-              Workspace Access
+              工作区权限
             </div>
             <div className="text-xs text-slate-500">
-              Select the namespace you want to work in.
+              选择要操作的工作区。
             </div>
           </div>
         </div>
 
         <div className="mt-4 space-y-2">
-          <Label className="text-xs text-slate-400">Namespace</Label>
+          <Label className="text-xs text-slate-400">工作区</Label>
           {membershipError ? (
             <div className="text-sm text-red-400">{membershipError}</div>
           ) : loadingMemberships ? (
-            <div className="text-sm text-slate-400">Loading access...</div>
+            <div className="text-sm text-slate-400">正在加载权限...</div>
           ) : memberships.length === 0 ? (
             <div className="text-sm text-slate-500">
-              No namespace access assigned yet.
+              当前账号暂无工作区权限。
             </div>
           ) : (
             <Select
@@ -166,13 +166,13 @@ export default function SettingsPage() {
                 setNamespace(value);
                 writeNamespace(value);
                 toast({
-                  title: "Namespace updated",
-                  description: "Switched to the selected namespace.",
+                  title: "工作区已更新",
+                  description: "已切换到选定工作区。",
                 });
               }}
             >
               <SelectTrigger className="bg-[#0f1116] border-slate-800 text-slate-200">
-                <SelectValue placeholder="Select namespace" />
+                <SelectValue placeholder="选择工作区" />
               </SelectTrigger>
               <SelectContent className="bg-[#151921] border-slate-800 text-slate-100">
                 {memberships.map((membership) => (

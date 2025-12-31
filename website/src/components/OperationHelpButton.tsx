@@ -45,43 +45,39 @@ export const OperationHelpButton: React.FC<OperationHelpButtonProps> = ({
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-sm text-muted-foreground">
-                The prompt runs once per document. Each document is available as{" "}
-                <span className="font-mono">input</span>, and you can reference
-                specific fields with dot notation:
+                提示词会针对每条文档执行一次。每条文档可通过{" "}
+                <span className="font-mono">input</span> 访问，可用点号引用字段：
               </p>
               <div className="space-y-2">
-                <p>Reference the entire document:</p>
+                <p>引用整条文档：</p>
                 <PromptBlock
-                  text={"Analyze this: {{ input }}"}
+                  text={"分析以下内容：{{ input }}"}
                   id="map-example"
                 />
                 <p>
-                  Or reference specific fields (e.g., if your document has a
-                  &ldquo;text&rdquo; field):
+                  或引用指定字段（例如文档有 &ldquo;text&rdquo; 字段）：
                 </p>
                 <PromptBlock
-                  text={"Analyze this text: {{ input.text }}"}
+                  text={"分析以下文本：{{ input.text }}"}
                   id="map-specific"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-sm">
-                What&apos;s the output schema?
+                输出 Schema 是什么？
               </p>
               <div className="border rounded p-3">
                 <p className="text-sm">
-                  The schema defines what new columns the LLM should add to each
-                  document. For example:
+                  Schema 定义 LLM 要为每条文档新增的字段。例如：
                 </p>
                 <div className="mt-2 pl-4 text-sm text-muted-foreground">
-                  Column: <span className="font-mono">summary</span>
+                  字段：<span className="font-mono">summary</span>
                   <br />
-                  Type: <span className="font-mono">string</span>
+                  类型：<span className="font-mono">string</span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Each document will keep its existing columns and get this new
-                  column.
+                  每条文档会保留原有字段，并新增这个字段。
                 </p>
               </div>
             </div>
@@ -93,43 +89,39 @@ export const OperationHelpButton: React.FC<OperationHelpButtonProps> = ({
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-sm text-muted-foreground">
-                The prompt runs once per document. Each document is available as{" "}
-                <span className="font-mono">input</span>, and you can reference
-                specific fields with dot notation:
+                提示词会针对每条文档执行一次。每条文档可通过{" "}
+                <span className="font-mono">input</span> 访问，可用点号引用字段：
               </p>
               <div className="space-y-2">
-                <p>Reference the entire document:</p>
+                <p>引用整条文档：</p>
                 <PromptBlock
-                  text={"Should we keep this? {{ input }}"}
+                  text={"是否保留这条记录？{{ input }}"}
                   id="filter-example"
                 />
                 <p>
-                  Or reference specific fields (e.g., if your document has a
-                  &ldquo;content&rdquo; field):
+                  或引用指定字段（例如文档有 &ldquo;content&rdquo; 字段）：
                 </p>
                 <PromptBlock
-                  text={"Is this content relevant? {{ input.content }}"}
+                  text={"这段内容是否相关？{{ input.content }}"}
                   id="filter-specific"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-sm">
-                What&apos;s the output schema?
+                输出 Schema 是什么？
               </p>
               <div className="border rounded p-3">
                 <p className="text-sm">
-                  For filter operations, the schema must be a single boolean
-                  column that determines if the document should be kept:
+                  对于过滤操作，Schema 必须是一个布尔字段，用于决定是否保留该文档：
                 </p>
                 <div className="mt-2 pl-4 text-sm text-muted-foreground">
-                  Column: <span className="font-mono">keep_document</span>
+                  字段：<span className="font-mono">keep_document</span>
                   <br />
-                  Type: <span className="font-mono">boolean</span>
+                  类型：<span className="font-mono">boolean</span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Documents where this column is true will be kept, others will
-                  be filtered out.
+                  该字段为 true 的文档会被保留，其余会被过滤掉。
                 </p>
               </div>
             </div>
@@ -141,36 +133,32 @@ export const OperationHelpButton: React.FC<OperationHelpButtonProps> = ({
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-sm text-muted-foreground">
-                The reduce operation groups documents by a &ldquo;reduce
-                key&rdquo; (like a SQL GROUP BY), then runs the prompt once per
-                group. The reduce key can be one or more columns - documents
-                with the same values for these columns will be processed
-                together.
+                Reduce 操作会按 &ldquo;reduce key&rdquo;（类似 SQL 的 GROUP BY）
+                对文档分组，然后每组运行一次提示词。reduce key 可以是一个或多个字段，
+                这些字段取值相同的文档会被一起处理。
               </p>
               <p className="mb-2 text-sm text-muted-foreground">
-                Use &ldquo;_all&rdquo; as the reduce key to process all
-                documents in a single group.
+                使用 &ldquo;_all&rdquo; 作为 reduce key 可将所有文档视为同一组处理。
               </p>
               <p className="mb-2 text-sm text-muted-foreground">
-                Each document in the group is available in the{" "}
-                <span className="font-mono">inputs</span> list, and you can
-                reference specific fields with dot notation:
+                每个分组内的文档会在{" "}
+                <span className="font-mono">inputs</span> 列表中提供，
+                可用点号引用字段：
               </p>
               <div className="space-y-2">
-                <p>Reference entire documents:</p>
+                <p>引用整条文档：</p>
                 <PromptBlock
                   text={
-                    "Analyze these documents:\n\n{% for input in inputs %}\nDocument: {{ input }}\n{% endfor %}"
+                    "分析以下文档：\n\n{% for input in inputs %}\n文档：{{ input }}\n{% endfor %}"
                   }
                   id="reduce-example"
                 />
                 <p>
-                  Or reference specific fields (e.g., if your documents have a
-                  &ldquo;title&rdquo; field):
+                  或引用指定字段（例如文档有 &ldquo;title&rdquo; 字段）：
                 </p>
                 <PromptBlock
                   text={
-                    "Analyze these documents:\n\n{% for input in inputs %}\nTitle: {{ input.title }}\n{% endfor %}"
+                    "分析以下文档：\n\n{% for input in inputs %}\n标题：{{ input.title }}\n{% endfor %}"
                   }
                   id="reduce-specific"
                 />
@@ -178,23 +166,21 @@ export const OperationHelpButton: React.FC<OperationHelpButtonProps> = ({
             </div>
             <div className="space-y-2">
               <p className="font-medium text-sm">
-                What&apos;s the output schema?
+                输出 Schema 是什么？
               </p>
               <div className="border rounded p-3">
                 <p className="text-sm">
-                  The schema defines the columns for a new row that represents
-                  the entire group. Each group (determined by the reduce key)
-                  will produce one new row containing these output columns:
+                  Schema 定义每个分组输出的新行字段。每个分组（由 reduce key 确定）
+                  会产出一行，包含这些输出字段：
                 </p>
                 <div className="mt-2 pl-4 text-sm text-muted-foreground">
-                  Column: <span className="font-mono">combined_analysis</span>
+                  字段：<span className="font-mono">combined_analysis</span>
                   <br />
-                  Type: <span className="font-mono">string</span>
+                  类型：<span className="font-mono">string</span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  For example, if you group by &ldquo;category&rdquo;,
-                  you&apos;ll get one output row for each unique category value,
-                  summarizing all documents in that category.
+                  例如以 &ldquo;category&rdquo; 分组时，每个不同的类别会输出一行，
+                  汇总该类别下的所有文档。
                 </p>
               </div>
             </div>
@@ -214,22 +200,21 @@ export const OperationHelpButton: React.FC<OperationHelpButtonProps> = ({
       </HoverCardTrigger>
       <HoverCardContent className="w-[750px]">
         <div className="space-y-4">
-          <h4 className="font-medium">Operator Guide</h4>
+          <h4 className="font-medium">操作指南</h4>
           {getExamplePrompt()}
           <div className="text-sm text-muted-foreground">
             <p>
-              You can find available input keys in the Dataset View (top right
-              corner).
+              可在数据集视图（右上角）查看可用的输入字段。
             </p>
             <p className="mt-2">
-              For more details, see the{" "}
+              更多细节请查看{" "}
               <a
                 href={`https://ucbepic.github.io/docetl/operators/${type}/`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline"
               >
-                {type} operator documentation
+                {type} 操作文档
               </a>
               .
             </p>

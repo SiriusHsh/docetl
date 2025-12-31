@@ -187,14 +187,14 @@ const RemoteDatasetDialog: React.FC<RemoteDatasetDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload Remote Dataset</DialogTitle>
+          <DialogTitle>上传远程数据集</DialogTitle>
           <DialogDescription>
-            Enter the URL of a publicly accessible JSON or CSV file
+            请输入可公开访问的 JSON 或 CSV 文件 URL
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="url">Dataset URL</Label>
+            <Label htmlFor="url">数据集 URL</Label>
             <Input
               id="url"
               type="url"
@@ -206,16 +206,16 @@ const RemoteDatasetDialog: React.FC<RemoteDatasetDialogProps> = ({
           </div>
           <div className="flex justify-end space-x-2">
             <Button variant="outline" type="button" onClick={onClose}>
-              Cancel
+              取消
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
+                  上传中...
                 </>
               ) : (
-                "Upload"
+                "上传"
               )}
             </Button>
           </div>
@@ -389,7 +389,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
 
       if (!saveDocsResponse.ok) {
         // If saving originals fails, stop here
-        throw new Error("Failed to save original documents before conversion.");
+        throw new Error("转换前保存原始文档失败。");
       }
       savedDocs = await saveDocsResponse.json(); // Store response data
 
@@ -425,16 +425,16 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
 
       // Step 3: Validate conversion response (HTTP status)
       if (!response.ok) {
-        let errorMessage = "Conversion failed. Please check server logs.";
+        let errorMessage = "转换失败，请检查服务器日志。";
         try {
           const errorData = await response.json();
           if (errorData && errorData.error) {
             errorMessage = errorData.error;
           } else {
-            errorMessage = `Server returned status ${response.status}: ${response.statusText}`;
+            errorMessage = `服务器返回状态 ${response.status}: ${response.statusText}`;
           }
         } catch (jsonError) {
-          errorMessage = `Server returned status ${response.status}: ${response.statusText}`;
+          errorMessage = `服务器返回状态 ${response.status}: ${response.statusText}`;
         }
         // NOTE: Originals were saved, but conversion failed. We throw, so UI isn't updated.
         // Consider if cleanup of saved originals is needed on the backend in this case.
@@ -458,7 +458,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
       // Ensure savedDocs is not null before proceeding
       if (!savedDocs) {
         throw new Error(
-          "Internal error: Saved documents data is missing after successful save."
+          "内部错误：保存成功后缺少原始文档数据。"
         );
       }
 
@@ -503,7 +503,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         // If JSON upload fails, the originals are already in UI. This might be acceptable,
         // or you might want to implement rollback logic (more complex).
         throw new Error(
-          "Conversion succeeded, but failed to upload the final JSON result."
+          "转换成功，但上传最终 JSON 结果失败。"
         );
       }
 
@@ -520,16 +520,16 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
       handleDialogClose();
 
       toast({
-        title: "Success",
+        title: "成功",
         description:
-          "Documents converted and uploaded successfully. We recommend downloading your dataset json file.",
+          "文档已转换并上传成功，建议下载生成的数据集 JSON 文件。",
       });
     } catch (error) {
       // Catch block handles errors from any step (save originals, convert, upload JSON)
       console.error("Error during conversion process:", error);
       toast({
         variant: "destructive",
-        title: "Process Error", // More general title
+        title: "处理失败",
         description: error instanceof Error ? error.message : String(error),
       });
       // IMPORTANT: No files are added to the UI state if an error occurs at any step.
@@ -544,7 +544,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         `${getBackendUrl()}/fs/read-file?path=${encodeURIComponent(file.path)}`
       );
       if (!response.ok) {
-        throw new Error("Failed to download file");
+        throw new Error("下载文件失败");
       }
 
       const blob = await response.blob();
@@ -560,8 +560,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
       console.error("Error downloading file:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to download file",
+        title: "错误",
+        description: "下载文件失败",
       });
     }
   };
@@ -603,7 +603,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
           <div className="flex justify-between items-center mb-4 border-b pb-3">
             <h2 className="text-base font-bold flex items-center">
               <Folder className="mr-2" size={14} />
-              FILES
+              文件
             </h2>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -640,8 +640,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                       )}
                       <span>
                         {uploadingFiles.size > 0
-                          ? "Uploading dataset..."
-                          : "Upload Local Dataset"}
+                          ? "正在上传数据集..."
+                          : "上传本地数据集"}
                       </span>
                     </label>
                   </div>
@@ -662,8 +662,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   )}
                   <span>
                     {uploadingFiles.size > 0
-                      ? "Uploading dataset..."
-                      : "Upload Remote Dataset"}
+                      ? "正在上传数据集..."
+                      : "上传远程数据集"}
                   </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -682,8 +682,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   )}
                   <span>
                     {uploadingFiles.size > 0
-                      ? "Uploading files..."
-                      : "Upload Files or Folder"}
+                      ? "正在上传文件..."
+                      : "上传文件/文件夹"}
                   </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -730,8 +730,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   )}
                   <span>
                     {uploadingFiles.size > 0
-                      ? "Uploading dataset..."
-                      : "Upload Local Dataset"}
+                      ? "正在上传数据集..."
+                      : "上传本地数据集"}
                   </span>
                     </label>
                   </div>
@@ -750,8 +750,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
               )}
               <span>
                 {uploadingFiles.size > 0
-                  ? "Uploading dataset..."
-                  : "Upload Remote Dataset"}
+                  ? "正在上传数据集..."
+                  : "上传远程数据集"}
               </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -768,8 +768,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
               )}
               <span>
                 {uploadingFiles.size > 0
-                  ? "Uploading files..."
-                  : "Upload Files or Folder"}
+                  ? "正在上传文件..."
+                  : "上传文件/文件夹"}
               </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -778,8 +778,8 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         )}
 
         <div className="text-xs mb-4 bg-muted/50 p-2 rounded-md">
-          <span className="text-muted-foreground font-medium">Tip: </span>
-          Right-click files to view, download or delete them
+          <span className="text-muted-foreground font-medium">提示：</span>
+          右键文件可查看、下载或删除
         </div>
       </div>
 
@@ -799,7 +799,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                     onClick={() => handleFolderDeleteClick(folder)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Delete Folder</span>
+                    <span>删除文件夹</span>
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -832,16 +832,16 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   {file.type !== "json" && (
                     <ContextMenuItem onClick={() => setViewingDocument(file)}>
                       <Eye className="mr-2 h-4 w-4" />
-                      <span>View Document</span>
+                      <span>查看文档</span>
                     </ContextMenuItem>
                   )}
                   <ContextMenuItem onClick={() => handleFileDownload(file)}>
                     <Download className="mr-2 h-4 w-4" />
-                    <span>Download</span>
+                    <span>下载</span>
                   </ContextMenuItem>
                   <ContextMenuItem onClick={() => onFileDelete(file)}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
+                    <span>删除</span>
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
@@ -890,13 +890,13 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         >
           <DialogContent className="max-w-5xl w-full overflow-hidden max-h-[80vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Upload Documents</DialogTitle>
+              <DialogTitle>上传文档</DialogTitle>
             </DialogHeader>
 
             <div className="space-y-3 w-full flex-1 overflow-hidden flex flex-col">
               <div>
                 <Label className="text-sm font-medium text-gray-700">
-                  Processing Method
+                  处理方式
                 </Label>
 
                 <RadioGroup
@@ -918,12 +918,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                           htmlFor="docwrangler-pdf"
                           className="text-sm font-medium cursor-pointer"
                         >
-                          DocWrangler PDF Conversion
+                          DocWrangler PDF 转换
                         </Label>
                       </div>
                       <p className="text-xs text-muted-foreground pl-6">
-                        Convert documents using DocWrangler&apos;s hosted
-                        service
+                        使用 DocWrangler 托管服务转换文档
                       </p>
                     </div>
                   ) : (
@@ -938,12 +937,11 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                           htmlFor="local-server"
                           className="text-sm font-medium cursor-pointer"
                         >
-                          Local Server
+                          本地服务
                         </Label>
                       </div>
                       <p className="text-xs text-muted-foreground pl-6">
-                        Process documents privately on your machine (this can be
-                        slow for many documents)
+                        在本地处理文档（批量文档可能较慢）
                       </p>
                       {conversionMethod === "local" && (
                         <div className="bg-destructive/10 text-destructive rounded-md p-2 mt-1 text-xs">
@@ -951,11 +949,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                             <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                             <div>
                               <p className="font-medium">
-                                Local Server Required
+                                需要本地服务
                               </p>
                               <p className="mt-1">
-                                This option requires running the application
-                                locally with the server component.
+                                该选项需要在本地运行带服务端的应用。
                               </p>
                               <button
                                 className="text-destructive underline hover:opacity-80 mt-1.5 font-medium"
@@ -964,7 +961,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                                   e.stopPropagation();
                                 }}
                               >
-                                Continue anyway if running locally
+                                已在本地运行则继续
                               </button>
                             </div>
                           </div>
@@ -984,7 +981,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                         htmlFor="docetl-server"
                         className="text-sm font-medium cursor-pointer"
                       >
-                        Docling Server{" "}
+                        Docling 服务{" "}
                         <a
                           href="https://github.com/DS4SD/docling"
                           target="_blank"
@@ -993,13 +990,12 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                         >
                           (GitHub ↗)
                         </a>
-                      </Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      Use our hosted server for slow (but more accurate)
-                      processing across many documents
-                    </p>
+                    </Label>
                   </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    使用托管服务进行较慢但更准确的批量处理
+                  </p>
+                </div>
 
                   <div className="flex flex-col space-y-1 p-2 rounded-md transition-colors hover:bg-gray-50 cursor-pointer border border-gray-100">
                     <div className="flex items-start space-x-2.5">
@@ -1016,8 +1012,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                       </Label>
                     </div>
                     <p className="text-xs text-muted-foreground pl-6">
-                      Enterprise-grade cloud processing (provide your own Azure
-                      keys)
+                      企业级云处理（需自备 Azure Key）
                     </p>
                   </div>
 
@@ -1032,7 +1027,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                         htmlFor="custom-docling"
                         className="text-sm font-medium cursor-pointer"
                       >
-                        Custom Docling Server{" "}
+                        自建 Docling 服务{" "}
                         <a
                           href="https://github.com/DS4SD/docling-serve"
                           target="_blank"
@@ -1041,14 +1036,14 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                         >
                           (GitHub ↗)
                         </a>
-                      </Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-6">
-                      Connect to your own Docling server instance
-                    </p>
+                    </Label>
                   </div>
-                </RadioGroup>
-              </div>
+                  <p className="text-xs text-muted-foreground pl-6">
+                    连接到自建 Docling 服务实例
+                  </p>
+                </div>
+              </RadioGroup>
+            </div>
 
               {conversionMethod === "azure" && (
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-1">
@@ -1076,8 +1071,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                           </TooltipTrigger>
                           <TooltipContent className="bg-amber-50 border-amber-200 text-amber-900 w-[150px] text-xs">
                             <p>
-                              Warning: Key is passed in plaintext to your local
-                              server
+                              警告：Key 会以明文传递到本地服务
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -1086,7 +1080,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                     <Input
                       id="azure-key"
                       type="password"
-                      placeholder="Enter your Azure Document Intelligence key"
+                      placeholder="请输入 Azure Document Intelligence Key"
                       value={azureKey}
                       onChange={(e) => setAzureKey(e.target.value)}
                       className="h-8"
@@ -1099,7 +1093,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-1">
                   <div className="space-y-1">
                     <Label htmlFor="docling-url" className="text-sm">
-                      Docling Server URL
+                      Docling 服务地址
                     </Label>
                     <Input
                       id="docling-url"
@@ -1161,8 +1155,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                     <div className="flex flex-col items-center space-y-1">
                       <Upload className="w-6 h-6 text-blue-500 animate-bounce" />
                       <span className="text-sm font-medium text-blue-600">
-                        Drop {draggedFiles} file{draggedFiles !== 1 ? "s" : ""}{" "}
-                        to convert
+                        松开以转换 {draggedFiles} 个文件
                       </span>
                     </div>
                   </div>
@@ -1172,7 +1165,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   <Upload className="w-5 h-5 mx-auto text-gray-400 mb-1" />
                   <div className="flex flex-col items-center">
                     <div className="flex items-center text-sm text-gray-500">
-                      <span>Drag and drop your documents here or</span>
+                      <span>将文档拖拽到此处，或</span>
                       <label className="ml-0.5">
                         <input
                           type="file"
@@ -1186,12 +1179,12 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                           }}
                         />
                         <span className="text-primary hover:text-blue-600 cursor-pointer">
-                          browse files
+                          选择文件
                         </span>
                       </label>
                     </div>
                     <p className="mt-0.5 text-[10px] text-gray-400">
-                      Supported formats: PDF, DOCX, DOC, TXT, HTML, PPTX, MD
+                      支持格式：PDF, DOCX, DOC, TXT, HTML, PPTX, MD
                     </p>
                   </div>
                 </div>
@@ -1238,8 +1231,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                   <div className="flex items-center justify-between pt-2 flex-shrink-0">
                     <div className="flex items-center space-x-4">
                       <p className="text-sm text-gray-600">
-                        {selectedFiles.length} file
-                        {selectedFiles.length !== 1 ? "s" : ""} selected
+                        已选择 {selectedFiles.length} 个文件
                       </p>
                       <label className="text-sm text-primary hover:text-blue-600 cursor-pointer">
                         <input
@@ -1253,7 +1245,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                             }
                           }}
                         />
-                        Add more
+                        继续添加
                       </label>
                     </div>
                     <Button
@@ -1270,10 +1262,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
                       {isConverting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Converting
+                          转换中
                         </>
                       ) : (
-                        "Convert"
+                        "转换"
                       )}
                     </Button>
                   </div>
@@ -1291,19 +1283,18 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Folder</AlertDialogTitle>
+              <AlertDialogTitle>删除文件夹</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete this folder and all its
-                contents? This action cannot be undone.
+                确认删除该文件夹及其所有内容？此操作不可恢复。
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>取消</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleFolderDeleteConfirm}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Delete
+                删除
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -123,6 +123,9 @@ def test_upload_excel_dataset(client: TestClient) -> None:
     ready_payload = _wait_for_dataset_ready(client, token, payload["id"])
     assert ready_payload["row_count"] == 2
     assert Path(ready_payload["path"]).exists()
+    progress = ready_payload["ingest_config"]["progress"]
+    assert progress["state"] == "completed"
+    assert progress["percent"] == 100
 
     listing = client.get(
         f"/data-center/datasets?namespace={namespace}",
@@ -148,6 +151,41 @@ def test_upload_excel_dataset(client: TestClient) -> None:
     sample_json = sample.json()
     assert sample_json["sample"] is True
     assert len(sample_json["items"]) == 1
+
+
+def test_delete_dataset_removes_files(client: TestClient) -> None:
+    token, namespace = _register_user(client, "delete_user")
+    payload = b'[{"name":"alpha","score":1},{"name":"beta","score":2}]'
+    files = {"file": ("sample.json", payload, "application/json")}
+    data = {"namespace": namespace, "name": "delete_me"}
+
+    resp = client.post(
+        "/data-center/datasets/upload",
+        headers=_auth_headers(token),
+        data=data,
+        files=files,
+    )
+    assert resp.status_code == 201, resp.text
+    dataset = resp.json()
+    assert dataset["ingest_status"] == "ready"
+    raw_path = Path(dataset["raw_path"])
+    dataset_path = Path(dataset["path"])
+    assert raw_path.exists()
+    assert dataset_path.exists()
+
+    delete_resp = client.delete(
+        f"/data-center/datasets/{dataset['id']}",
+        headers=_auth_headers(token),
+    )
+    assert delete_resp.status_code == 200, delete_resp.text
+
+    get_resp = client.get(
+        f"/data-center/datasets/{dataset['id']}",
+        headers=_auth_headers(token),
+    )
+    assert get_resp.status_code == 404, get_resp.text
+    assert not raw_path.exists()
+    assert not dataset_path.exists()
 
 
 def test_dataset_detail_includes_lineage(client: TestClient) -> None:

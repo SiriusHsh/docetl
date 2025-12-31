@@ -106,7 +106,7 @@ export const SearchableCell = React.memo(
           <div className="flex items-center gap-2 p-1">
             <Search className="h-3 w-3 text-muted-foreground" />
             <Input
-              placeholder="Search in cell..."
+              placeholder="在单元格内搜索..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);

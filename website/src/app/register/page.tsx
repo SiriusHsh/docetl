@@ -91,7 +91,7 @@ export default function RegisterPage() {
     if (password !== confirmPassword) {
       toast({
         variant: "destructive",
-        title: "Passwords do not match",
+        title: "两次输入的密码不一致",
       });
       return;
     }
@@ -111,7 +111,7 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || `Register failed (${response.status})`);
+        throw new Error(detail || `注册失败（${response.status}）`);
       }
 
       const data = (await response.json()) as AuthResponse;
@@ -148,13 +148,13 @@ export default function RegisterPage() {
         // Ignore failures; user can still set namespace manually.
       }
 
-      toast({ title: "Account created" });
+      toast({ title: "账号已创建" });
       router.replace("/console/dashboard");
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Register failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        title: "注册失败",
+        description: error instanceof Error ? error.message : "未知错误",
       });
     } finally {
       setSubmitting(false);
@@ -165,24 +165,24 @@ export default function RegisterPage() {
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Create account</CardTitle>
-          <CardDescription>Register a new user</CardDescription>
+          <CardTitle>创建账号</CardTitle>
+          <CardDescription>注册新用户</CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">用户名</Label>
               <Input
                 id="username"
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="3-64 chars; letters, digits, _ . -"
+                placeholder="3-64 位；字母/数字/ _ . -"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email (optional)</Label>
+              <Label htmlFor="email">邮箱（可选）</Label>
               <Input
                 id="email"
                 type="email"
@@ -193,36 +193,36 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">密码</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                placeholder="至少 8 位"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm password</Label>
+              <Label htmlFor="confirmPassword">确认密码</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter your password"
+                placeholder="再次输入密码"
                 required
               />
             </div>
           </CardContent>
           <CardFooter className="flex items-center justify-between gap-3">
             <Link href="/login" className="text-sm text-muted-foreground hover:underline">
-              Back to sign in
+              返回登录
             </Link>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Creating..." : "Create account"}
+              {submitting ? "创建中..." : "创建账号"}
             </Button>
           </CardFooter>
         </form>

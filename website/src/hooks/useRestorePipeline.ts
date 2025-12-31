@@ -185,7 +185,7 @@ export const useRestorePipeline = ({
                         ? "LLM"
                         : "non-LLM",
                     type: type as Operation["type"],
-                    name: name || "Untitled Operation",
+                    name: name || "未命名操作",
                     prompt,
                     output: output
                       ? {
@@ -202,7 +202,7 @@ export const useRestorePipeline = ({
                 })
               );
 
-              setPipelineName(yamlFileName || "Untitled Pipeline");
+              setPipelineName(yamlFileName || "未命名流水线");
               setSampleSize(
                 (yamlContent.operations?.[0]?.sample as number) || null
               );
@@ -233,8 +233,8 @@ export const useRestorePipeline = ({
                 } else {
                   // If the file doesn't exist, show a toast message
                   toast({
-                    title: "Dataset Required",
-                    description: `This pipeline requires a dataset at path: ${requiredPath}. Please upload the dataset using the file explorer.`,
+                    title: "需要数据集",
+                    description: `该流水线需要路径为 ${requiredPath} 的数据集，请通过文件管理器上传。`,
                     variant: "destructive",
                   });
                 }

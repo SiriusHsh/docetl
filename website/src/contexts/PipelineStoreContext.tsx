@@ -151,7 +151,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
       return updated;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to save pipeline";
+        error instanceof Error ? error.message : "保存流水线失败";
       toast({
         title: "保存失败",
         description: message,
@@ -194,7 +194,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         const message =
           error instanceof Error
             ? error.message
-            : "无法加载所选的 pipeline";
+            : "无法加载所选的流水线";
         toast({
           title: "加载失败",
           description: message,
@@ -223,7 +223,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
       namespace,
       pipelineName: pipelineName || seed.pipelineName,
     };
-    const nextName = generateName(snapshot.pipelineName || "Untitled Analysis");
+    const nextName = generateName(snapshot.pipelineName || "未命名流水线");
     const stateWithName = { ...snapshot, pipelineName: nextName };
 
     const created = await createPipelineApi({
@@ -270,7 +270,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "无法获取 pipeline 列表";
+        error instanceof Error ? error.message : "无法获取流水线列表";
       toast({
         title: "加载失败",
         description: message,
@@ -292,7 +292,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!namespace) {
         toast({
           title: "缺少命名空间",
-          description: "请先设置命名空间再创建 pipeline。",
+          description: "请先设置命名空间再创建流水线。",
           variant: "destructive",
         });
         return;
@@ -300,7 +300,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
       await maybeSaveActive();
 
-      const nextName = generateName(name || "New Pipeline");
+      const nextName = generateName(name || "新建流水线");
       const templateState = createDefaultPipelineState(namespace, nextName);
       const snapshot = buildPipelineSnapshot(templateState);
 
@@ -314,7 +314,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         applyPipelineRecord(created);
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "无法创建 pipeline";
+          error instanceof Error ? error.message : "无法创建流水线";
         toast({
           title: "创建失败",
           description: message,
@@ -336,7 +336,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         const baseName =
           name ||
           pipelines.find((p) => p.id === pipelineId)?.name ||
-          "Pipeline Copy";
+          "流水线副本";
         const nextName = generateName(baseName);
 
         const duplicated = await duplicatePipelineApi({
@@ -349,7 +349,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         await switchPipeline(duplicated.id);
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "无法复制 pipeline";
+          error instanceof Error ? error.message : "无法复制流水线";
         toast({
           title: "复制失败",
           description: message,
@@ -395,7 +395,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "无法重命名 pipeline";
+          error instanceof Error ? error.message : "无法重命名流水线";
         toast({
           title: "重命名失败",
           description: message,
@@ -436,7 +436,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "无法删除 pipeline";
+          error instanceof Error ? error.message : "无法删除流水线";
         toast({
           title: "删除失败",
           description: message,

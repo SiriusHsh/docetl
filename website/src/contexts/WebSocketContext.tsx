@@ -45,7 +45,7 @@ export const WebSocketProvider: React.FC<{
       }
 
       if (!namespace) {
-        reject(new Error("Namespace is required for WebSocket connection"));
+        reject(new Error("WebSocket 连接需要命名空间"));
         return;
       }
 
@@ -74,9 +74,9 @@ export const WebSocketProvider: React.FC<{
         console.error("WebSocket error:", error);
         setLastMessage({
           type: "error",
-          data: "A WebSocket error occurred. Make sure websockets is installed and enabled on your server.",
+          data: "WebSocket 出错，请确认服务端已安装并启用 websockets。",
         });
-        reject(new Error("WebSocket connection failed"));
+        reject(new Error("WebSocket 连接失败"));
       };
 
       ws.current.onmessage = (event) => {
@@ -85,7 +85,7 @@ export const WebSocketProvider: React.FC<{
           if (message.type === "error" && !message.data) {
             setLastMessage({
               type: "error",
-              data: message.message || "An unknown error occurred",
+              data: message.message || "发生未知错误",
             });
           } else {
             setLastMessage(message);
@@ -94,7 +94,7 @@ export const WebSocketProvider: React.FC<{
           console.error("Error parsing WebSocket message:", error);
           setLastMessage({
             type: "error",
-            data: "Failed to parse WebSocket message",
+            data: "解析 WebSocket 消息失败",
           });
         }
       };

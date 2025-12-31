@@ -77,15 +77,15 @@ const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
         {note.metadata?.columnId && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <MessageSquare size={12} />
-            <span>Column: {note.metadata.columnId}</span>
+            <span>字段：{note.metadata.columnId}</span>
             {note.metadata.rowIndex !== undefined && (
-              <span>• Row: {note.metadata.rowIndex}</span>
+              <span>• 行：{note.metadata.rowIndex}</span>
             )}
           </div>
         )}
         {note.metadata?.rowContent && (
           <div className="text-xs bg-muted/50 p-2 rounded-md mt-1">
-            <div className="font-semibold mb-1">Row Context:</div>
+            <div className="font-semibold mb-1">行上下文：</div>
             <pre className="overflow-x-auto">
               {JSON.stringify(note.metadata.rowContent, null, 2)}
             </pre>
@@ -100,10 +100,10 @@ const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
       <div className={embedded ? "px-4 pt-4" : ""}>
       {!embedded && (
         <div className="flex justify-between items-center px-4 pt-4 mb-4 border-b pb-3">
-          <h2 className="text-base font-bold flex items-center">
-            <Bookmark className="mr-2" size={14} />
-            NOTES
-          </h2>
+            <h2 className="text-base font-bold flex items-center">
+              <Bookmark className="mr-2" size={14} />
+              备注
+            </h2>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -117,22 +117,22 @@ const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Clear all notes</p>
+                <p>清空所有备注</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
       )}
       <div className="text-xs mb-2 bg-muted/50 p-2 rounded-md">
-        <span className="text-muted-foreground font-medium">Tip: </span>
-        Click <Maximize2 className="h-3 w-3 inline-block mx-0.5 text-primary" />{" "}
-        in any output column to leave notes on outputs
+        <span className="text-muted-foreground font-medium">提示：</span>
+        点击 <Maximize2 className="h-3 w-3 inline-block mx-0.5 text-primary" />{" "}
+        在任意输出列中添加备注
       </div>
       <div className="text-xs mb-4 bg-yellow-100/50 p-2 rounded-md">
-        <span className="text-muted-foreground font-medium">Note: </span>
-        Notes are only used when clicking{" "}
-        <Wand2 className="h-3 w-3 inline-block mx-0.5 text-primary" /> Improve
-        Prompt, not in operation prompts
+        <span className="text-muted-foreground font-medium">注意：</span>
+        备注仅在点击{" "}
+        <Wand2 className="h-3 w-3 inline-block mx-0.5 text-primary" />{" "}
+        优化提示词时使用，不会写入操作提示词
       </div>
       </div>
 
@@ -140,7 +140,7 @@ const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
         <div className="flex mb-2">
         <Input
           type="text"
-          placeholder="Search..."
+          placeholder="搜索..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-grow mr-2"
@@ -163,10 +163,10 @@ const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
                 onValueChange={(value) => setSelectedColor(value as string)}
               >
                 <SelectTrigger className="border-none shadow-none">
-                  <SelectValue placeholder="Filter by color" />
+                  <SelectValue placeholder="按颜色筛选" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All colors</SelectItem>
+                  <SelectItem value="all">全部颜色</SelectItem>
                   {uniqueColors.map((color) => (
                     <SelectItem key={color} value={color}>
                       <div className="flex items-center">
@@ -203,13 +203,13 @@ const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
               <div className="flex-grow min-w-0">
                 <div
                   className={`text-sm ${
-                    expandedBookmarkId === bookmark.id ? "" : "line-clamp-1"
-                  }`}
-                >
-                  {bookmark.notes[0]?.note || "No notes"}
-                </div>
+                  expandedBookmarkId === bookmark.id ? "" : "line-clamp-1"
+                }`}
+              >
+                {bookmark.notes[0]?.note || "暂无备注"}
               </div>
-              <div className="flex-shrink-0 ml-2">
+            </div>
+            <div className="flex-shrink-0 ml-2">
                 {expandedBookmarkId === bookmark.id ? (
                   <ChevronUp className="text-primary" size={18} />
                 ) : (
@@ -231,7 +231,7 @@ const BookmarksPanel: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
                   className="mb-1"
                 >
                   <Trash2 size={14} className="mr-2" />
-                  Delete
+                  删除
                 </Button>
               </div>
             )}

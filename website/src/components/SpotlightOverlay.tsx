@@ -53,7 +53,7 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({ children }) => {
     setTimeout(() => {
       const aiResponse = {
         role: "assistant" as const,
-        content: `AI response to: ${chatInput}`,
+        content: `AI 回复：${chatInput}`,
       };
       setChatHistory((prevHistory) => [...prevHistory, aiResponse]);
     }, 1000);
@@ -149,12 +149,12 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({ children }) => {
             <CardHeader className="cursor-move bg-muted p-3 flex justify-between items-center">
               <div className="flex items-center justify-between w-full">
                 <h3 className="text-lg font-semibold flex items-center">
-                  <MessageCircle className="w-5 h-5 mr-2" /> AI Assistant
+                  <MessageCircle className="w-5 h-5 mr-2" /> AI 助手
                 </h3>
                 <button
                   onClick={handleClearAll}
                   className="p-1 rounded-full hover:bg-gray-200 transition-colors duration-200"
-                  title="Clear history"
+                  title="清空记录"
                 >
                   <RefreshCw size={16} />
                 </button>
@@ -192,7 +192,7 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({ children }) => {
                 <Input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder="输入消息..."
                   onKeyPress={(e) =>
                     e.key === "Enter" && !e.shiftKey && handleChatSubmit()
                   }
@@ -202,7 +202,7 @@ const SpotlightOverlay: React.FC<SpotlightOverlayProps> = ({ children }) => {
                   onClick={handleChatSubmit}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  Send
+                  发送
                 </Button>
               </div>
             </CardContent>
