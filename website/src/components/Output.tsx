@@ -129,13 +129,13 @@ const TableContent = memo(
       <div className="flex-1 min-h-0">
         {!opName ? (
           <div className="flex items-center justify-center h-full">
-            <p className={emptyTextClass}>No operation selected.</p>
+            <p className={emptyTextClass}>未选择操作。</p>
           </div>
         ) : isLoadingOutputs ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             <span className={`ml-2 ${emptyTextClass}`}>
-              Loading outputs...
+              正在加载输出...
             </span>
           </div>
         ) : outputs.length > 0 ? (
@@ -156,7 +156,7 @@ const TableContent = memo(
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className={emptyTextClass}>No outputs available.</p>
+            <p className={emptyTextClass}>暂无输出。</p>
           </div>
         )}
       </div>
@@ -191,7 +191,7 @@ const VisualizeContent = memo(
       return (
         <div className="flex items-center justify-center h-full">
           <p className="text-muted-foreground">
-            No visualization data available.
+            暂无可视化数据。
           </p>
         </div>
       );
@@ -232,7 +232,7 @@ const VisualizeContent = memo(
                 stroke="currentColor"
               />
               <RechartsTooltip
-                formatter={(value: number) => [value.toLocaleString(), "Count"]}
+                formatter={(value: number) => [value.toLocaleString(), "数量"]}
                 contentStyle={{
                   backgroundColor: "hsl(var(--popover))",
                   border: "1px solid hsl(var(--border))",
@@ -245,7 +245,7 @@ const VisualizeContent = memo(
               <Bar
                 dataKey="value"
                 fill="hsl(var(--chart-2))"
-                name="Count"
+                name="数量"
                 radius={[0, 4, 4, 0]} // Adjusted for vertical layout
               />
             </BarChart>
@@ -349,14 +349,11 @@ const VisualizeContent = memo(
                     return (
                       <div className="bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-[var(--radius)] p-3 shadow-md max-h-[400px] overflow-y-auto w-[400px]">
                         <p className="font-medium mb-2">
-                          {data.value.toLocaleString()} Documents ({percentage}
-                          %)
+                          {data.value.toLocaleString()} 条文档（{percentage}%）
                         </p>
                         <div className="text-sm space-y-2">
                           <p className="font-medium text-[hsl(var(--muted-foreground))]">
-                            {distinctValues.length} distinct value
-                            {distinctValues.length !== 1 ? "s" : ""} before
-                            resolution:
+                            消歧前去重值数量：{distinctValues.length}
                           </p>
                           {distinctValues.map((value, idx) => (
                             <pre
@@ -376,7 +373,7 @@ const VisualizeContent = memo(
               <Bar
                 dataKey="value"
                 fill="hsl(var(--chart-2))"
-                name="Documents"
+                name="文档数"
                 radius={[0, 4, 4, 0]}
               />
             </BarChart>
@@ -387,9 +384,7 @@ const VisualizeContent = memo(
 
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">
-          Visualization not supported for this operation type.
-        </p>
+        <p className="text-muted-foreground">此操作类型不支持可视化。</p>
       </div>
     );
   }
@@ -446,7 +441,7 @@ export const ConsoleContent = memo(() => {
                   <summary className="cursor-pointer list-none">
                     <div className="flex items-center">
                       <div className="text-xs font-medium uppercase tracking-wider bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-                        Optimizing because
+                        优化原因
                       </div>
                       <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground transition-transform group-open:rotate-180" />
                     </div>
@@ -461,7 +456,7 @@ export const ConsoleContent = memo(() => {
                     <summary className="cursor-pointer list-none">
                       <div className="flex items-center">
                         <div className="text-xs font-medium uppercase tracking-wider bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-                          Using this prompt to evaluate the best plan
+                          使用该提示词评估最佳方案
                         </div>
                         <ChevronDown className="w-4 h-4 ml-2 text-muted-foreground transition-transform group-open:rotate-180" />
                       </div>
@@ -574,7 +569,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
         document.body.removeChild(link);
       }
     } catch (err) {
-      console.error("Error converting to CSV:", err);
+      console.error("CSV 转换失败:", err);
     }
   }, [outputs]);
 
@@ -600,7 +595,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
             `/api/readFile?path=${encodeURIComponent(output.path)}`
           );
           if (!outputResponse.ok) {
-            throw new Error("Failed to fetch output file");
+            throw new Error("获取输出文件失败");
           }
           const outputContent = await outputResponse.text();
           let parsedOutputs = JSON.parse(outputContent) as OutputRow[];
@@ -650,7 +645,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
               `/api/readFile?path=${encodeURIComponent(output.inputPath)}`
             );
             if (!inputResponse.ok) {
-              throw new Error("Failed to fetch input file");
+              throw new Error("获取输入文件失败");
             }
             const inputContent = await inputResponse.text();
             const parsedInputs = JSON.parse(inputContent);
@@ -661,7 +656,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
             setInputCount(0);
           }
         } catch (error) {
-          console.error("Error fetching data:", error);
+          console.error("获取数据失败:", error);
         }
       }
     };
@@ -704,7 +699,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
             <div className="flex items-center gap-4">
               <h2 className="text-base font-bold flex items-center">
                 <Terminal className="mr-2" size={14} />
-                OUTPUT
+                输出
                 {opName && (
                   <span className="text-muted-foreground ml-1">
                     - {opName}
@@ -713,16 +708,16 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
               </h2>
               <TabsList>
                 <TabsTrigger value="console" className="flex items-center">
-                  Console
+                  控制台
                   {readyState === WebSocket.OPEN && (
                     <span className="ml-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
                     </span>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="table">Table</TabsTrigger>
+                <TabsTrigger value="table">表格</TabsTrigger>
                 <TabsTrigger value="visualize" disabled={!isResolveOrReduce}>
-                  Visualize Input Distribution
+                  可视化输入分布
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -732,14 +727,14 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
                   <span className="text-foreground font-medium">
                     {isLoadingOutputs ? "0" : inputCount}
                   </span>
-                  <span className="text-muted-foreground ml-1">in</span>
+                  <span className="text-muted-foreground ml-1">输入</span>
                 </div>
                 <span className="text-muted-foreground">→</span>
                 <div className="flex items-center px-2 py-1 border border-border rounded-md">
                   <span className="text-foreground font-medium">
                     {isLoadingOutputs ? "0" : outputCount}
                   </span>
-                  <span className="text-muted-foreground ml-1">out</span>
+                  <span className="text-muted-foreground ml-1">输出</span>
                 </div>
                 <TooltipProvider>
                   <Tooltip>
@@ -760,7 +755,10 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
                               "text-foreground"
                           )}
                         >
-                          {isLoadingOutputs ? "N/A" : selectivityFactor}×
+                          {isLoadingOutputs || selectivityFactor === "N/A"
+                            ? "暂无"
+                            : selectivityFactor}
+                          ×
                         </span>
                         {!isLoadingOutputs &&
                           selectivityFactor !== "N/A" &&
@@ -774,14 +772,14 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="font-medium">Output to input ratio</p>
+                      <p className="font-medium">输出/输入比</p>
                       {!isLoadingOutputs && selectivityFactor !== "N/A" && (
                         <p className="text-xs mt-1">
                           {Number(selectivityFactor) > 1
-                            ? "Operation increases data volume"
+                            ? "操作增加数据量"
                             : Number(selectivityFactor) < 1
-                            ? "Operation reduces data volume"
-                            : "Operation maintains data volume"}
+                            ? "操作减少数据量"
+                            : "操作保持数据量"}
                         </p>
                       )}
                     </TooltipContent>
@@ -801,7 +799,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Download as CSV</p>
+                    <p>下载为 CSV</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

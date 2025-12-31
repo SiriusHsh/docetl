@@ -79,7 +79,7 @@ const AnsiRenderer: React.FC<AnsiRendererProps> = ({
             className={`flex-grow bg-transparent text-white outline-none ${
               isWebSocketClosed ? "cursor-not-allowed" : ""
             }`}
-            placeholder={isWebSocketClosed ? "WebSocket disconnected..." : ""}
+            placeholder={isWebSocketClosed ? "WebSocket 已断开..." : ""}
             disabled={isWebSocketClosed}
           />
           {userInput.trim() && !isWebSocketClosed && (
@@ -93,16 +93,16 @@ const AnsiRenderer: React.FC<AnsiRendererProps> = ({
         </div>
         <div className="flex justify-between items-center text-xs text-gray-500">
           <div className={isWebSocketClosed ? "text-red-500" : ""}>
-            Status:{" "}
+            状态：
             {readyState === WebSocket.CONNECTING
-              ? "Connecting"
+              ? "连接中"
               : readyState === WebSocket.OPEN
-              ? "Connected"
+              ? "已连接"
               : readyState === WebSocket.CLOSING
-              ? "Closing"
+              ? "关闭中"
               : readyState === WebSocket.CLOSED
-              ? "Disconnected"
-              : "Unknown"}
+              ? "已断开"
+              : "未知"}
           </div>
           <button
             onClick={() => setTerminalOutput("")}
@@ -111,7 +111,7 @@ const AnsiRenderer: React.FC<AnsiRendererProps> = ({
             }`}
             disabled={isWebSocketClosed}
           >
-            Clear
+            清空
           </button>
         </div>
       </div>

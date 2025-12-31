@@ -71,7 +71,7 @@ const ObservabilityIndicator = React.memo(
         >
           <div className="space-y-4">
             <h3 className="text-lg font-semibold border-b pb-2">
-              LLM Call(s) for {currentOperation}
+              {currentOperation} 的 LLM 调用
             </h3>
             <div className="space-y-2">
               {observabilityEntries.map(([key, value]) => (
@@ -134,6 +134,14 @@ interface ValueStatsProps {
 const ValueStats = React.memo(
   ({ value, columnStats, data, columnId }: ValueStatsProps) => {
     if (!columnStats) return null;
+    const typeLabelMap: Record<ColumnStats["type"], string> = {
+      number: "数字",
+      array: "数组",
+      "string-words": "文本（词数）",
+      "string-chars": "文本（字符数）",
+      boolean: "布尔",
+    };
+    const typeLabel = typeLabelMap[columnStats.type] ?? columnStats.type;
 
     const currentValue =
       typeof value === "number"
@@ -178,9 +186,9 @@ const ValueStats = React.memo(
             <div className="flex-none">
               <div className="text-3xl font-bold text-primary">
                 {percentile}
-                <span className="text-lg">th</span>
+                <span className="text-lg">%</span>
               </div>
-              <div className="text-xs text-muted-foreground">percentile</div>
+              <div className="text-xs text-muted-foreground">百分位</div>
             </div>
           )}
 
@@ -203,11 +211,11 @@ const ValueStats = React.memo(
                     columnStats.min + (i + 1) * columnStats.bucketSize
                   )}${
                     columnStats.type === "array"
-                      ? " items"
+                      ? " 项"
                       : columnStats.type === "string-chars"
-                      ? " chars"
+                      ? " 字符"
                       : columnStats.type === "string-words"
-                      ? " words"
+                      ? " 词"
                       : ""
                   }`,
                 }))}
@@ -219,30 +227,30 @@ const ValueStats = React.memo(
 
         <div className="grid grid-cols-4 gap-2 text-xs">
           <div className="space-y-0.5">
-            <div className="font-medium">Type</div>
-            <div className="text-muted-foreground">{columnStats.type}</div>
+            <div className="font-medium">类型</div>
+            <div className="text-muted-foreground">{typeLabel}</div>
           </div>
           <div className="space-y-0.5">
-            <div className="font-medium">Distinct Values</div>
+            <div className="font-medium">不同值</div>
             <div className="text-muted-foreground">
               {columnStats.distinctCount} / {columnStats.totalCount}
             </div>
           </div>
           <div className="space-y-0.5">
-            <div className="font-medium">Current</div>
+            <div className="font-medium">当前值</div>
             <div className="text-muted-foreground">
               {currentValue}
               {columnStats.type === "array"
-                ? " items"
+                ? " 项"
                 : columnStats.type === "string-chars"
-                ? " chars"
+                ? " 字符"
                 : columnStats.type === "string-words"
-                ? " words"
+                ? " 词"
                 : ""}
             </div>
           </div>
           <div className="space-y-0.5">
-            <div className="font-medium">Range</div>
+            <div className="font-medium">范围</div>
             <div className="text-muted-foreground">
               {columnStats.min} - {columnStats.max}
             </div>
@@ -301,7 +309,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
 
   const renderContent = (value: unknown) => {
     if (value === null || value === undefined) {
-      return <span className="text-muted-foreground">No value</span>;
+      return <span className="text-muted-foreground">无值</span>;
     }
 
     if (typeof value === "object") {
@@ -397,16 +405,16 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                       onClick={() => onNavigate("prev")}
                       className="h-full w-8 rounded-none hover:bg-muted/20 flex items-center justify-center bg-muted/5"
                       disabled={currentIndex === 0}
-                      aria-label="Previous example (Left arrow key)"
+                      aria-label="上一条示例（左方向键）"
                     >
                       <ChevronLeft className="h-12 w-12 absolute" />
                     </Button>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>Previous example</p>
+                  <p>上一条示例</p>
                   <p className="text-xs text-muted-foreground">
-                    Left arrow key
+                    左方向键
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -429,16 +437,16 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                       onClick={() => onNavigate("next")}
                       className="h-full w-8 rounded-none hover:bg-muted/20 flex items-center justify-center bg-muted/5"
                       disabled={currentIndex === data.length - 1}
-                      aria-label="Next example (Right arrow key)"
+                      aria-label="下一条示例（右方向键）"
                     >
                       <ChevronRight className="h-12 w-12 absolute" />
                     </Button>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="left">
-                  <p>Next example</p>
+                  <p>下一条示例</p>
                   <p className="text-xs text-muted-foreground">
-                    Right arrow key
+                    右方向键
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -452,7 +460,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
               <div className="h-full overflow-auto bg-muted/10">
                 <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 p-2 border-b">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">Other Keys</span>
+                    <span className="font-medium text-sm">其他字段</span>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -465,7 +473,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                         }`}
                       />
                       <span className="ml-1 text-xs">
-                        {isAllExpanded ? "Collapse" : "Expand"}
+                        {isAllExpanded ? "收起" : "展开"}
                       </span>
                     </Button>
                   </div>
@@ -504,12 +512,12 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                   <div className="h-full bg-muted/5 flex flex-col border-l">
                     <div className="flex-none p-3 bg-muted/10">
                       <h3 className="text-base font-medium mb-0.5">
-                        Add Notes
+                        添加备注
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Your notes will help improve prompts via the{" "}
+                        备注将用于改进提示词（操作设置中的{" "}
                         <Wand2 className="h-3 w-3 inline-block mx-0.5 text-primary" />{" "}
-                        Improve Prompt feature in operation settings
+                        改进提示词功能）
                       </p>
                     </div>
 
@@ -522,7 +530,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                             }
                             className="flex items-center justify-between w-full text-base font-medium"
                           >
-                            <span>Previous Notes ({existingNotes.length})</span>
+                            <span>历史备注（{existingNotes.length}）</span>
                             <ChevronDown
                               className={`h-5 w-5 text-primary transition-transform ${
                                 showPreviousNotes ? "rotate-180" : ""
@@ -556,7 +564,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
 
                       <div className="space-y-4">
                         <Textarea
-                          placeholder="What do you think about this output?"
+                          placeholder="你对这个输出有什么看法？"
                           className="min-h-[100px] text-base bg-background border resize-none p-3"
                         />
 
@@ -572,7 +580,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                                     className="w-4 h-4 rounded-full border"
                                     style={{ backgroundColor: feedbackColor }}
                                   />
-                                  <span>Category</span>
+                                  <span>分类</span>
                                 </div>
                               </SelectValue>
                             </SelectTrigger>
@@ -580,37 +588,37 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                               <SelectItem value="#FF0000">
                                 <div className="flex items-center">
                                   <div className="w-4 h-4 rounded-full bg-[#FF0000] mr-2" />
-                                  Red
+                                  红色
                                 </div>
                               </SelectItem>
                               <SelectItem value="#00FF00">
                                 <div className="flex items-center">
                                   <div className="w-4 h-4 rounded-full bg-[#00FF00] mr-2" />
-                                  Green
+                                  绿色
                                 </div>
                               </SelectItem>
                               <SelectItem value="#0000FF">
                                 <div className="flex items-center">
                                   <div className="w-4 h-4 rounded-full bg-[#0000FF] mr-2" />
-                                  Blue
+                                  蓝色
                                 </div>
                               </SelectItem>
                               <SelectItem value="#FFFF00">
                                 <div className="flex items-center">
                                   <div className="w-4 h-4 rounded-full bg-[#FFFF00] mr-2" />
-                                  Yellow
+                                  黄色
                                 </div>
                               </SelectItem>
                               <SelectItem value="#FF00FF">
                                 <div className="flex items-center">
                                   <div className="w-4 h-4 rounded-full bg-[#FF00FF] mr-2" />
-                                  Magenta
+                                  品红
                                 </div>
                               </SelectItem>
                               <SelectItem value="#00FFFF">
                                 <div className="flex items-center">
                                   <div className="w-4 h-4 rounded-full bg-[#00FFFF] mr-2" />
-                                  Cyan
+                                  青色
                                 </div>
                               </SelectItem>
                             </SelectContent>
@@ -629,7 +637,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                               }
                             }}
                           >
-                            Add Note
+                            添加备注
                           </Button>
                         </div>
                       </div>
@@ -663,7 +671,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                   onJumpToRow={onJumpToRow}
                 />
                 <span className="text-sm text-muted-foreground">
-                  Use ← → arrow keys to navigate
+                  使用 ← → 键切换
                 </span>
                 <Button
                   variant="outline"
@@ -677,7 +685,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                     }
                   }}
                 >
-                  {splitView ? "Single View" : "Split View"}
+                  {splitView ? "单栏" : "分栏"}
                 </Button>
               </div>
             </div>
@@ -709,7 +717,7 @@ export function ColumnDialog<T extends Record<string, unknown>>({
                             );
                           }}
                           onJumpToRow={(index) => setCompareIndex(index)}
-                          label="Compare Row"
+                          label="对比行"
                           compact={true}
                         />
                       </div>

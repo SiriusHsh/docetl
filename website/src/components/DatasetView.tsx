@@ -73,13 +73,13 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
   const [hasFoundKeys, setHasFoundKeys] = useState(false);
 
   const fetchFileContent = async ({ pageParam = 0 }): Promise<FileChunk> => {
-    if (!file?.path) throw new Error("No file selected");
+    if (!file?.path) throw new Error("未选择文件");
     const response = await backendFetch(
       `/api/readFilePage?path=${encodeURIComponent(
         file.path
       )}&page=${pageParam}`
     );
-    if (!response.ok) throw new Error("Failed to fetch file content");
+    if (!response.ok) throw new Error("获取文件内容失败");
     return response.json();
   };
 
@@ -273,10 +273,10 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
           try {
             documents = JSON.parse(allContent) as Record<string, unknown>[];
             if (!Array.isArray(documents)) {
-              throw new Error("Content is not an array of documents");
+              throw new Error("内容不是文档数组");
             }
           } catch (parseError) {
-            console.error("Error parsing JSON:", parseError);
+            console.error("解析 JSON 失败:", parseError);
             setDatasetStats((prev) => ({ ...prev, isCalculating: false }));
             return;
           }
@@ -365,7 +365,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
 
           setDatasetStats(stats);
         } catch (error) {
-          console.error("Error calculating stats:", error);
+          console.error("计算统计失败:", error);
           setDatasetStats((prev) => ({ ...prev, isCalculating: false }));
         }
       }, 0);
@@ -377,19 +377,16 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
       <div className="h-full flex flex-col p-4">
         <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center">
           <Database className="h-12 w-12 text-muted-foreground/50" />
-          <h3 className="font-medium text-muted-foreground">
-            No Dataset Selected
-          </h3>
+          <h3 className="font-medium text-muted-foreground">未选择数据集</h3>
           <p className="text-sm text-muted-foreground/80">
-            Please select or upload a file from the left panel to view its
-            contents.
+            请在左侧选择或上传文件以查看内容。
           </p>
         </div>
       </div>
     );
   }
 
-  if (isError) return <div>Error: {error.message}</div>;
+  if (isError) return <div>错误：{error.message}</div>;
 
   return (
     <div className="h-full flex flex-col p-4">
@@ -403,7 +400,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
       <Collapsible className="mb-4">
         <CollapsibleTrigger className="flex items-center gap-2 hover:text-primary transition-colors">
           <ChevronRight className="h-4 w-4 transition-transform ui-expanded:rotate-90" />
-          <p className="text-sm font-medium">Available Keys</p>
+          <p className="text-sm font-medium">可用字段</p>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-4">
           <div className="text-xs bg-muted/50 p-2 rounded-md">
@@ -425,14 +422,14 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
       <Collapsible className="mb-4">
         <CollapsibleTrigger className="flex items-center gap-2 hover:text-primary transition-colors">
           <ChevronRight className="h-4 w-4 transition-transform ui-expanded:rotate-90" />
-          <p className="text-sm font-medium">Dataset Statistics</p>
+          <p className="text-sm font-medium">数据集统计</p>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-4">
           {hasNextPage || datasetStats.isCalculating ? (
             <div className="flex items-center gap-2 p-4 rounded-lg border border-border bg-card/50">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">
-                Calculating dataset statistics...
+                正在计算数据集统计...
               </p>
             </div>
           ) : (
@@ -440,34 +437,34 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
               <div className="flex gap-8">
                 <div className="flex flex-col justify-center space-y-2 w-[20%]">
                   <div>
-                    <p className="text-xs text-muted-foreground">Documents</p>
+                    <p className="text-xs text-muted-foreground">文档数</p>
                     <p className="text-xl font-semibold">
                       {datasetStats.documentCount.toLocaleString()}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      Average Words
+                      平均词数
                     </p>
                     <p className="text-xl font-semibold">
                       {datasetStats.averageWords.toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Min Words</p>
+                    <p className="text-xs text-muted-foreground">最少词数</p>
                     <p className="text-xl font-semibold">
                       {datasetStats.minWords.toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Max Words</p>
+                    <p className="text-xs text-muted-foreground">最多词数</p>
                     <p className="text-xl font-semibold">
                       {datasetStats.maxWords.toLocaleString()}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      Std Deviation
+                      标准差
                     </p>
                     <p className="text-xl font-semibold">
                       {datasetStats.standardDeviation.toLocaleString()}
@@ -477,7 +474,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
                 {datasetStats.histogram.length > 0 && (
                   <div className="w-[80%] h-[300px]">
                     <p className="text-sm font-medium mb-3 text-muted-foreground">
-                      Word Count Distribution
+                      词数分布
                     </p>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={datasetStats.histogram}>
@@ -498,7 +495,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
                         <Tooltip
                           formatter={(value: number) => [
                             value.toLocaleString(),
-                            "Documents",
+                            "文档数",
                           ]}
                           labelFormatter={(label: number) =>
                             `${label.toLocaleString()} - ${(
@@ -508,7 +505,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
                                   datasetStats.minWords) /
                                   20
                               )
-                            ).toLocaleString()} words`
+                            ).toLocaleString()} 词`
                           }
                           contentStyle={{
                             backgroundColor: "hsl(var(--popover))",
@@ -522,7 +519,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
                         <Bar
                           dataKey="count"
                           fill="hsl(var(--chart-2))"
-                          name="Documents"
+                          name="文档数"
                           radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
@@ -538,7 +535,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
       <form onSubmit={handleSearch} className="flex items-center mb-4">
         <Input
           type="text"
-          placeholder="Search (min 5 characters)..."
+          placeholder="搜索（至少 5 个字符）..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="mr-1"
@@ -573,8 +570,8 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
         </Button>
         <span className="ml-2 text-sm text-muted-foreground">
           {matches.length > 0
-            ? `${currentMatchIndex + 1} of ${matches.length} matches`
-            : "No matches"}
+            ? `第 ${currentMatchIndex + 1} / ${matches.length} 个匹配`
+            : "无匹配"}
         </span>
       </form>
 
@@ -593,7 +590,7 @@ const DatasetView: React.FC<{ file: File | null }> = ({ file }) => {
         ))}
         {isFetching && (
           <div className="text-center py-4 text-sm text-muted-foreground">
-            Loading more...
+            加载更多...
           </div>
         )}
       </div>

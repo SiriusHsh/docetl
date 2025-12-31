@@ -101,7 +101,7 @@ function DiffView({
     <div>
       {type && (
         <div className="text-sm font-medium mb-2">
-          {type === "comparison" ? "Comparison Prompt:" : "Resolution Prompt:"}
+          {type === "comparison" ? "对比提示词：" : "消歧提示词："}
         </div>
       )}
       <div className="font-mono text-sm whitespace-pre-wrap">
@@ -273,7 +273,7 @@ function AutosizeTextarea({
     <div className="relative">
       {type && (
         <div className="text-sm font-medium mb-2">
-          {type === "comparison" ? "Comparison Prompt:" : "Resolution Prompt:"}
+          {type === "comparison" ? "对比提示词：" : "消歧提示词："}
         </div>
       )}
       <Textarea
@@ -355,8 +355,8 @@ function RevisionTreeNode({
           <div className="min-w-0">
             <div className="font-medium truncate">
               {node.index === 0
-                ? "Initial version"
-                : node.feedback || `Revision ${node.index}`}
+                ? "初始版本"
+                : node.feedback || `修订 ${node.index}`}
             </div>
             <div className="text-xs text-muted-foreground">
               {new Date(node.revision.timestamp).toLocaleTimeString()}
@@ -393,7 +393,7 @@ function SchemaChangesDiff({ changes }: { changes: Array<[string, string]> }) {
 
   return (
     <div className="border rounded-md p-4">
-      <h3 className="font-medium mb-2">Schema Key Changes:</h3>
+      <h3 className="font-medium mb-2">Schema 字段变更：</h3>
       <div className="font-mono text-sm space-y-1">
         {changes.map(([oldKey, newKey], index) => (
           <div key={index}>
@@ -505,7 +505,7 @@ export function PromptImprovementDialog({
     onError: (error) => {
       console.error("Chat error:", error);
       toast({
-        title: "Error",
+        title: "错误",
         description: error.message,
         variant: "destructive",
       });
@@ -624,8 +624,8 @@ export function PromptImprovementDialog({
   const handleImprove = useCallback(async () => {
     if (!hasOpenAIKey && !usePersonalOpenAI) {
       toast({
-        title: "OpenAI API Key Required",
-        description: "Please add your OpenAI API key in Edit > Edit API Keys",
+        title: "需要 OpenAI API Key",
+        description: "请在 编辑 > 编辑 API Key 中添加你的 OpenAI API Key",
         variant: "destructive",
       });
       return;
@@ -855,7 +855,7 @@ Remember to ${
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              <DialogTitle>Improve Prompt</DialogTitle>
+              <DialogTitle>优化提示词</DialogTitle>
 
               <div className="flex items-center gap-1.5 ml-auto">
                 <Switch
@@ -868,7 +868,7 @@ Remember to ${
                   htmlFor="use-personal-openai"
                   className="text-[10px] text-muted-foreground whitespace-nowrap"
                 >
-                  Use Personal OpenAI API Key
+                  使用个人 OpenAI API Key
                 </Label>
               </div>
             </div>
@@ -887,8 +887,8 @@ Remember to ${
             </div>
             <DialogDescription className="mt-2">
               {step === "select"
-                ? "Select the operation you want to improve the prompt for"
-                : "DocWrangler is analyzing and suggesting improvements"}
+                ? "选择要优化提示词的操作"
+                : "系统正在分析并给出优化建议"}
             </DialogDescription>
           </DialogHeader>
 
@@ -900,16 +900,16 @@ Remember to ${
                     <div className="flex gap-2">
                       <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium">OpenAI API Key Required</p>
+                        <p className="font-medium">需要 OpenAI API Key</p>
                         <p className="mt-1">
-                          To use the AI assistant, please add your OpenAI API
-                          key in Edit {">"} Edit API Keys.
+                          要使用 AI 助手，请在 编辑 {">"} 编辑 API Key 中添加
+                          OpenAI API Key。
                         </p>
                         <button
                           className="text-destructive underline hover:opacity-80 mt-1.5 font-medium"
                           onClick={() => setIgnoreMissingKey(true)}
                         >
-                          Ignore if running locally with environment variables
+                          本地环境变量运行可忽略
                         </button>
                       </div>
                     </div>
@@ -921,7 +921,7 @@ Remember to ${
                   onValueChange={setSelectedOperationId}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select operation" />
+                    <SelectValue placeholder="选择操作" />
                   </SelectTrigger>
                   <SelectContent>
                     {operations
@@ -939,14 +939,15 @@ Remember to ${
                     <div className="space-y-6">
                       <div className="text-sm">
                         <div className="font-medium mb-2 text-foreground">
-                          Current Prompt
-                          {selectedOperation.type === "resolve" ? "s" : ""}:
+                          当前提示词
+                          {selectedOperation.type === "resolve" ? "（多条）" : ""}
+                          ：
                         </div>
                         {selectedOperation.type === "resolve" ? (
                           <div className="space-y-4">
                             <div>
                               <div className="text-sm mb-1 text-muted-foreground">
-                                Comparison Prompt:
+                                对比提示词：
                               </div>
                               <pre className="bg-muted p-2 rounded-md whitespace-pre-wrap">
                                 {selectedOperation.otherKwargs
@@ -955,7 +956,7 @@ Remember to ${
                             </div>
                             <div>
                               <div className="text-sm mb-1 text-muted-foreground">
-                                Resolution Prompt:
+                                消歧提示词：
                               </div>
                               <pre className="bg-muted p-2 rounded-md whitespace-pre-wrap">
                                 {selectedOperation.otherKwargs
@@ -972,7 +973,7 @@ Remember to ${
 
                       <div className="text-sm">
                         <div className="font-medium mb-2 text-foreground">
-                          Your Notes:
+                          你的备注：
                         </div>
                         <div className="bg-muted p-3 rounded-md">
                           {relevantBookmarks.length > 0 ? (
@@ -983,7 +984,7 @@ Remember to ${
                             </ul>
                           ) : (
                             <p className="text-muted-foreground">
-                              No feedback or bookmarks found for this operation.
+                              该操作暂无反馈或备注。
                             </p>
                           )}
                         </div>
@@ -991,13 +992,13 @@ Remember to ${
 
                       <div className="text-sm">
                         <div className="font-medium mb-2 text-muted-foreground flex items-center gap-2">
-                          Additional Instructions
+                          附加说明
                           <span className="text-xs font-normal">
-                            (optional)
+                            （可选）
                           </span>
                         </div>
                         <Textarea
-                          placeholder="Add specific instructions for improving the prompt (e.g., 'Make it more concise', 'Add more examples')"
+                          placeholder="补充提示词优化的具体要求（例如：更简洁、增加更多示例）"
                           value={additionalInstructions}
                           onChange={(e) =>
                             setAdditionalInstructions(e.target.value)
@@ -1006,8 +1007,7 @@ Remember to ${
                         />
                         {!additionalInstructions && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            Leave blank to let the AI follow default improvement
-                            guidelines
+                            留空将使用默认优化规则
                           </p>
                         )}
                       </div>
@@ -1024,7 +1024,7 @@ Remember to ${
                       }
                       className="mt-4"
                     >
-                      Continue to Analysis
+                      继续分析
                     </Button>
                   </>
                 )}
@@ -1035,7 +1035,7 @@ Remember to ${
                   <div className="flex flex-col items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin mb-4" />
                     <p className="text-sm text-muted-foreground">
-                      Starting analysis...
+                      开始分析中...
                     </p>
                   </div>
                 ) : (
@@ -1066,7 +1066,7 @@ Remember to ${
                     {!isLoading && editedPrompt && selectedOperation && (
                       <>
                         <div className="border rounded-md p-4">
-                          <h3 className="font-medium mb-2">Prompt Changes:</h3>
+                          <h3 className="font-medium mb-2">提示词变更：</h3>
                           {isDirectEditing ? (
                             selectedOperation.type === "resolve" ? (
                               <div className="space-y-4">
@@ -1171,7 +1171,7 @@ Remember to ${
                               }
                             }}
                           >
-                            {isDirectEditing ? "See diff" : "Directly edit"}
+                            {isDirectEditing ? "查看差异" : "直接编辑"}
                           </Button>
 
                           <Popover
@@ -1180,7 +1180,7 @@ Remember to ${
                             modal
                           >
                             <PopoverTrigger asChild>
-                              <Button variant="secondary">Add feedback</Button>
+                              <Button variant="secondary">添加反馈</Button>
                             </PopoverTrigger>
                             <PopoverContent
                               className="w-[500px] max-h-[80vh]"
@@ -1190,7 +1190,7 @@ Remember to ${
                               <div className="flex flex-col gap-2 h-full">
                                 <div className="flex-1 overflow-y-auto border-b max-h-[500px]">
                                   <div className="font-medium text-sm mb-1">
-                                    Revision History:
+                                    修订历史：
                                   </div>
                                   <div>
                                     {buildRevisionTree(
@@ -1208,7 +1208,7 @@ Remember to ${
                                 </div>
                                 <div className="flex-none pt-2">
                                   <Textarea
-                                    placeholder="What would you like to improve?"
+                                    placeholder="希望改进哪部分？"
                                     value={localFeedbackText}
                                     onChange={(e) => {
                                       setLocalFeedbackText(e.target.value);
@@ -1221,7 +1221,7 @@ Remember to ${
                                       onClick={handleFeedbackSubmit}
                                       disabled={!localFeedbackText.trim()}
                                     >
-                                      Submit Feedback
+                                      提交反馈
                                     </Button>
                                   </div>
                                 </div>
@@ -1230,7 +1230,7 @@ Remember to ${
                           </Popover>
 
                           <Button onClick={handleSave} disabled={!editedPrompt}>
-                            Save and Overwrite
+                            保存并覆盖
                           </Button>
                         </div>
                       </>
@@ -1246,21 +1246,21 @@ Remember to ${
       <AlertDialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Save Changes</AlertDialogTitle>
+            <AlertDialogTitle>保存更改</AlertDialogTitle>
             <AlertDialogDescription>
-              Would you like to clear your notes for this operation?
+              是否清空该操作的备注？
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={() => handleConfirmedSave(true)}
             >
-              Save & Clear Notes
+              保存并清空备注
             </AlertDialogAction>
             <AlertDialogAction onClick={() => handleConfirmedSave(false)}>
-              Save & Keep Notes
+              保存并保留备注
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

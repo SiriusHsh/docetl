@@ -151,7 +151,7 @@ const VegaVisualizer = ({ spec, mode }: VegaVisualizerProps) => {
           size="sm"
           onClick={() => setShowCode(!showCode)}
         >
-          {showCode ? "Show Graph" : "Show Code"}
+          {showCode ? "显示图表" : "显示代码"}
         </Button>
       </div>
 
@@ -170,7 +170,7 @@ const VegaVisualizer = ({ spec, mode }: VegaVisualizerProps) => {
                 whiteSpace: "pre-wrap",
                 wordWrap: "break-word",
               }}>
-                JSON.parse(): {parseError}
+                JSON 解析失败：{parseError}
               </div>
               <code>
                 {spec}

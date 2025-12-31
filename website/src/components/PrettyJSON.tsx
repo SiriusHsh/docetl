@@ -63,7 +63,7 @@ export const PrettyJSON = React.memo(({ data }: PrettyJSONProps) => {
                 isExpanded ? "rotate-180" : ""
               }`}
             />
-            <span className="text-slate-900">Array ({value.length} items)</span>
+            <span className="text-slate-900">数组（{value.length} 项）</span>
           </button>
           {isExpanded && (
             <div className="ml-4 border-l pl-4 mt-2 space-y-2">
@@ -103,7 +103,7 @@ export const PrettyJSON = React.memo(({ data }: PrettyJSONProps) => {
               }`}
             />
             <span className="text-slate-900">
-              Object ({entries.length} properties)
+              对象（{entries.length} 个字段）
             </span>
           </button>
           {isExpanded && (
