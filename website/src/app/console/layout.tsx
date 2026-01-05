@@ -153,7 +153,7 @@ export default function ConsoleLayout({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="flex min-h-screen">
-        <aside className="w-64 border-r border-slate-200 bg-white">
+        <aside className="w-64 border-r border-slate-200 bg-white flex flex-col h-screen">
           <div className="flex items-center gap-3 px-5 py-5">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sky-300 via-cyan-200 to-emerald-200 text-slate-900 flex items-center justify-center font-bold">
               D
@@ -162,7 +162,7 @@ export default function ConsoleLayout({
               Zhongjing Dataflow
             </div>
           </div>
-          <nav className="px-3 py-2">
+          <nav className="px-3 py-2 flex-1 min-h-0 overflow-y-auto">
             {MAIN_NAV.map((item) => {
               const Icon = item.icon;
               const isActive = activePath.startsWith(item.href);
@@ -183,7 +183,7 @@ export default function ConsoleLayout({
               );
             })}
           </nav>
-          <div className="px-3 pb-4">
+          <div className="px-3 pb-4 mt-auto">
             <div className="my-3 h-px bg-slate-200" />
             {secondaryNav.map((item) => {
               const Icon = item.icon;
