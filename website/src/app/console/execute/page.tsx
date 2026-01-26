@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -22,9 +23,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-import PipelineGUI from "@/components/PipelineGui";
-import { Output } from "@/components/Output";
-import DatasetView from "@/components/DatasetView";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,6 +37,36 @@ import { PipelineStoreProvider, usePipelineStore } from "@/contexts/PipelineStor
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { File } from "@/app/types";
 import { backendFetch } from "@/lib/backendFetch";
+
+const PipelineGUI = dynamic(() => import("@/components/PipelineGui"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex items-center justify-center text-sm text-slate-500">
+      正在加载执行画布...
+    </div>
+  ),
+});
+
+const Output = dynamic(
+  () => import("@/components/Output").then((mod) => mod.Output),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center text-sm text-slate-500">
+        正在加载输出视图...
+      </div>
+    ),
+  }
+);
+
+const DatasetView = dynamic(() => import("@/components/DatasetView"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex items-center justify-center text-sm text-slate-500">
+      正在加载数据集预览...
+    </div>
+  ),
+});
 
 const DEFAULT_NAMESPACE = "default";
 
