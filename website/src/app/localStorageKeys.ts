@@ -29,3 +29,6 @@ export const ACTIVE_PIPELINE_ID_KEY = "docetl_activePipelineId";
 export const AUTH_TOKEN_KEY = "docetl_auth_token";
 export const AUTH_EXPIRES_AT_KEY = "docetl_auth_expires_at";
 export const AUTH_USER_KEY = "docetl_auth_user";
+
+// Model registry
+export const MODEL_REGISTRY_KEY = "docetl_model_registry";

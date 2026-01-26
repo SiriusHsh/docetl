@@ -35,6 +35,8 @@ import {
 import { Operation, SchemaItem } from "@/app/types";
 import { usePipelineContext } from "@/contexts/PipelineContext";
 import { useToast } from "@/hooks/use-toast";
+import { ModelInput } from "@/components/ModelInput";
+import { useModelRegistry } from "@/hooks/useModelRegistry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { debounce } from "lodash";
 import { Guardrails, GleaningConfig } from "./operations/args";
@@ -181,6 +183,11 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
     const [editedName, setEditedName] = useState(name);
     const [isEditingModel, setIsEditingModel] = useState(false);
     const [editedModel, setEditedModel] = useState(model);
+    const { modelOptions } = useModelRegistry();
+
+    useEffect(() => {
+      setEditedModel(model);
+    }, [model]);
     const isExecute = variant === "execute";
     const badgeVariant = isExecute
       ? "outline"
@@ -256,21 +263,31 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
             {llmType === "LLM" && (
               <div className="flex items-center">
                 {isEditingModel ? (
-                  <Input
-                    value={editedModel}
-                    onChange={(e) => setEditedModel(e.target.value)}
-                    onBlur={() => {
+                  <ModelInput
+                    value={editedModel || ""}
+                    onChange={setEditedModel}
+                    placeholder="模型"
+                    suggestions={modelOptions}
+                    className="max-w-[180px]"
+                    inputClassName="h-6 text-xs font-mono"
+                    autoFocus
+                    onSelectSuggestion={(value) => {
+                      setEditedModel(value);
                       setIsEditingModel(false);
-                      onModelChange?.(editedModel || "");
+                      onModelChange?.(value);
                     }}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
+                    onBlur={(event) => {
+                      const nextValue = event.target.value;
+                      setIsEditingModel(false);
+                      onModelChange?.(nextValue || "");
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        const nextValue = (event.target as HTMLInputElement).value;
                         setIsEditingModel(false);
-                        onModelChange?.(editedModel || "");
+                        onModelChange?.(nextValue || "");
                       }
                     }}
-                    className="max-w-[150px] h-6 text-xs font-mono"
-                    autoFocus
                   />
                 ) : (
                   <div

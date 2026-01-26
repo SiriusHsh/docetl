@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "../ui/button";
 import { Plus, X, Info } from "lucide-react";
+import { ModelInput } from "@/components/ModelInput";
+import { useModelRegistry } from "@/hooks/useModelRegistry";
 import {
   Tooltip,
   TooltipContent,
@@ -1026,6 +1028,8 @@ export const GatherOperationComponent: React.FC<OperationComponentProps> = ({
 export const ParallelMapOperationComponent: React.FC<
   OperationComponentProps
 > = ({ operation, onUpdate, isSchemaExpanded, onToggleSchema }) => {
+  const { modelOptions } = useModelRegistry();
+
   const handlePromptChange = (index: number, field: string, value: string) => {
     const updatedPrompts = [...(operation.otherKwargs?.prompts || [])];
     updatedPrompts[index] = { ...updatedPrompts[index], [field]: value };
@@ -1164,13 +1168,12 @@ export const ParallelMapOperationComponent: React.FC<
               </div>
               <div>
                 <Label className="text-sm font-medium">模型</Label>
-                <Input
+                <ModelInput
                   value={prompt.model || ""}
-                  onChange={(e) =>
-                    handlePromptChange(index, "model", e.target.value)
-                  }
+                  onChange={(value) => handlePromptChange(index, "model", value)}
                   placeholder="模型"
-                  className="w-48 mt-1"
+                  suggestions={modelOptions}
+                  inputClassName="w-48 mt-1"
                 />
               </div>
             </div>

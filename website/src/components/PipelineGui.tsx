@@ -141,7 +141,14 @@ const AddOperationDropdown: React.FC<AddOperationDropdownProps> = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent
+        className="max-h-[70vh] overflow-y-auto"
+        sideOffset={6}
+        collisionPadding={{ top: 24, bottom: 12, left: 8, right: 8 }}
+        style={{
+          maxHeight: "min(70vh, var(--radix-dropdown-menu-content-available-height))",
+        }}
+      >
         <DropdownMenuLabel className="font-bold text-sm bg-muted/50 py-2">
           添加 LLM 操作
         </DropdownMenuLabel>
@@ -992,7 +999,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
                           />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-72">
+                      <DropdownMenuContent className="w-72 max-h-[70vh] overflow-y-auto">
                         <DropdownMenuLabel>选择流水线</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {pipelines.length === 0 ? (

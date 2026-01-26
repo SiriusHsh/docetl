@@ -10,6 +10,7 @@ import {
   Play,
   Rocket,
   Database,
+  Cpu,
   Settings,
   Shield,
 } from "lucide-react";
@@ -56,6 +57,7 @@ const MAIN_NAV: NavItem[] = [
   { label: "执行", href: "/console/execute", icon: Play },
   { label: "部署", href: "/console/deployments", icon: Rocket },
   { label: "数据中心", href: "/console/data-center", icon: Database },
+  { label: "模型中心", href: "/console/models", icon: Cpu },
 ];
 
 export default function ConsoleLayout({

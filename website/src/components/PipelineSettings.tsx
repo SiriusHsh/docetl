@@ -25,6 +25,8 @@ import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import yaml from "js-yaml";
 import { backendFetch } from "@/lib/backendFetch";
+import { ModelInput } from "@/components/ModelInput";
+import { useModelRegistry } from "@/hooks/useModelRegistry";
 
 const PREDEFINED_MODELS = [
   "gpt-4o-mini",
@@ -34,63 +36,6 @@ const PREDEFINED_MODELS = [
   "azure/<your-deployment-name>",
   "gemini/gemini-2.0-flash",
 ] as const;
-
-interface ModelInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  suggestions?: readonly string[];
-}
-
-export const ModelInput: React.FC<ModelInputProps> = ({
-  value,
-  onChange,
-  placeholder,
-  suggestions = PREDEFINED_MODELS,
-}) => {
-  const [isFocused, setIsFocused] = useState(false);
-
-  return (
-    <div className="relative">
-      <Input
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full"
-        placeholder={placeholder}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => {
-          setTimeout(() => setIsFocused(false), 200);
-        }}
-      />
-      {isFocused &&
-        (value === "" ||
-          suggestions.some((model) =>
-            model.toLowerCase().includes(value?.toLowerCase() || "")
-          )) && (
-          <div className="absolute top-full left-0 w-full mt-1 bg-popover rounded-md border shadow-md z-50 max-h-[200px] overflow-y-auto">
-            {suggestions
-              .filter(
-                (model) =>
-                  value === "" ||
-                  model.toLowerCase().includes(value.toLowerCase())
-              )
-              .map((model) => (
-                <div
-                  key={model}
-                  className="px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => {
-                    onChange(model);
-                    setIsFocused(false);
-                  }}
-                >
-                  {model}
-                </div>
-              ))}
-          </div>
-        )}
-    </div>
-  );
-};
 
 interface PipelineSettingsProps {
   isOpen: boolean;
@@ -172,6 +117,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   >([]);
   const [dataCenterLoading, setDataCenterLoading] = useState(false);
   const [dataCenterError, setDataCenterError] = useState<string | null>(null);
+  const { modelOptions } = useModelRegistry(namespace);
 
   // Convert extraPipelineSettings to YAML string
   const initialYamlString = useMemo(() => {
@@ -192,6 +138,38 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
   const hasOpenAIKey = useMemo(() => {
     return apiKeys.some((key) => key.name === "OPENAI_API_KEY");
   }, [apiKeys]);
+
+  const defaultModelSuggestions = useMemo(() => {
+    const predefined = PREDEFINED_MODELS.map((model) => ({
+      value: model,
+      label: model,
+    }));
+    const combined = [...modelOptions, ...predefined];
+    const seen = new Set<string>();
+    return combined.filter((item) => {
+      if (seen.has(item.value)) {
+        return false;
+      }
+      seen.add(item.value);
+      return true;
+    });
+  }, [modelOptions]);
+
+  const optimizerModelSuggestions = useMemo(() => {
+    const preferred = ["gpt-4o", "gpt-4o-mini"].map((model) => ({
+      value: model,
+      label: model,
+    }));
+    const combined = [...modelOptions, ...preferred];
+    const seen = new Set<string>();
+    return combined.filter((item) => {
+      if (seen.has(item.value)) {
+        return false;
+      }
+      seen.add(item.value);
+      return true;
+    });
+  }, [modelOptions]);
 
   const loadDataCenterDatasets = useCallback(async () => {
     if (!namespace) {
@@ -467,6 +445,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
               value={tempDefaultModel}
               onChange={setTempDefaultModel}
               placeholder="输入或选择模型..."
+              suggestions={defaultModelSuggestions}
             />
             <p className="text-xs text-muted-foreground">
               输入任意 LiteLLM 模型名或从推荐中选择。使用托管版本时，请在
@@ -480,6 +459,11 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                 查看支持的模型 {String.fromCharCode(8594)}
               </a>
             </p>
+            {defaultModelSuggestions.length > PREDEFINED_MODELS.length ? (
+              <p className="text-xs text-muted-foreground">
+                已同步模型配置中心中的可用模型，可直接选择。
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-col space-y-1.5">
@@ -508,7 +492,7 @@ const PipelineSettings: React.FC<PipelineSettingsProps> = ({
                   value={tempOptimizerModel}
                   onChange={setTempOptimizerModel}
                   placeholder="输入优化器模型名称..."
-                  suggestions={["gpt-4o", "gpt-4o-mini"]}
+                  suggestions={optimizerModelSuggestions}
                 />
                 <p className="text-xs text-muted-foreground">
                   输入任意 LiteLLM 模型名（例如 &quot;azure/gpt-4o&quot;）
