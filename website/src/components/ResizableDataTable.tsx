@@ -40,6 +40,7 @@ import {
   Search,
   Eye,
   Maximize2,
+  Database,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -694,6 +695,9 @@ interface ResizableDataTableProps<T extends Record<string, unknown>> {
   currentOperation?: string;
   variant?: "default" | "execute";
   onDownload?: () => void;
+  onStoreToDataCenter?: () => void;
+  isStoreToDataCenterLoading?: boolean;
+  storeToDataCenterDisabled?: boolean;
 }
 
 interface ObservabilityIndicatorProps {
@@ -767,6 +771,9 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
   currentOperation,
   variant = "default",
   onDownload,
+  onStoreToDataCenter,
+  isStoreToDataCenterLoading = false,
+  storeToDataCenterDisabled = false,
 }: ResizableDataTableProps<T>) {
   const isExecute = variant === "execute";
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(() => {
@@ -1001,6 +1008,26 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
 
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
+  const [pageInput, setPageInput] = useState("");
+
+  useEffect(() => {
+    if (pageCount > 0) {
+      setPageInput(String(pageIndex + 1));
+    } else {
+      setPageInput("");
+    }
+  }, [pageCount, pageIndex]);
+
+  const handlePageJump = useCallback(() => {
+    if (!pageCount) return;
+    const parsed = Number.parseInt(pageInput, 10);
+    if (Number.isNaN(parsed)) {
+      setPageInput(String(pageIndex + 1));
+      return;
+    }
+    const nextPage = Math.min(Math.max(parsed, 1), pageCount);
+    table.setPageIndex(nextPage - 1);
+  }, [pageCount, pageIndex, pageInput, table]);
 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
@@ -1044,8 +1071,20 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
             重置宽度
           </Button>
           <div className="flex-1" />
-          {onDownload && (
-            <>
+          <div className="flex items-center gap-2">
+            {onStoreToDataCenter && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-white"
+                onClick={onStoreToDataCenter}
+                disabled={storeToDataCenterDisabled || isStoreToDataCenterLoading}
+              >
+                <Database className="h-3.5 w-3.5" />
+                {isStoreToDataCenterLoading ? "存储中..." : "存储至数据中心"}
+              </Button>
+            )}
+            {onDownload && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1055,34 +1094,60 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
               >
                 <Download className="h-4 w-4" />
               </Button>
-              <div className="h-4 w-px bg-slate-200 mx-2" />
-            </>
-          )}
-          {data.length > 0 && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-xs">
-                第 {pageIndex + 1} 页 / 共 {pageCount} 页
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+            )}
+            {data.length > 0 && (
+              <>
+                <div className="h-4 w-px bg-slate-200 mx-1" />
+                <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-600">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="text-xs">
+                    第 {pageIndex + 1} 页 / 共 {pageCount} 页
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1">
+                  <span className="text-[10px] text-slate-500">跳转</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={pageCount}
+                    value={pageInput}
+                    onChange={(event) => setPageInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        handlePageJump();
+                      }
+                    }}
+                    className="h-6 w-14 text-center text-xs"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={handlePageJump}
+                  >
+                    前往
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       ) : (
         <div className="mb-2 flex justify-between items-center">

@@ -4,6 +4,7 @@ import ResizableDataTable from "@/components/ResizableDataTable";
 import { usePipelineContext } from "@/contexts/PipelineContext";
 import { Loader2, Download, ChevronDown, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { Operation, OutputRow } from "@/app/types";
 import { Parser } from "json2csv";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,6 +18,7 @@ import { useWebSocket } from "@/contexts/WebSocketContext";
 import AnsiRenderer from "./AnsiRenderer";
 import clsx from "clsx";
 import { backendFetch } from "@/lib/backendFetch";
+import { getBackendUrl } from "@/lib/api-config";
 import {
   BarChart,
   Bar,
@@ -87,6 +89,9 @@ const useOutputContext = () => {
     optimizerProgress,
     sampleSize,
     operations,
+    pipelineName,
+    namespace,
+    pipelineId,
   } = usePipelineContext();
 
   return {
@@ -97,6 +102,9 @@ const useOutputContext = () => {
     optimizerProgress,
     sampleSize,
     operations,
+    pipelineName,
+    namespace,
+    pipelineId,
   };
 };
 
@@ -110,6 +118,9 @@ type TableContentProps = {
   columns: ColumnType<OutputRow>[];
   variant: OutputVariant;
   onDownload?: () => void;
+  onStoreToDataCenter?: () => void;
+  isStoreToDataCenterLoading?: boolean;
+  storeToDataCenterDisabled?: boolean;
 };
 
 // First, move TableContent outside and give it a display name
@@ -122,6 +133,9 @@ const TableContent = memo(
     columns,
     variant,
     onDownload,
+    onStoreToDataCenter,
+    isStoreToDataCenterLoading,
+    storeToDataCenterDisabled,
   }: TableContentProps) => {
     const emptyTextClass =
       variant === "execute" ? "text-slate-400" : "text-muted-foreground";
@@ -152,6 +166,9 @@ const TableContent = memo(
               currentOperation={opName}
               variant={variant}
               onDownload={onDownload}
+              onStoreToDataCenter={onStoreToDataCenter}
+              isStoreToDataCenterLoading={isStoreToDataCenterLoading}
+              storeToDataCenterDisabled={storeToDataCenterDisabled}
             />
           </div>
         ) : (
@@ -490,14 +507,23 @@ type OutputProps = {
 };
 
 export const Output = memo(({ variant = "default" }: OutputProps) => {
-  const { output, isLoadingOutputs, sampleSize, operations } =
-    useOutputContext();
+  const {
+    output,
+    isLoadingOutputs,
+    sampleSize,
+    operations,
+    pipelineName,
+    namespace,
+    pipelineId,
+  } = useOutputContext();
   const operation = useOperation(output?.operationId);
   const isExecute = variant === "execute";
 
   const [outputs, setOutputs] = useState<OutputRow[]>([]);
   const [inputCount, setInputCount] = useState<number>(0);
   const [outputCount, setOutputCount] = useState<number>(0);
+  const [isStoringOutput, setIsStoringOutput] = useState(false);
+  const { toast } = useToast();
 
   const [opName, setOpName] = useState<string | undefined>(undefined);
   const [isResolveOrReduce, setIsResolveOrReduce] = useState<boolean>(false);
@@ -572,6 +598,58 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
       console.error("CSV 转换失败:", err);
     }
   }, [outputs]);
+
+  const handleStoreToDataCenter = useCallback(async () => {
+    if (!output?.path || !namespace) {
+      toast({
+        title: "无法存储",
+        description: "当前没有可存储的输出数据。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsStoringOutput(true);
+    try {
+      const response = await backendFetch(
+        `${getBackendUrl()}/data-center/store-output`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            namespace,
+            output_path: output.path,
+            pipeline_id: pipelineId,
+            pipeline_name: pipelineName,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "存储失败");
+      }
+
+      const dataset = await response.json();
+      toast({
+        title: "已存储至数据中心",
+        description: dataset?.name
+          ? `数据集：${dataset.name}`
+          : "输出已保存到数据中心。",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "存储失败",
+        description: error instanceof Error ? error.message : "未知错误",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStoringOutput(false);
+    }
+  }, [namespace, output?.path, pipelineId, pipelineName, toast]);
 
   const handleTabChange = useCallback((value: string) => {
     setActiveTab(value);
@@ -682,6 +760,11 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
           columns={columns}
           variant={variant}
           onDownload={downloadCSV}
+          onStoreToDataCenter={handleStoreToDataCenter}
+          isStoreToDataCenterLoading={isStoringOutput}
+          storeToDataCenterDisabled={
+            isLoadingOutputs || outputs.length === 0 || !output?.path
+          }
         />
       </div>
     );

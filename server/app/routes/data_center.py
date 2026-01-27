@@ -15,8 +15,21 @@ from typing import Any, Callable
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 
 from server.app.deps import get_db
-from server.app.models import DatasetFormat, DatasetIngestStatus, DatasetRecord, DatasetSource, NamespaceRole
-from server.app.security import CurrentUser, assert_namespace_role, get_current_user, get_request_meta
+from server.app.models import (
+    DatasetFormat,
+    DatasetIngestStatus,
+    DatasetRecord,
+    DatasetSource,
+    NamespaceRole,
+    StorePipelineOutputRequest,
+)
+from server.app.security import (
+    CurrentUser,
+    assert_namespace_role,
+    get_current_user,
+    get_request_meta,
+    resolve_docetl_namespace_for_path,
+)
 from server.app.storage import metadata_db
 from server.app.storage.paths import (
     get_data_center_dir,
@@ -218,6 +231,113 @@ def _is_within_root(path: Path, root: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+@router.post("/store-output", response_model=DatasetRecord, status_code=201)
+def store_pipeline_output(
+    request: StorePipelineOutputRequest,
+    http_request: Request,
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
+) -> DatasetRecord:
+    assert_namespace_role(
+        conn=conn,
+        current_user=current_user,
+        namespace=request.namespace,
+        min_role=NamespaceRole.EDITOR,
+    )
+
+    resolved_namespace, resolved_path = resolve_docetl_namespace_for_path(
+        request.output_path
+    )
+    if resolved_namespace != request.namespace:
+        raise HTTPException(status_code=400, detail="Output path namespace mismatch")
+
+    dataset_row = _register_pipeline_output(
+        conn=conn,
+        namespace=request.namespace,
+        output_path=str(resolved_path),
+        pipeline_id=request.pipeline_id,
+        pipeline_name=request.pipeline_name,
+        run_id=request.run_id,
+    )
+    meta = get_request_meta(http_request)
+    metadata_db.insert_audit_log(
+        conn,
+        actor_user_id=current_user.id,
+        actor_username=current_user.username,
+        action="dataset.generated",
+        resource_type="dataset",
+        resource_id=dataset_row.id,
+        namespace=request.namespace,
+        success=True,
+        ip=meta["ip"],
+        user_agent=meta["user_agent"],
+        request_id=meta["request_id"],
+        detail={
+            "output_path": request.output_path,
+            "pipeline_id": request.pipeline_id,
+            "pipeline_name": request.pipeline_name,
+        },
+    )
+    conn.commit()
+    return _to_dataset_record(dataset_row)
+
+
+def _register_pipeline_output(
+    *,
+    conn,
+    namespace: str,
+    output_path: str,
+    pipeline_id: str | None,
+    pipeline_name: str | None,
+    run_id: str | None,
+) -> metadata_db.DatasetRow:
+    path = Path(output_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Pipeline output file not found")
+
+    suffix = path.suffix.lower()
+    content = path.read_bytes()
+    if suffix == ".json":
+        records = _parse_json_bytes(content)
+        original_format = "json"
+    elif suffix == ".csv":
+        records = _parse_csv_bytes(content)
+        original_format = "csv"
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported output format")
+
+    records = _sanitize_records(records)
+    dataset_id = str(uuid.uuid4())
+    dataset_path = (
+        get_data_center_dataset_dir(namespace, DatasetSource.PIPELINE_GENERATED.value)
+        / f"{dataset_id}.json"
+    )
+    row_count = _serialize_records(records, dataset_path)
+    schema = _infer_schema(records)
+
+    dataset_row = metadata_db.create_dataset(
+        conn,
+        dataset_id=dataset_id,
+        namespace=namespace,
+        name=f"{pipeline_name or 'pipeline'}_run_{run_id or dataset_id}",
+        source=DatasetSource.PIPELINE_GENERATED.value,
+        format=DatasetFormat.JSON.value,
+        original_format=original_format,
+        raw_path=str(path),
+        path=str(dataset_path),
+        ingest_status=DatasetIngestStatus.READY.value,
+        schema=schema,
+        row_count=row_count,
+        lineage={
+            "pipeline_id": pipeline_id,
+            "pipeline_name": pipeline_name,
+            "run_id": run_id,
+            "output_path": output_path,
+        },
+    )
+    return dataset_row
 
 
 def _safe_delete_path(path_value: str | None, root: Path) -> None:

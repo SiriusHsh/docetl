@@ -732,12 +732,15 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
         // Ensure the WebSocket is connected before sending the message
         await connect();
 
+        const shouldStoreOutput =
+          variant === "execute" ? false : saveOutputToDataCenter;
+
         sendMessage({
           yaml_config: filePath,
           clear_intermediate: clear_intermediate,
           pipeline_id: activePipelineId,
           namespace: namespace,
-          save_output_to_data_center: saveOutputToDataCenter,
+          save_output_to_data_center: shouldStoreOutput,
         });
       } catch (error) {
         console.error("Error writing pipeline config:", error);
@@ -766,6 +769,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
       namespace,
       extraPipelineSettings,
       saveOutputToDataCenter,
+      variant,
       cost,
       activePipelineId,
     ]
@@ -836,12 +840,15 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
 
       await connect();
 
+      const shouldStoreOutput =
+        variant === "execute" ? false : saveOutputToDataCenter;
+
       sendMessage({
         yaml_config: filePath,
         optimize: true,
         pipeline_id: activePipelineId,
         namespace: namespace,
-        save_output_to_data_center: saveOutputToDataCenter,
+        save_output_to_data_center: shouldStoreOutput,
       });
     } catch (error) {
       console.error("Error optimizing operation:", error);

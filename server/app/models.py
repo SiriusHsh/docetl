@@ -220,6 +220,14 @@ class PipelineDuplicateRequest(BaseModel):
     name: str | None = None
 
 
+class StorePipelineOutputRequest(BaseModel):
+    namespace: str
+    output_path: str
+    pipeline_id: str | None = None
+    pipeline_name: str | None = None
+    run_id: str | None = None
+
+
 # Auth/RBAC models
 class PlatformRole(str, Enum):
     PLATFORM_ADMIN = "platform_admin"
