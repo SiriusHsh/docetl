@@ -217,7 +217,7 @@ export default function DashboardPage() {
   return (
     <div className="px-6 py-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-slate-900">仪表盘</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">看板</h1>
         <p className="text-sm text-slate-500">
           {namespace ? `当前工作区：${namespace}` : "请在执行页选择工作区后继续"}
         </p>

@@ -126,6 +126,70 @@ const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
   return defaultValue;
 };
 
+const hasSampleSizeMigration = () =>
+  typeof window !== "undefined" &&
+  localStorage.getItem(localStorageKeys.SAMPLE_SIZE_MIGRATION_KEY) === "true";
+
+const markSampleSizeMigrated = () => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(localStorageKeys.SAMPLE_SIZE_MIGRATION_KEY, "true");
+  }
+};
+
+const normalizeSampleSize = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsedValue = typeof value === "string" ? Number(value) : value;
+  if (typeof parsedValue === "number" && Number.isFinite(parsedValue)) {
+    return parsedValue;
+  }
+
+  return null;
+};
+
+const loadSampleSizeFromLocalStorage = (): number | null => {
+  if (typeof window === "undefined") {
+    return mockSampleSize;
+  }
+
+  const storedValue = localStorage.getItem(localStorageKeys.SAMPLE_SIZE_KEY);
+  if (!storedValue) {
+    if (!hasSampleSizeMigration()) {
+      markSampleSizeMigrated();
+    }
+    return mockSampleSize;
+  }
+
+  try {
+    const parsedValue = JSON.parse(storedValue);
+    const normalizedValue = normalizeSampleSize(parsedValue);
+    const shouldMigrateLegacyDefault =
+      !hasSampleSizeMigration() && normalizedValue === 5;
+    if (shouldMigrateLegacyDefault) {
+      localStorage.setItem(
+        localStorageKeys.SAMPLE_SIZE_KEY,
+        JSON.stringify(null)
+      );
+      markSampleSizeMigrated();
+      return null;
+    }
+    if (normalizedValue !== parsedValue) {
+      localStorage.setItem(
+        localStorageKeys.SAMPLE_SIZE_KEY,
+        JSON.stringify(normalizedValue)
+      );
+    }
+    if (!hasSampleSizeMigration()) {
+      markSampleSizeMigrated();
+    }
+    return normalizedValue;
+  } catch {
+    return mockSampleSize;
+  }
+};
+
 export const createDefaultPipelineState = (
   namespace: string | null,
   pipelineName: string = mockPipelineName
@@ -387,10 +451,7 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorageKeys.PIPELINE_NAME_KEY,
         mockPipelineName
       ),
-      sampleSize: loadFromLocalStorage(
-        localStorageKeys.SAMPLE_SIZE_KEY,
-        mockSampleSize
-      ),
+      sampleSize: loadSampleSizeFromLocalStorage(),
       files: loadFromLocalStorage(localStorageKeys.FILES_KEY, mockFiles),
       cost: loadFromLocalStorage(localStorageKeys.COST_KEY, 0),
       defaultModel: loadFromLocalStorage(
@@ -626,6 +687,9 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
       snapshot: Partial<PipelineStateSnapshot>,
       options?: { markSaved?: boolean }
     ) => {
+      const normalizedSampleSize = normalizeSampleSize(snapshot.sampleSize);
+      const shouldMigrateLegacyDefault =
+        !hasSampleSizeMigration() && normalizedSampleSize === 5;
       const mergedNamespace =
         snapshot.namespace ?? stateRef.current.namespace ?? null;
       const mergedPipelineId =
@@ -636,6 +700,7 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
           snapshot.pipelineName ?? stateRef.current.pipelineName
         ),
         ...snapshot,
+        sampleSize: shouldMigrateLegacyDefault ? null : normalizedSampleSize,
         currentFile: snapshot.currentFile ?? null,
         files: snapshot.files ?? stateRef.current.files,
         apiKeys: stateRef.current.apiKeys,
@@ -643,6 +708,9 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
         pipelineId: mergedPipelineId,
       };
 
+      if (shouldMigrateLegacyDefault) {
+        markSampleSizeMigrated();
+      }
       setState(mergedState);
       persistSnapshotToLocalStorage(buildPipelineSnapshot(mergedState));
       if (options?.markSaved) {

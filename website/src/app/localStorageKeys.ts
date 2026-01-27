@@ -10,6 +10,7 @@ export const IS_LOADING_OUTPUTS_KEY = "docetl_isLoadingOutputs";
 export const NUM_OP_RUN_KEY = "docetl_numOpRun";
 export const PIPELINE_NAME_KEY = "docetl_pipelineName";
 export const SAMPLE_SIZE_KEY = "docetl_sampleSize";
+export const SAMPLE_SIZE_MIGRATION_KEY = "docetl_sampleSizeMigrated";
 export const FILES_KEY = "docetl_files";
 export const COST_KEY = "docetl_cost";
 export const DEFAULT_MODEL_KEY = "docetl_defaultModel";

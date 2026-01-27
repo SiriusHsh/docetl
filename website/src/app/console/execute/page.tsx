@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -33,7 +34,11 @@ import {
 import { BookmarkProvider } from "@/contexts/BookmarkContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PipelineProvider, usePipelineContext } from "@/contexts/PipelineContext";
-import { PipelineStoreProvider, usePipelineStore } from "@/contexts/PipelineStoreContext";
+import {
+  DEFAULT_PIPELINE_SCOPE,
+  PipelineStoreProvider,
+  usePipelineStore,
+} from "@/contexts/PipelineStoreContext";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { File } from "@/app/types";
 import { backendFetch } from "@/lib/backendFetch";
@@ -69,6 +74,26 @@ const DatasetView = dynamic(() => import("@/components/DatasetView"), {
 });
 
 const DEFAULT_NAMESPACE = "default";
+const DATA_GENERATION_SCOPE_MAP: Record<string, string> = {
+  "/console/data-generation": DEFAULT_PIPELINE_SCOPE,
+  "/console/data-generation/distillation": "distillation",
+  "/console/data-generation/synthesis": "synthesis",
+  "/console/data-generation/generalization": "generalization",
+  "/console/data-generation/transformation": "transformation",
+  "/console/data-generation/manual": "manual",
+  "/console/execute": DEFAULT_PIPELINE_SCOPE,
+};
+
+const resolvePipelineScope = (pathname: string) => {
+  const direct = DATA_GENERATION_SCOPE_MAP[pathname];
+  if (direct) return direct;
+  if (pathname.startsWith("/console/data-generation/")) {
+    const parts = pathname.split("/").filter(Boolean);
+    const segment = parts[2];
+    return segment || DEFAULT_PIPELINE_SCOPE;
+  }
+  return undefined;
+};
 
 const formatRecordCount = (count: string) =>
   count === "-" ? "记录数未知" : `${count} 条记录`;
@@ -776,10 +801,16 @@ const WebSocketWrapper: React.FC<{ children: React.ReactNode }> = ({
 };
 
 export default function ExecutePage() {
+  const pathname = usePathname();
+  const pipelineScope = useMemo(
+    () => resolvePipelineScope(pathname || ""),
+    [pathname]
+  );
+
   return (
     <ThemeProvider>
       <PipelineProvider>
-        <PipelineStoreProvider>
+        <PipelineStoreProvider scope={pipelineScope}>
           <WebSocketWrapper>
             <BookmarkProvider>
               <ExecuteWorkspace />

@@ -524,6 +524,9 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
     if (!unsavedChanges) {
       return;
     }
+    if (isLoadingOutputs) {
+      return;
+    }
 
     const intervalId = window.setInterval(() => {
       if (!isSavingPipeline) {
@@ -532,7 +535,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
     }, 30000);
 
     return () => window.clearInterval(intervalId);
-  }, [isSavingPipeline, saveActivePipeline, unsavedChanges, variant]);
+  }, [isLoadingOutputs, isSavingPipeline, saveActivePipeline, unsavedChanges, variant]);
 
   useEffect(() => {
     if (variant !== "execute") {
@@ -542,7 +545,8 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
       if (
         document.visibilityState === "hidden" &&
         unsavedChanges &&
-        !isSavingPipeline
+        !isSavingPipeline &&
+        !isLoadingOutputs
       ) {
         void saveActivePipeline();
       }
@@ -551,7 +555,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [isSavingPipeline, saveActivePipeline, unsavedChanges, variant]);
+  }, [isLoadingOutputs, isSavingPipeline, saveActivePipeline, unsavedChanges, variant]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
@@ -783,11 +787,18 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
   };
 
   const handleStop = () => {
-    sendMessage("kill");
-
-    if (readyState === WebSocket.CLOSED && isLoadingOutputs) {
-      setIsLoadingOutputs(false);
+    if (readyState === WebSocket.OPEN) {
+      sendMessage("kill");
     }
+
+    disconnect();
+    setOptimizerProgress(null);
+    setIsLoadingOutputs(false);
+    toast({
+      title: "已请求停止",
+      description: "正在终止当前流程...",
+      duration: 3000,
+    });
   };
 
   const handleOptimizeFromDialog = async () => {

@@ -12,6 +12,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from docetl.runner import DSLRunner
+from fastapi import HTTPException
 
 from server.app.run_manager import register_run, unregister_run, cancel_run as cancel_active_run
 from server.app.storage import metadata_db
@@ -40,6 +41,41 @@ DEFAULT_RETRY_MAX_BACKOFF_SECONDS = 3600
 class ScheduledRun:
     deployment: metadata_db.DeploymentRow
     scheduled_for: int
+
+
+def _disable_deployment_for_missing_pipeline(
+    conn,
+    deployment: metadata_db.DeploymentRow,
+    *,
+    reason: str = "pipeline_not_found",
+) -> None:
+    metadata_db.update_deployment(
+        conn,
+        deployment.id,
+        enabled=False,
+        next_run_at=None,
+    )
+    metadata_db.insert_audit_log(
+        conn,
+        actor_user_id=None,
+        actor_username=None,
+        action="deployment.disabled",
+        resource_type="deployment",
+        resource_id=deployment.id,
+        namespace=deployment.namespace,
+        success=True,
+        detail={
+            "reason": reason,
+            "pipeline_id": deployment.pipeline_id,
+        },
+    )
+    conn.commit()
+    logger.warning(
+        "Disabled deployment %s (namespace=%s) because pipeline %s not found",
+        deployment.id,
+        deployment.namespace,
+        deployment.pipeline_id,
+    )
 
 
 def _parse_timezone(tz: str | None) -> ZoneInfo:
@@ -596,8 +632,15 @@ class DeploymentScheduler:
                 continue
 
             if due_times:
+                deployment_disabled = False
                 for scheduled_for in due_times:
-                    await self._schedule_run(deployment, scheduled_for)
+                    deployment_disabled = await self._schedule_run(
+                        deployment, scheduled_for
+                    )
+                    if deployment_disabled:
+                        break
+                if deployment_disabled:
+                    continue
                 conn = metadata_db.get_connection()
                 try:
                     if deployment.schedule_type == "once":
@@ -628,7 +671,7 @@ class DeploymentScheduler:
                 finally:
                     conn.close()
 
-    async def _schedule_run(self, deployment: metadata_db.DeploymentRow, scheduled_for: int) -> None:
+    async def _schedule_run(self, deployment: metadata_db.DeploymentRow, scheduled_for: int) -> bool:
         conn = metadata_db.get_connection()
         try:
             existing = metadata_db.get_run_for_schedule(
@@ -637,12 +680,18 @@ class DeploymentScheduler:
                 scheduled_for=scheduled_for,
             )
             if existing is not None:
-                return
+                return False
 
             if not self._can_schedule(conn, deployment):
-                return
+                return False
 
-            pipeline = load_pipeline(deployment.namespace, deployment.pipeline_id)
+            try:
+                pipeline = load_pipeline(deployment.namespace, deployment.pipeline_id)
+            except HTTPException as exc:
+                if exc.status_code == 404:
+                    _disable_deployment_for_missing_pipeline(conn, deployment)
+                    return True
+                raise
             max_attempts = _max_attempts(deployment.retry_policy)
             run_row = metadata_db.create_run(
                 conn,
@@ -662,6 +711,7 @@ class DeploymentScheduler:
             conn.close()
 
         asyncio.create_task(self._execute_run(deployment, run_row.id))
+        return False
 
     def _can_schedule(
         self,
@@ -817,7 +867,32 @@ class DeploymentScheduler:
                     return
                 attempt = run_row.attempt
                 max_attempts = run_row.max_attempts or max_attempts
-                pipeline = load_pipeline(deployment.namespace, deployment.pipeline_id)
+                try:
+                    pipeline = load_pipeline(deployment.namespace, deployment.pipeline_id)
+                except HTTPException as exc:
+                    if exc.status_code == 404:
+                        error_message = "Pipeline not found"
+                        metadata_db.update_run(
+                            conn,
+                            run_id,
+                            status="failed",
+                            ended_at=metadata_db.utc_now_ts(),
+                            error=error_message,
+                        )
+                        metadata_db.insert_audit_log(
+                            conn,
+                            actor_user_id=None,
+                            actor_username=None,
+                            action="run.fail",
+                            resource_type="run",
+                            resource_id=run_id,
+                            namespace=deployment.namespace,
+                            success=False,
+                            detail={"error": error_message},
+                        )
+                        _disable_deployment_for_missing_pipeline(conn, deployment)
+                        return
+                    raise
                 pipeline_name = pipeline.name
                 metadata_db.update_run(
                     conn,

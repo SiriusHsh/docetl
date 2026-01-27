@@ -736,12 +736,14 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
                 if user_message == "kill":
                     runner.console.log("Stopping process...")
                     runner.is_cancelled = True
+                    if pipeline_task is not None and not pipeline_task.done():
+                        pipeline_task.cancel()
 
                     await websocket.send_json({
                         "type": "error",
                         "message": "Process stopped by user request",
                     })
-                    raise Exception("Process stopped by user request")
+                    raise asyncio.CancelledError("Process stopped by user request")
 
                 # Process the user message and send it to the runner
                 runner.console.post_input(user_message)

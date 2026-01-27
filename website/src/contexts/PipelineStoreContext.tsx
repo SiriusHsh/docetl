@@ -41,12 +41,39 @@ const PipelineStoreContext = createContext<PipelineStoreContextValue | null>(
   null
 );
 
+export const DEFAULT_PIPELINE_SCOPE = "generation";
+const PIPELINE_SCOPE_PREFIX = "docetl_scope:";
+
+const getPipelineScope = (description?: string | null) => {
+  if (!description) return null;
+  if (!description.startsWith(PIPELINE_SCOPE_PREFIX)) return null;
+  return description.slice(PIPELINE_SCOPE_PREFIX.length) || null;
+};
+
+const buildScopeDescription = (scope?: string | null) => {
+  if (!scope) return undefined;
+  return `${PIPELINE_SCOPE_PREFIX}${scope}`;
+};
+
+const matchesScope = (
+  description: string | null | undefined,
+  scope?: string | null
+) => {
+  if (!scope) return true;
+  const pipelineScope = getPipelineScope(description);
+  if (scope === DEFAULT_PIPELINE_SCOPE) {
+    return pipelineScope === null || pipelineScope === scope;
+  }
+  return pipelineScope === scope;
+};
+
 const getActivePipelineStorageKey = (namespace: string) =>
   `${localStorageKeys.ACTIVE_PIPELINE_ID_KEY}:${namespace}`;
 
-export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const PipelineStoreProvider: React.FC<{
+  children: React.ReactNode;
+  scope?: string;
+}> = ({ children, scope }) => {
   const {
     namespace,
     pipelineName,
@@ -65,13 +92,21 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
   const pipelineCacheRef = React.useRef(pipelineCache);
   const activePipelineIdRef = React.useRef<string | null>(null);
   const pipelinesRef = React.useRef<PipelineMetadata[]>([]);
-  const initializedNamespaceRef = React.useRef<string | null>(null);
+  const allPipelinesRef = React.useRef<PipelineMetadata[]>([]);
+  const initializedScopeRef = React.useRef<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const scopeKey = scope ?? null;
+
   const activeStorageKey = useMemo(
-    () => (namespace ? getActivePipelineStorageKey(namespace) : null),
-    [namespace]
+    () =>
+      namespace
+        ? scopeKey
+          ? `${getActivePipelineStorageKey(namespace)}:${scopeKey}`
+          : getActivePipelineStorageKey(namespace)
+        : null,
+    [namespace, scopeKey]
   );
 
   useEffect(() => {
@@ -86,10 +121,17 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
     pipelinesRef.current = pipelines;
   }, [pipelines]);
 
+  useEffect(() => {
+    if (!namespace) {
+      allPipelinesRef.current = [];
+    }
+  }, [namespace]);
+
   const generateName = useCallback(
-    (base: string) => {
+    (base: string, listOverride?: PipelineMetadata[]) => {
+      const source = listOverride ?? pipelines;
       const existing = new Set(
-        pipelines.map((pipeline) => pipeline.name.toLowerCase())
+        source.map((pipeline) => pipeline.name.toLowerCase())
       );
       if (!existing.has(base.toLowerCase())) {
         return base;
@@ -147,6 +189,9 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
       );
       setPipelineCache((prev) => ({ ...prev, [updated.id]: updated }));
+      allPipelinesRef.current = allPipelinesRef.current.map((p) =>
+        p.id === updated.id ? { ...p, ...updated } : p
+      );
       saveProgress();
       return updated;
     } catch (error) {
@@ -217,21 +262,38 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
   const bootstrapPipeline = useCallback(async () => {
     if (!namespace) return;
 
-    const seed = getSerializableState();
+    const seed = scopeKey
+      ? buildPipelineSnapshot(createDefaultPipelineState(namespace))
+      : getSerializableState();
+    const resolvedPipelineName = scopeKey
+      ? seed.pipelineName
+      : pipelineName || seed.pipelineName;
     const snapshot = {
       ...seed,
       namespace,
-      pipelineName: pipelineName || seed.pipelineName,
+      pipelineName: resolvedPipelineName,
     };
-    const nextName = generateName(snapshot.pipelineName || "未命名流水线");
+    const nameSource =
+      allPipelinesRef.current.length > 0
+        ? allPipelinesRef.current
+        : pipelines;
+    const nextName = generateName(
+      snapshot.pipelineName || "未命名流水线",
+      nameSource
+    );
     const stateWithName = { ...snapshot, pipelineName: nextName };
 
-    const created = await createPipelineApi({
+  const created = await createPipelineApi({
       namespace,
       name: nextName,
+      description: buildScopeDescription(scopeKey),
       state: stateWithName,
     });
     setPipelines([created]);
+    allPipelinesRef.current = [
+      created,
+      ...allPipelinesRef.current.filter((p) => p.id !== created.id),
+    ];
     applyPipelineRecord(created);
   }, [
     applyPipelineRecord,
@@ -239,6 +301,8 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
     getSerializableState,
     namespace,
     pipelineName,
+    scopeKey,
+    pipelines,
   ]);
 
   const refreshPipelines = useCallback(async () => {
@@ -247,9 +311,13 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(true);
     try {
       const list = await fetchPipelines(namespace);
-      setPipelines(list);
+      allPipelinesRef.current = list;
+      const scopedList = list.filter((pipeline) =>
+        matchesScope(pipeline.description, scopeKey)
+      );
+      setPipelines(scopedList);
 
-      if (list.length === 0) {
+      if (scopedList.length === 0) {
         await bootstrapPipeline();
         return;
       }
@@ -257,8 +325,8 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
       const storedActive =
         activeStorageKey && localStorage.getItem(activeStorageKey);
       const nextActive =
-        (storedActive && list.find((p) => p.id === storedActive)?.id) ||
-        list[0].id;
+        (storedActive && scopedList.find((p) => p.id === storedActive)?.id) ||
+        scopedList[0].id;
 
       const shouldLoadPipeline =
         nextActive &&
@@ -283,6 +351,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
     activeStorageKey,
     bootstrapPipeline,
     namespace,
+    scopeKey,
     switchPipeline,
     toast,
   ]);
@@ -300,7 +369,11 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
       await maybeSaveActive();
 
-      const nextName = generateName(name || "新建流水线");
+      const nameSource =
+        allPipelinesRef.current.length > 0
+          ? allPipelinesRef.current
+          : pipelines;
+      const nextName = generateName(name || "新建流水线", nameSource);
       const templateState = createDefaultPipelineState(namespace, nextName);
       const snapshot = buildPipelineSnapshot(templateState);
 
@@ -308,9 +381,14 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         const created = await createPipelineApi({
           namespace,
           name: nextName,
+          description: buildScopeDescription(scopeKey),
           state: { ...snapshot, pipelineName: nextName },
         });
         setPipelines((prev) => [created, ...prev]);
+        allPipelinesRef.current = [
+          created,
+          ...allPipelinesRef.current.filter((p) => p.id !== created.id),
+        ];
         applyPipelineRecord(created);
       } catch (error) {
         const message =
@@ -322,7 +400,15 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     },
-    [applyPipelineRecord, generateName, maybeSaveActive, namespace, toast]
+    [
+      applyPipelineRecord,
+      generateName,
+      maybeSaveActive,
+      namespace,
+      pipelines,
+      scopeKey,
+      toast,
+    ]
   );
 
   const duplicatePipeline = useCallback(
@@ -337,7 +423,11 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
           name ||
           pipelines.find((p) => p.id === pipelineId)?.name ||
           "流水线副本";
-        const nextName = generateName(baseName);
+        const nameSource =
+          allPipelinesRef.current.length > 0
+            ? allPipelinesRef.current
+            : pipelines;
+        const nextName = generateName(baseName, nameSource);
 
         const duplicated = await duplicatePipelineApi({
           namespace,
@@ -346,6 +436,10 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
         });
         setPipelines((prev) => [duplicated, ...prev]);
         setPipelineCache((prev) => ({ ...prev, [duplicated.id]: duplicated }));
+        allPipelinesRef.current = [
+          duplicated,
+          ...allPipelinesRef.current.filter((p) => p.id !== duplicated.id),
+        ];
         await switchPipeline(duplicated.id);
       } catch (error) {
         const message =
@@ -389,6 +483,9 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
           prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
         );
         setPipelineCache((prev) => ({ ...prev, [updated.id]: updated }));
+        allPipelinesRef.current = allPipelinesRef.current.map((p) =>
+          p.id === updated.id ? { ...p, ...updated } : p
+        );
 
         if (isActive) {
           applyPipelineRecord(updated);
@@ -425,6 +522,9 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
           delete next[pipelineId];
           return next;
         });
+        allPipelinesRef.current = allPipelinesRef.current.filter(
+          (p) => p.id !== pipelineId
+        );
 
         if (activePipelineId === pipelineId) {
           const remaining = pipelines.filter((p) => p.id !== pipelineId);
@@ -459,13 +559,15 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
       setActivePipelineId(null);
       setPipelineCache({});
       setPipelines([]);
+      initializedScopeRef.current = null;
       return;
     }
 
-    if (initializedNamespaceRef.current === namespace) {
+    const scopeIdentity = scopeKey ? `${namespace}:${scopeKey}` : namespace;
+    if (initializedScopeRef.current === scopeIdentity) {
       return;
     }
-    initializedNamespaceRef.current = namespace;
+    initializedScopeRef.current = scopeIdentity;
 
     const stored =
       activeStorageKey && localStorage.getItem(activeStorageKey);
@@ -479,7 +581,7 @@ export const PipelineStoreProvider: React.FC<{ children: React.ReactNode }> = ({
     // 仅在 namespace 变化时刷新，避免依赖变动导致的重复刷新
     void refreshPipelines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStorageKey, namespace]);
+  }, [activeStorageKey, namespace, scopeKey]);
 
   const value: PipelineStoreContextValue = {
     pipelines,

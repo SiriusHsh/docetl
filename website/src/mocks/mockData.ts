@@ -63,5 +63,5 @@ export const initialOperations: Operation[] = [
   // }
 ];
 
-export const mockSampleSize = 5;
+export const mockSampleSize = null;
 export const mockPipelineName = "Untitled_Analysis";

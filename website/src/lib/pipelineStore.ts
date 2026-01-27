@@ -4,6 +4,7 @@ import { getBackendUrl } from "./api-config";
 import { clearAuthSession, getAuthToken } from "@/lib/auth";
 
 const backendUrl = getBackendUrl();
+const PIPELINE_STORE_REQUEST_TIMEOUT_MS = 15000;
 
 async function request<T>(
   path: string,
@@ -16,11 +17,24 @@ async function request<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${backendUrl}${path}`, {
-    ...options,
-    headers,
-    credentials: options?.credentials ?? "include",
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PIPELINE_STORE_REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${backendUrl}${path}`, {
+      ...options,
+      headers,
+      credentials: options?.credentials ?? "include",
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("请求超时，请稍后重试");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (response.status === 401 && typeof window !== "undefined") {
     clearAuthSession();

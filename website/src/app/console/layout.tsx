@@ -13,6 +13,7 @@ import {
   Cpu,
   Settings,
   Shield,
+  ChevronDown,
 } from "lucide-react";
 
 import {
@@ -41,7 +42,13 @@ import {
 type NavItem = {
   label: string;
   href: string;
+  icon?: ComponentType<{ className?: string }>;
+};
+
+type NavGroup = {
+  label: string;
   icon: ComponentType<{ className?: string }>;
+  children: NavItem[];
 };
 
 type MembershipRecord = {
@@ -51,10 +58,22 @@ type MembershipRecord = {
   updated_at: number;
 };
 
-const MAIN_NAV: NavItem[] = [
-  { label: "仪表盘", href: "/console/dashboard", icon: LayoutDashboard },
+const DATA_GENERATION_CHILDREN: NavItem[] = [
+  { label: "数据蒸馏", href: "/console/data-generation/distillation" },
+  { label: "数据合成", href: "/console/data-generation/synthesis" },
+  { label: "数据泛化", href: "/console/data-generation/generalization" },
+  { label: "数据转化", href: "/console/data-generation/transformation" },
+  { label: "人工创建", href: "/console/data-generation/manual" },
+];
+
+const MAIN_NAV: Array<NavItem | NavGroup> = [
+  { label: "看板", href: "/console/dashboard", icon: LayoutDashboard },
   { label: "运行记录", href: "/console/runs", icon: ListChecks },
-  { label: "执行", href: "/console/execute", icon: Play },
+  {
+    label: "数据生成",
+    icon: Play,
+    children: DATA_GENERATION_CHILDREN,
+  },
   { label: "部署", href: "/console/deployments", icon: Rocket },
   { label: "数据中心", href: "/console/data-center", icon: Database },
   { label: "模型中心", href: "/console/models", icon: Cpu },
@@ -74,6 +93,16 @@ export default function ConsoleLayout({
   const [membershipError, setMembershipError] = useState<string | null>(null);
   const [activeNamespace, setActiveNamespace] = useState<string | null>(null);
   const [selectedNamespace, setSelectedNamespace] = useState("");
+  const activePath = useMemo(() => pathname || "", [pathname]);
+  const dataGenerationActive = useMemo(
+    () =>
+      activePath.startsWith("/console/data-generation") ||
+      activePath.startsWith("/console/execute"),
+    [activePath]
+  );
+  const [dataGenerationOpen, setDataGenerationOpen] = useState(
+    dataGenerationActive
+  );
 
   useEffect(() => {
     const token = getAuthToken();
@@ -142,7 +171,11 @@ export default function ConsoleLayout({
     };
   }, [activeNamespace, backendUrl]);
 
-  const activePath = useMemo(() => pathname || "", [pathname]);
+  useEffect(() => {
+    if (dataGenerationActive) {
+      setDataGenerationOpen(true);
+    }
+  }, [dataGenerationActive]);
   const secondaryNav = useMemo<NavItem[]>(() => {
     const items: NavItem[] = [];
     if (isAdmin) {
@@ -166,6 +199,60 @@ export default function ConsoleLayout({
           </div>
           <nav className="px-3 py-2 flex-1 min-h-0 overflow-y-auto">
             {MAIN_NAV.map((item) => {
+              if ("children" in item) {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="space-y-1">
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition",
+                        dataGenerationActive
+                          ? "bg-slate-200 text-slate-900"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      )}
+                      onClick={() =>
+                        setDataGenerationOpen((prev) => !prev)
+                      }
+                      aria-expanded={dataGenerationOpen}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="flex-1 text-left">{item.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          dataGenerationOpen ? "rotate-0" : "-rotate-90"
+                        )}
+                      />
+                    </button>
+                    {dataGenerationOpen ? (
+                      <div className="ml-7 space-y-1 border-l border-slate-200 pl-3">
+                        {item.children.map((child) => {
+                          const isChildActive =
+                            activePath === child.href ||
+                            (child.href === "/console/data-generation" &&
+                              activePath.startsWith("/console/execute"));
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              className={cn(
+                                "block rounded-md px-2 py-1 text-xs transition",
+                                isChildActive
+                                  ? "bg-slate-200 text-slate-900"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              )}
+                            >
+                              {child.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
               const Icon = item.icon;
               const isActive = activePath.startsWith(item.href);
               return (
@@ -179,7 +266,7 @@ export default function ConsoleLayout({
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  {Icon ? <Icon className="h-4 w-4" /> : null}
                   <span>{item.label}</span>
                 </Link>
               );
