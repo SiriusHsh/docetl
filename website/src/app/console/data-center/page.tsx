@@ -524,13 +524,13 @@ export default function DataCenterPage() {
       </div>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[85vh] w-[min(96vw,64rem)] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>
               预览：{previewDatasetName || "数据集"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 flex-1 overflow-y-auto pr-1">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span>总行数：{previewTotal}</span>
               <span>当前显示：{previewItems.length}</span>
