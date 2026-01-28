@@ -20,6 +20,11 @@ const convert = new Convert({
   },
 });
 
+const stripAnsiArtifacts = (value: string) =>
+  value
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "")
+    .replace(/\[(?:\d{1,3};?)+m/g, "");
+
 interface AnsiRendererProps {
   text: string;
   readyState: number;
@@ -31,7 +36,8 @@ const AnsiRenderer: React.FC<AnsiRendererProps> = ({
   readyState,
   setTerminalOutput,
 }) => {
-  const html = convert.toHtml(text);
+  const cleanedText = stripAnsiArtifacts(text);
+  const html = convert.toHtml(cleanedText);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [userInput, setUserInput] = useState("");
   const { sendMessage } = useWebSocket();

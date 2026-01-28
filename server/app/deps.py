@@ -27,10 +27,28 @@ def init_metadata_db(db_path: Path | None = None) -> None:
 def _ensure_initialized(db_path: Path) -> None:
     path_key = str(db_path)
     if path_key in _INITIALIZED:
-        return
+        conn = get_connection(db_path)
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                ("group_memberships",),
+            ).fetchone()
+            if row is not None:
+                return
+        finally:
+            conn.close()
     with _INIT_LOCK:
         if path_key in _INITIALIZED:
-            return
+            conn = get_connection(db_path)
+            try:
+                row = conn.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                    ("group_memberships",),
+                ).fetchone()
+                if row is not None:
+                    return
+            finally:
+                conn.close()
         init_metadata_db(db_path)
         _INITIALIZED.add(path_key)
 
@@ -44,4 +62,3 @@ def get_db() -> Iterator[sqlite3.Connection]:
         conn.commit()
     finally:
         conn.close()
-

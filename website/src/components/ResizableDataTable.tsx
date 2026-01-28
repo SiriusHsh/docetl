@@ -1086,13 +1086,14 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
             )}
             {onDownload && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                className="h-7 gap-1 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-white"
                 onClick={onDownload}
                 disabled={data.length === 0}
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-3.5 w-3.5" />
+                下载至本地
               </Button>
             )}
             {data.length > 0 && (

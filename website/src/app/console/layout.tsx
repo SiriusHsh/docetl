@@ -151,7 +151,10 @@ export default function ConsoleLayout({
         const list = data.memberships || [];
         setMemberships(list);
         if (list.length > 0 && (!activeNamespace || !list.some((m) => m.namespace === activeNamespace))) {
-          setSelectedNamespace(list[0].namespace);
+          const fallbackNamespace = list[0].namespace;
+          setSelectedNamespace(fallbackNamespace);
+          writeNamespace(fallbackNamespace);
+          setActiveNamespace(fallbackNamespace);
         }
       } catch (error) {
         if (!cancelled) {
@@ -237,7 +240,7 @@ export default function ConsoleLayout({
                               key={child.href}
                               href={child.href}
                               className={cn(
-                                "block rounded-md px-2 py-1 text-xs transition",
+                                "block rounded-md px-2 py-1.5 text-sm transition",
                                 isChildActive
                                   ? "bg-slate-200 text-slate-900"
                                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"

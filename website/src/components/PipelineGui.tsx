@@ -71,6 +71,7 @@ import PipelineSettings from "@/components/PipelineSettings";
 
 interface PipelineGUIProps {
   variant?: "default" | "execute";
+  onRunComplete?: () => void;
 }
 
 interface OperationMenuItemProps {
@@ -243,9 +244,13 @@ const AddOperationDropdown: React.FC<AddOperationDropdownProps> = ({
   );
 };
 
-const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
+const PipelineGUI: React.FC<PipelineGUIProps> = ({
+  variant = "default",
+  onRunComplete,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const onRunCompleteRef = useRef(onRunComplete);
   const {
     operations,
     setOperations,
@@ -314,6 +319,10 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedPipelineName, setEditedPipelineName] = useState(pipelineName);
   const [isLeftSideCollapsed, setIsLeftSideCollapsed] = useState(false);
+
+  useEffect(() => {
+    onRunCompleteRef.current = onRunComplete;
+  }, [onRunComplete]);
 
   const { submitTask } = useOptimizeCheck({
     onComplete: (result) => {
@@ -456,10 +465,10 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({ variant = "default" }) => {
 
         setCost((prevCost) => prevCost + runCost);
         toast({
-          title: "操作完成",
-          description: `本次操作成本 $${runCost.toFixed(4)}`,
+          title: "执行完成",
           duration: 3000,
         });
+        onRunCompleteRef.current?.();
 
         // Close the WebSocket connection
         disconnect();

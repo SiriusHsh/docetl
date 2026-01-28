@@ -91,7 +91,10 @@ interface PipelineContextType extends PipelineState {
   setOptimizerModel: React.Dispatch<React.SetStateAction<string>>;
   saveProgress: () => void;
   unsavedChanges: boolean;
-  clearPipelineState: () => void;
+  clearPipelineState: (options?: {
+    preserveNamespace?: boolean;
+    nextNamespace?: string | null;
+  }) => void;
   serializeState: () => Promise<string>;
   setAutoOptimizeCheck: React.Dispatch<React.SetStateAction<boolean>>;
   setHighLevelGoal: React.Dispatch<React.SetStateAction<string>>;
@@ -428,70 +431,13 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const buildInitialState = (): PipelineState => {
-    const namespace = readNamespace();
-    const snapshot = {
-      pipelineId: loadFromLocalStorage(localStorageKeys.PIPELINE_ID_KEY, null),
-      operations: loadFromLocalStorage(
-        localStorageKeys.OPERATIONS_KEY,
-        initialOperations
-      ),
-      currentFile: loadFromLocalStorage(localStorageKeys.CURRENT_FILE_KEY, null),
-      output: loadFromLocalStorage(localStorageKeys.OUTPUT_KEY, null),
-      terminalOutput: loadFromLocalStorage(
-        localStorageKeys.TERMINAL_OUTPUT_KEY,
-        ""
-      ),
-      optimizerProgress: null,
-      isLoadingOutputs: loadFromLocalStorage(
-        localStorageKeys.IS_LOADING_OUTPUTS_KEY,
-        false
-      ),
-      numOpRun: loadFromLocalStorage(localStorageKeys.NUM_OP_RUN_KEY, 0),
-      pipelineName: loadFromLocalStorage(
-        localStorageKeys.PIPELINE_NAME_KEY,
-        mockPipelineName
-      ),
-      sampleSize: loadSampleSizeFromLocalStorage(),
-      files: loadFromLocalStorage(localStorageKeys.FILES_KEY, mockFiles),
-      cost: loadFromLocalStorage(localStorageKeys.COST_KEY, 0),
-      defaultModel: loadFromLocalStorage(
-        localStorageKeys.DEFAULT_MODEL_KEY,
-        "gpt-5-nano"
-      ),
-      optimizerModel: loadFromLocalStorage(
-        localStorageKeys.OPTIMIZER_MODEL_KEY,
-        "gpt-5-nano"
-      ),
-      autoOptimizeCheck: loadFromLocalStorage(
-        localStorageKeys.AUTO_OPTIMIZE_CHECK_KEY,
-        false
-      ),
-      highLevelGoal: loadFromLocalStorage(
-        localStorageKeys.HIGH_LEVEL_GOAL_KEY,
-        ""
-      ),
-      systemPrompt: loadFromLocalStorage(localStorageKeys.SYSTEM_PROMPT_KEY, {
-        datasetDescription: null,
-        persona: null,
-      }),
-      namespace,
-      apiKeys: [],
-      extraPipelineSettings: loadFromLocalStorage(
-        localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
-        null
-      ),
-      saveOutputToDataCenter: loadFromLocalStorage(
-        localStorageKeys.SAVE_OUTPUT_TO_DATA_CENTER_KEY,
-        false
-      ),
-    };
-
-    return { ...createDefaultPipelineState(namespace), ...snapshot };
+    return createDefaultPipelineState(null);
   };
 
   const [state, setState] = useState<PipelineState>(buildInitialState);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [hasHydratedSnapshot, setHasHydratedSnapshot] = useState(false);
   const stateRef = useRef(state);
   const suppressNamespaceEventRef = useRef<string | null>(null);
   const externalNamespaceUpdateRef = useRef(false);
@@ -505,12 +451,16 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
-    if (!isMounted || state.namespace) {
+    if (!isMounted || !hasHydratedSnapshot) {
+      return;
+    }
+    const storedNamespace = readNamespace();
+    if (storedNamespace) {
       return;
     }
     writeNamespace(DEFAULT_NAMESPACE);
     setState((prev) => ({ ...prev, namespace: DEFAULT_NAMESPACE }));
-  }, [isMounted, state.namespace]);
+  }, [isMounted, hasHydratedSnapshot]);
 
   const persistSnapshotToLocalStorage = useCallback(
     (snapshot: PipelineStateSnapshot) => {
@@ -611,19 +561,39 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     setUnsavedChanges(false);
   }, [persistSnapshotToLocalStorage]);
 
-  const clearPipelineState = useCallback(() => {
-    Object.values(localStorageKeys).forEach((key) => {
-      if (typeof key !== "string") return;
-      if (key.startsWith("docetl_auth_")) return;
-      localStorage.removeItem(key);
-    });
-    const defaults = createDefaultPipelineState(null);
-    setState({
-      ...defaults,
-      apiKeys: stateRef.current.apiKeys,
-    });
-    setUnsavedChanges(false);
-  }, []);
+  const clearPipelineState = useCallback(
+    (options?: { preserveNamespace?: boolean; nextNamespace?: string | null }) => {
+      const preserveNamespace = options?.preserveNamespace ?? false;
+      const nextNamespace = options?.nextNamespace ?? null;
+
+      Object.values(localStorageKeys).forEach((key) => {
+        if (typeof key !== "string") return;
+        if (key.startsWith("docetl_auth_")) return;
+        if (preserveNamespace && key === localStorageKeys.NAMESPACE_KEY) return;
+        localStorage.removeItem(key);
+      });
+
+      if (preserveNamespace) {
+        if (nextNamespace === null) {
+          localStorage.removeItem(localStorageKeys.NAMESPACE_KEY);
+        } else {
+          localStorage.setItem(
+            localStorageKeys.NAMESPACE_KEY,
+            JSON.stringify(nextNamespace)
+          );
+        }
+      }
+
+      const defaults = createDefaultPipelineState(null);
+      setState({
+        ...defaults,
+        apiKeys: stateRef.current.apiKeys,
+        namespace: preserveNamespace ? nextNamespace : defaults.namespace,
+      });
+      setUnsavedChanges(false);
+    },
+    []
+  );
 
   const setStateAndUpdate = useCallback(
     <K extends keyof PipelineState>(
@@ -641,7 +611,10 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
             : value;
         if (newValue !== prevState[key]) {
           if (key === "namespace") {
-            clearPipelineState();
+            clearPipelineState({
+              preserveNamespace: true,
+              nextNamespace: (newValue as string | null) ?? null,
+            });
             if (!externalNamespaceUpdateRef.current) {
               suppressNamespaceEventRef.current =
                 (newValue as string | null) ?? null;
@@ -719,6 +692,70 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [persistSnapshotToLocalStorage]
   );
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+    const snapshot: Partial<PipelineStateSnapshot> = {
+      pipelineId: loadFromLocalStorage(localStorageKeys.PIPELINE_ID_KEY, null),
+      operations: loadFromLocalStorage(
+        localStorageKeys.OPERATIONS_KEY,
+        initialOperations
+      ),
+      currentFile: loadFromLocalStorage(localStorageKeys.CURRENT_FILE_KEY, null),
+      output: loadFromLocalStorage(localStorageKeys.OUTPUT_KEY, null),
+      terminalOutput: loadFromLocalStorage(
+        localStorageKeys.TERMINAL_OUTPUT_KEY,
+        ""
+      ),
+      optimizerProgress: null,
+      isLoadingOutputs: loadFromLocalStorage(
+        localStorageKeys.IS_LOADING_OUTPUTS_KEY,
+        false
+      ),
+      numOpRun: loadFromLocalStorage(localStorageKeys.NUM_OP_RUN_KEY, 0),
+      pipelineName: loadFromLocalStorage(
+        localStorageKeys.PIPELINE_NAME_KEY,
+        mockPipelineName
+      ),
+      sampleSize: loadSampleSizeFromLocalStorage(),
+      files: loadFromLocalStorage(localStorageKeys.FILES_KEY, mockFiles),
+      cost: loadFromLocalStorage(localStorageKeys.COST_KEY, 0),
+      defaultModel: loadFromLocalStorage(
+        localStorageKeys.DEFAULT_MODEL_KEY,
+        "gpt-5-nano"
+      ),
+      optimizerModel: loadFromLocalStorage(
+        localStorageKeys.OPTIMIZER_MODEL_KEY,
+        "gpt-5-nano"
+      ),
+      autoOptimizeCheck: loadFromLocalStorage(
+        localStorageKeys.AUTO_OPTIMIZE_CHECK_KEY,
+        false
+      ),
+      highLevelGoal: loadFromLocalStorage(
+        localStorageKeys.HIGH_LEVEL_GOAL_KEY,
+        ""
+      ),
+      systemPrompt: loadFromLocalStorage(localStorageKeys.SYSTEM_PROMPT_KEY, {
+        datasetDescription: null,
+        persona: null,
+      }),
+      namespace: readNamespace(),
+      extraPipelineSettings: loadFromLocalStorage(
+        localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
+        null
+      ),
+      saveOutputToDataCenter: loadFromLocalStorage(
+        localStorageKeys.SAVE_OUTPUT_TO_DATA_CENTER_KEY,
+        false
+      ),
+    };
+
+    loadPipelineSnapshot(snapshot, { markSaved: true });
+    setHasHydratedSnapshot(true);
+  }, [isMounted, loadPipelineSnapshot]);
 
   const getSerializableState = useCallback(
     () => buildPipelineSnapshot(stateRef.current),

@@ -525,23 +525,37 @@ const ExecuteLeftPanel: React.FC<{
   );
 };
 
-const ExecuteBottomPanel: React.FC = () => {
-  const { terminalOutput, currentFile } = usePipelineContext();
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"console" | "output" | "input">(
-    "output"
-  );
+type ExecuteBottomPanelProps = {
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  activeTab: "console" | "output" | "input";
+  setActiveTab: React.Dispatch<
+    React.SetStateAction<"console" | "output" | "input">
+  >;
+};
 
-  const logLines = useMemo(() => {
-    if (!terminalOutput) return [];
-    return terminalOutput.split("\n").filter((line) => line.trim().length > 0);
+const ExecuteBottomPanel: React.FC<ExecuteBottomPanelProps> = ({
+  isOpen,
+  setIsOpen,
+  activeTab,
+  setActiveTab,
+}) => {
+  const { terminalOutput, currentFile } = usePipelineContext();
+
+  const cleanedTerminalOutput = useMemo(() => {
+    if (!terminalOutput) return "";
+    return terminalOutput
+      .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
+      .replace(/\u009b[0-?]*[ -/]*[@-~]/g, "")
+      .replace(/\[(?:\d{1,3};?)+m/g, "");
   }, [terminalOutput]);
 
-  useEffect(() => {
-    if (!currentFile) return;
-    setActiveTab("input");
-    setIsOpen(true);
-  }, [currentFile?.path]);
+  const logLines = useMemo(() => {
+    if (!cleanedTerminalOutput) return [];
+    return cleanedTerminalOutput
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
+  }, [cleanedTerminalOutput]);
 
   return (
     <div
@@ -663,17 +677,15 @@ const ExecuteWorkspace: React.FC = () => {
   const { namespace, setNamespace, currentFile, setCurrentFile } =
     usePipelineContext();
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+  const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
+  const [bottomPanelTab, setBottomPanelTab] = useState<
+    "console" | "output" | "input"
+  >("output");
   const [dataCenterDatasets, setDataCenterDatasets] = useState<
     DataCenterDataset[]
   >([]);
   const [dataCenterLoading, setDataCenterLoading] = useState(false);
   const [dataCenterError, setDataCenterError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!namespace) {
-      setNamespace(DEFAULT_NAMESPACE);
-    }
-  }, [namespace, setNamespace]);
 
   useEffect(() => {
     const loadDatasets = async () => {
@@ -780,10 +792,21 @@ const ExecuteWorkspace: React.FC = () => {
         </div>
 
         <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-lg h-full min-h-0 relative shadow-sm min-w-0">
-          <PipelineGUI variant="execute" />
+          <PipelineGUI
+            variant="execute"
+            onRunComplete={() => {
+              setBottomPanelTab("output");
+              setBottomPanelOpen(true);
+            }}
+          />
         </div>
       </div>
-      <ExecuteBottomPanel />
+      <ExecuteBottomPanel
+        isOpen={bottomPanelOpen}
+        setIsOpen={setBottomPanelOpen}
+        activeTab={bottomPanelTab}
+        setActiveTab={setBottomPanelTab}
+      />
     </div>
   );
 };
