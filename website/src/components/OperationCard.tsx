@@ -890,7 +890,6 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
     namespace,
     apiKeys,
     systemPrompt,
-    extraPipelineSettings,
   } = usePipelineContext();
   const { activePipelineId } = usePipelineStore();
   const { toast } = useToast();
@@ -989,7 +988,6 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
           namespace: namespace,
           apiKeys: apiKeys,
           optimizerModel: optimizerModel,
-          extraPipelineSettings: extraPipelineSettings,
         }),
       });
 
@@ -1034,7 +1032,6 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
     systemPrompt,
     namespace,
     apiKeys,
-    extraPipelineSettings,
     activePipelineId,
   ]);
 
@@ -1055,7 +1052,6 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
           name: pipelineName,
           sample_size: sampleSize,
           namespace,
-          extraPipelineSettings,
         }),
       });
 

@@ -69,11 +69,10 @@ Playground 的运行日志与结果回传依赖 WebSocket（避免 HTTP 长轮�
 
 核心职责：
 
-- 将 UI state（operations、sample_size、system_prompt、apiKeys、extraPipelineSettings 等）映射为 DocETL YAML
+- 将 UI state（operations、sample_size、system_prompt、apiKeys 等）映射为 DocETL YAML
 - 约定输出/中间目录：
   - `pipeline.output.path`：`~/.docetl/<namespace>/pipelines/outputs/<name>.json`
   - `pipeline.output.intermediate_dir`：`~/.docetl/<namespace>/pipelines/<name>/intermediates/`
 - 可选：对 `llm_api_keys` 做加密（需要 `DOCETL_ENCRYPTION_KEY`）
 
 > 这也是前后端对“数据与存储约定”对齐的关键点，详见 `develop_doc/06_数据与存储约定.md`。
-

@@ -50,8 +50,6 @@ export interface PipelineState {
   systemPrompt: { datasetDescription: string | null; persona: string | null };
   namespace: string | null;
   apiKeys: APIKey[];
-  extraPipelineSettings: Record<string, unknown> | null;
-  saveOutputToDataCenter: boolean;
 }
 
 export type PipelineStateSnapshot = Omit<PipelineState, "apiKeys">;
@@ -106,10 +104,6 @@ interface PipelineContextType extends PipelineState {
   >;
   setNamespace: React.Dispatch<React.SetStateAction<string | null>>;
   setApiKeys: React.Dispatch<React.SetStateAction<APIKey[]>>;
-  setExtraPipelineSettings: React.Dispatch<
-    React.SetStateAction<Record<string, unknown> | null>
-  >;
-  setSaveOutputToDataCenter: React.Dispatch<React.SetStateAction<boolean>>;
   getSerializableState: () => PipelineStateSnapshot;
   loadPipelineSnapshot: (
     snapshot: Partial<PipelineStateSnapshot>,
@@ -216,8 +210,6 @@ export const createDefaultPipelineState = (
   systemPrompt: { datasetDescription: null, persona: null },
   namespace,
   apiKeys: [],
-  extraPipelineSettings: null,
-  saveOutputToDataCenter: false,
 });
 
 const sanitizeFile = (file: File | null): File | null =>
@@ -249,8 +241,6 @@ export const buildPipelineSnapshot = (
   highLevelGoal: state.highLevelGoal,
   systemPrompt: state.systemPrompt,
   namespace: state.namespace,
-  extraPipelineSettings: state.extraPipelineSettings,
-  saveOutputToDataCenter: state.saveOutputToDataCenter,
 });
 
 const serializeState = async (state: PipelineState): Promise<string> => {
@@ -532,15 +522,6 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorageKeys.NAMESPACE_KEY,
         JSON.stringify(snapshot.namespace)
       );
-      localStorage.setItem(
-        localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
-        JSON.stringify(snapshot.extraPipelineSettings)
-      );
-      localStorage.setItem(
-        localStorageKeys.SAVE_OUTPUT_TO_DATA_CENTER_KEY,
-        JSON.stringify(snapshot.saveOutputToDataCenter)
-      );
-
       if (snapshot.pipelineId) {
         const cache = loadFromLocalStorage<
           Record<string, PipelineStateSnapshot>
@@ -743,14 +724,6 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
         persona: null,
       }),
       namespace: readNamespace(),
-      extraPipelineSettings: loadFromLocalStorage(
-        localStorageKeys.EXTRA_PIPELINE_SETTINGS_KEY,
-        null
-      ),
-      saveOutputToDataCenter: loadFromLocalStorage(
-        localStorageKeys.SAVE_OUTPUT_TO_DATA_CENTER_KEY,
-        false
-      ),
     };
 
     loadPipelineSnapshot(snapshot, { markSaved: true });
@@ -870,14 +843,6 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     ),
     setApiKeys: useCallback(
       (value) => setStateAndUpdate("apiKeys", value),
-      [setStateAndUpdate]
-    ),
-    setExtraPipelineSettings: useCallback(
-      (value) => setStateAndUpdate("extraPipelineSettings", value),
-      [setStateAndUpdate]
-    ),
-    setSaveOutputToDataCenter: useCallback(
-      (value) => setStateAndUpdate("saveOutputToDataCenter", value),
       [setStateAndUpdate]
     ),
     getSerializableState,

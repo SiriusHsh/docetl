@@ -441,10 +441,6 @@ def build_pipeline_config(
         if system_prompt.get("persona"):
             pipeline_config["system_prompt"]["persona"] = system_prompt["persona"]
 
-    extra_settings = pipeline_state.get("extraPipelineSettings")
-    if isinstance(extra_settings, dict):
-        pipeline_config.update(extra_settings)
-
     _validate_local_path(namespace, input_path)
     _validate_local_path(namespace, str(output_path))
     _validate_local_path(namespace, str(intermediate_dir))

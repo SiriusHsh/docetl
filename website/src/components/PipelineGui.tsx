@@ -12,7 +12,6 @@ import { OperationCard } from "@/components/OperationCard";
 import { Button } from "@/components/ui/button";
 import {
   Play,
-  Settings,
   PieChart,
   RefreshCw,
   Download,
@@ -67,7 +66,6 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { useRestorePipeline } from "@/hooks/useRestorePipeline";
-import PipelineSettings from "@/components/PipelineSettings";
 
 interface PipelineGUIProps {
   variant?: "default" | "execute";
@@ -280,10 +278,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
     setSystemPrompt,
     namespace,
     apiKeys,
-    extraPipelineSettings,
-    setExtraPipelineSettings,
-    saveOutputToDataCenter,
-    setSaveOutputToDataCenter,
     unsavedChanges,
   } = usePipelineContext();
   const {
@@ -297,7 +291,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
     saveActivePipeline,
     saving: isSavingPipeline,
   } = usePipelineStore();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { toast } = useToast();
   const { connect, sendMessage, lastMessage, readyState, disconnect } =
     useWebSocket();
@@ -624,7 +617,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
           namespace: namespace,
           system_prompt: systemPrompt,
           optimizerModel: optimizerModel,
-          extraPipelineSettings: extraPipelineSettings,
         }),
       });
 
@@ -722,7 +714,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
             namespace: namespace,
             apiKeys: currentApiKeys, // Use the latest API keys
             optimizerModel: optimizerModel,
-            extraPipelineSettings: extraPipelineSettings,
           }),
         });
 
@@ -741,15 +732,11 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
         // Ensure the WebSocket is connected before sending the message
         await connect();
 
-        const shouldStoreOutput =
-          variant === "execute" ? false : saveOutputToDataCenter;
-
         sendMessage({
           yaml_config: filePath,
           clear_intermediate: clear_intermediate,
           pipeline_id: activePipelineId,
           namespace: namespace,
-          save_output_to_data_center: shouldStoreOutput,
         });
       } catch (error) {
         console.error("Error writing pipeline config:", error);
@@ -776,8 +763,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
       apiKeys,
       systemPrompt,
       namespace,
-      extraPipelineSettings,
-      saveOutputToDataCenter,
       variant,
       cost,
       activePipelineId,
@@ -837,7 +822,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
           namespace: namespace,
           apiKeys: apiKeys,
           optimizerModel: optimizerModel,
-          extraPipelineSettings: extraPipelineSettings,
         }),
       });
 
@@ -849,15 +833,11 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
 
       await connect();
 
-      const shouldStoreOutput =
-        variant === "execute" ? false : saveOutputToDataCenter;
-
       sendMessage({
         yaml_config: filePath,
         optimize: true,
         pipeline_id: activePipelineId,
         namespace: namespace,
-        save_output_to_data_center: shouldStoreOutput,
       });
     } catch (error) {
       console.error("Error optimizing operation:", error);
@@ -922,14 +902,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
               </h3>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors"
-                onClick={() => setIsSettingsOpen(true)}
-              >
-                <Settings className="w-3.5 h-3.5" />
-                设置
-              </button>
               <button
                 type="button"
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${
@@ -1317,14 +1289,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => setIsSettingsOpen(true)}
-                        className="h-8 w-8"
-                      >
-                        <Settings size={16} />
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1433,27 +1397,6 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
           />
         </div>
       </div>
-      <PipelineSettings
-        isOpen={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-        namespace={namespace}
-        pipelineName={pipelineName}
-        setPipelineName={setPipelineName}
-        currentFile={currentFile}
-        setCurrentFile={setCurrentFile}
-        defaultModel={defaultModel}
-        setDefaultModel={setDefaultModel}
-        optimizerModel={optimizerModel}
-        setOptimizerModel={setOptimizerModel}
-        autoOptimizeCheck={autoOptimizeCheck}
-        setAutoOptimizeCheck={setAutoOptimizeCheck}
-        files={files}
-        apiKeys={apiKeys}
-        extraPipelineSettings={extraPipelineSettings}
-        setExtraPipelineSettings={setExtraPipelineSettings}
-        saveOutputToDataCenter={saveOutputToDataCenter}
-        setSaveOutputToDataCenter={setSaveOutputToDataCenter}
-      />
       <OptimizationDialog
         isOpen={optimizationDialog.isOpen}
         content={optimizationDialog.content}

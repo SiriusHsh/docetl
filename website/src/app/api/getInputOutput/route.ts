@@ -15,7 +15,6 @@ export async function POST(request: Request) {
       name,
       sample_size,
       namespace,
-      extraPipelineSettings,
     } = await request.json();
 
     if (!name) {
@@ -47,8 +46,7 @@ export async function POST(request: Request) {
       { datasetDescription: null, persona: null },
       [],
       "",
-      false,
-      extraPipelineSettings
+      false
     );
 
     // Check if files exist using FastAPI endpoints

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Database,
-  FileText,
   UploadCloud,
   Loader2,
   Table2,
@@ -293,7 +292,7 @@ export default function DataCenterPage() {
         上传数据集并将 Excel/CSV/JSON 规范化为可复用的数据集。
       </p>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+      <div className="mt-6">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <UploadCloud className="h-4 w-4" />
@@ -380,15 +379,6 @@ export default function DataCenterPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <FileText className="h-4 w-4" />
-            <span>流水线输出</span>
-          </div>
-          <p className="mt-2 text-xs text-slate-500">
-            流水线生成的数据集会显示在这里。
-          </p>
-        </div>
       </div>
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
