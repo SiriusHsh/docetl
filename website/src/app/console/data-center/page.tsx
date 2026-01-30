@@ -286,7 +286,7 @@ export default function DataCenterPage() {
     <div className="px-6 py-6">
       <div className="flex items-center gap-3">
         <Database className="h-6 w-6 text-slate-600" />
-        <h1 className="text-2xl font-semibold text-slate-900">数据中心</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">数据货架</h1>
       </div>
       <p className="mt-2 text-sm text-slate-500">
         上传数据集并将 Excel/CSV/JSON 规范化为可复用的数据集。

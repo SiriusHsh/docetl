@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType } from "react";
 import {
   Activity,
@@ -21,10 +21,8 @@ import Link from "next/link";
 
 import { backendFetch } from "@/lib/backendFetch";
 import { getBackendUrl } from "@/lib/api-config";
-import {
-  readNamespace,
-  subscribeToNamespaceChanges,
-} from "@/lib/namespace";
+import { readNamespace, subscribeToNamespaceChanges } from "@/lib/namespace";
+import { subscribeRunsUpdated } from "@/lib/run-events";
 import { cn } from "@/lib/utils";
 
 type RunSummary = {
@@ -84,6 +82,7 @@ export default function DashboardPage() {
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     setNamespace(readNamespace());
@@ -92,16 +91,15 @@ export default function DashboardPage() {
     });
   }, []);
 
-  useEffect(() => {
-    if (!namespace) return;
+  const loadDashboard = useCallback(async () => {
+    if (!namespace || loadingRef.current) return;
 
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [summaryResponse, pipelinesResponse, runsResponse] =
-          await Promise.all([
+    loadingRef.current = true;
+    setLoading(true);
+    setError(null);
+    try {
+      const [summaryResponse, pipelinesResponse, runsResponse] =
+        await Promise.all([
           backendFetch(
             `${backendUrl}/runs/summary?namespace=${encodeURIComponent(namespace)}`
           ),
@@ -113,44 +111,52 @@ export default function DashboardPage() {
           ),
         ]);
 
-        if (cancelled) return;
-
-        if (summaryResponse.ok) {
-          const data = (await summaryResponse.json()) as RunSummary;
-          setSummary(data);
-        } else {
-          setError("无法加载运行汇总");
-        }
-
-        if (pipelinesResponse.ok) {
-          const pipelines = (await pipelinesResponse.json()) as Array<unknown>;
-          setPipelineCount(pipelines.length);
-        } else {
-          setError((prev) => prev || "无法加载流水线列表");
-        }
-
-        if (runsResponse.ok) {
-          const runsData = (await runsResponse.json()) as RunRecord[];
-          setRuns(runsData);
-        } else {
-          setError((prev) => prev || "无法加载运行记录");
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError("加载仪表盘数据失败");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+      if (summaryResponse.ok) {
+        const data = (await summaryResponse.json()) as RunSummary;
+        setSummary(data);
+      } else {
+        setError("无法加载运行汇总");
       }
-    };
 
-    load();
-    return () => {
-      cancelled = true;
-    };
+      if (pipelinesResponse.ok) {
+        const pipelines = (await pipelinesResponse.json()) as Array<unknown>;
+        setPipelineCount(pipelines.length);
+      } else {
+        setError((prev) => prev || "无法加载流水线列表");
+      }
+
+      if (runsResponse.ok) {
+        const runsData = (await runsResponse.json()) as RunRecord[];
+        setRuns(runsData);
+      } else {
+        setError((prev) => prev || "无法加载运行记录");
+      }
+    } catch (err) {
+      setError("加载仪表盘数据失败");
+    } finally {
+      loadingRef.current = false;
+      setLoading(false);
+    }
   }, [backendUrl, namespace]);
+
+  useEffect(() => {
+    if (!namespace) return;
+    void loadDashboard();
+  }, [namespace, loadDashboard]);
+
+  useEffect(() => {
+    if (!namespace) return;
+    const unsubscribe = subscribeRunsUpdated(() => {
+      void loadDashboard();
+    });
+    const intervalId = window.setInterval(() => {
+      void loadDashboard();
+    }, 15000);
+    return () => {
+      unsubscribe();
+      window.clearInterval(intervalId);
+    };
+  }, [namespace, loadDashboard]);
 
   const lastRunText = summary?.last_run_at
     ? new Date(summary.last_run_at * 1000).toLocaleString()

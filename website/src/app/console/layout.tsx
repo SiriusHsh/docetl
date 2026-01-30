@@ -75,8 +75,8 @@ const MAIN_NAV: Array<NavItem | NavGroup> = [
     children: DATA_GENERATION_CHILDREN,
   },
   { label: "部署", href: "/console/deployments", icon: Rocket },
-  { label: "数据中心", href: "/console/data-center", icon: Database },
-  { label: "模型中心", href: "/console/models", icon: Cpu },
+  { label: "数据货架", href: "/console/data-center", icon: Database },
+  { label: "模型资源池", href: "/console/models", icon: Cpu },
 ];
 
 export default function ConsoleLayout({
@@ -179,6 +179,21 @@ export default function ConsoleLayout({
       setDataGenerationOpen(true);
     }
   }, [dataGenerationActive]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const portals = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-radix-portal]")
+    );
+    portals.forEach((portal) => {
+      const hasDialog = portal.querySelector(
+        '[role="dialog"],[role="alertdialog"]'
+      );
+      if (!hasDialog) {
+        portal.remove();
+      }
+    });
+  }, [activePath]);
   const secondaryNav = useMemo<NavItem[]>(() => {
     const items: NavItem[] = [];
     if (isAdmin) {

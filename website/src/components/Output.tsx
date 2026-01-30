@@ -634,10 +634,10 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
 
       const dataset = await response.json();
       toast({
-        title: "已存储至数据中心",
+        title: "已存储至数据货架",
         description: dataset?.name
           ? `数据集：${dataset.name}`
-          : "输出已保存到数据中心。",
+          : "输出已保存到数据货架。",
         duration: 3000,
       });
     } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ChevronRight,
@@ -15,6 +15,7 @@ import { getBackendUrl } from "@/lib/api-config";
 import { readNamespace, subscribeToNamespaceChanges } from "@/lib/namespace";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { subscribeRunsUpdated } from "@/lib/run-events";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -124,6 +125,7 @@ export default function RunsPage() {
   const [pendingActions, setPendingActions] = useState<Record<string, boolean>>(
     {}
   );
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     setNamespace(readNamespace());
@@ -154,14 +156,17 @@ export default function RunsPage() {
   }, [backendUrl, namespace, toast]);
 
   const loadRuns = useCallback(async () => {
-    if (!namespace) return;
+    if (!namespace || loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({ namespace });
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (pipelineFilter !== "all") params.set("pipeline_id", pipelineFilter);
-      const response = await backendFetch(`${backendUrl}/runs?${params.toString()}`);
+      const response = await backendFetch(
+        `${backendUrl}/runs?${params.toString()}`
+      );
       if (!response.ok) {
         const detail = await response.text();
         throw new Error(detail || "加载运行记录失败");
@@ -171,6 +176,7 @@ export default function RunsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载运行记录失败");
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, [backendUrl, namespace, pipelineFilter, statusFilter]);
@@ -184,6 +190,20 @@ export default function RunsPage() {
     if (!namespace) return;
     void loadPipelines();
   }, [namespace, loadPipelines]);
+
+  useEffect(() => {
+    if (!namespace) return;
+    const unsubscribe = subscribeRunsUpdated(() => {
+      void loadRuns();
+    });
+    const intervalId = window.setInterval(() => {
+      void loadRuns();
+    }, 15000);
+    return () => {
+      unsubscribe();
+      window.clearInterval(intervalId);
+    };
+  }, [namespace, loadRuns]);
 
   const filteredRuns = useMemo(() => {
     const query = search.trim().toLowerCase();

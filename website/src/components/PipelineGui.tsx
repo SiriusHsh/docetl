@@ -34,6 +34,7 @@ import {
 import { usePipelineContext } from "@/contexts/PipelineContext";
 import { usePipelineStore } from "@/contexts/PipelineStoreContext";
 import { backendFetch } from "@/lib/backendFetch";
+import { notifyRunsUpdated } from "@/lib/run-events";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
@@ -461,6 +462,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
           title: "执行完成",
           duration: 3000,
         });
+        notifyRunsUpdated();
         onRunCompleteRef.current?.();
 
         // Close the WebSocket connection
@@ -480,6 +482,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
           variant: "destructive",
           duration: Infinity,
         });
+        notifyRunsUpdated();
 
         // Close the WebSocket connection
         disconnect();

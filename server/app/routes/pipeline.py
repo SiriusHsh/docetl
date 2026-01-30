@@ -585,7 +585,9 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
         db_gen = get_db()
         conn = next(db_gen)
         try:
-            return fn(conn)
+            result = fn(conn)
+            conn.commit()
+            return result
         finally:
             db_gen.close()
 
@@ -612,6 +614,44 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
             return row.id if row else None
         except Exception as exc:
             logging.warning("Failed to create run record: %s", exc)
+            return None
+
+    def _create_fallback_run_record(
+        *,
+        namespace: str,
+        pipeline_id: str | None,
+        pipeline_name: str | None,
+        metadata: dict[str, Any],
+        status: str,
+        cost: float | None = None,
+        output_path: str | None = None,
+        error: str | None = None,
+    ) -> str | None:
+        try:
+            row = _with_conn(
+                lambda conn: metadata_db.create_run(
+                    conn,
+                    namespace=namespace,
+                    pipeline_id=pipeline_id,
+                    pipeline_name=pipeline_name,
+                    trigger="manual",
+                    status=status,
+                    triggered_by_user_id=current_user.id,
+                    cost=cost,
+                    output_path=output_path,
+                    error=error,
+                    metadata=metadata,
+                )
+            )
+            if row and status in {"completed", "failed", "cancelled"}:
+                _with_conn(
+                    lambda conn: metadata_db.update_run(
+                        conn, row.id, ended_at=_now_ts()
+                    )
+                )
+            return row.id if row else None
+        except Exception as exc:
+            logging.warning("Failed to create fallback run record: %s", exc)
             return None
 
     def _update_run_record(**fields: Any) -> None:
@@ -664,15 +704,16 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
             str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
             yaml_path,
         )
+        run_metadata = {
+            "yaml_config": str(yaml_path),
+            "optimize": bool(config.get("optimize", False)),
+            "clear_intermediate": bool(config.get("clear_intermediate", False)),
+        }
         run_id = _create_run_record(
             namespace=namespace_value,
             pipeline_id=str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
             pipeline_name=pipeline_name,
-            metadata={
-                "yaml_config": str(yaml_path),
-                "optimize": bool(config.get("optimize", False)),
-                "clear_intermediate": bool(config.get("clear_intermediate", False)),
-            },
+            metadata=run_metadata,
         )
         if run_id:
             _audit_run("run.start", True)
@@ -794,6 +835,16 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
                 }
             )
             output_path = runner.get_output_path() if runner is not None else None
+            if run_id is None:
+                run_id = _create_fallback_run_record(
+                    namespace=namespace_value,
+                    pipeline_id=str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
+                    pipeline_name=pipeline_name,
+                    metadata=run_metadata,
+                    status="completed",
+                    cost=cost,
+                    output_path=output_path,
+                )
             _update_run_record(
                 status="completed",
                 ended_at=_now_ts(),
@@ -814,6 +865,16 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
                 }
             )
             output_path = runner.get_output_path() if runner is not None else None
+            if run_id is None:
+                run_id = _create_fallback_run_record(
+                    namespace=namespace_value,
+                    pipeline_id=str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
+                    pipeline_name=pipeline_name,
+                    metadata=run_metadata,
+                    status="completed",
+                    cost=result,
+                    output_path=output_path,
+                )
             _update_run_record(
                 status="completed",
                 ended_at=_now_ts(),
@@ -860,11 +921,29 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
                 await pipeline_task
             except asyncio.CancelledError:
                 pass
+        if run_id is None:
+            run_id = _create_fallback_run_record(
+                namespace=namespace_value,
+                pipeline_id=str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
+                pipeline_name=pipeline_name,
+                metadata=run_metadata if "run_metadata" in locals() else {},
+                status="cancelled",
+                error="client_disconnected",
+            )
         _update_run_record(status="cancelled", ended_at=_now_ts(), error="client_disconnected")
         _audit_run("run.cancel", True, detail={"reason": "client_disconnected"})
         _record_run_status(config, "cancelled")
         print("Client disconnected")
     except asyncio.CancelledError:
+        if run_id is None:
+            run_id = _create_fallback_run_record(
+                namespace=namespace_value,
+                pipeline_id=str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
+                pipeline_name=pipeline_name,
+                metadata=run_metadata if "run_metadata" in locals() else {},
+                status="cancelled",
+                error="cancelled",
+            )
         _update_run_record(status="cancelled", ended_at=_now_ts(), error="cancelled")
         _audit_run("run.cancel", True, detail={"reason": "cancelled"})
         _record_run_status(config, "cancelled")
@@ -875,10 +954,28 @@ async def websocket_run_pipeline(websocket: WebSocket, client_id: str):
         error_traceback = traceback.format_exc()
         print(f"Error occurred:\n{error_traceback}")
         if runner is not None and runner.is_cancelled:
+            if run_id is None:
+                run_id = _create_fallback_run_record(
+                    namespace=namespace_value,
+                    pipeline_id=str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
+                    pipeline_name=pipeline_name,
+                    metadata=run_metadata if "run_metadata" in locals() else {},
+                    status="cancelled",
+                    error=str(e),
+                )
             _update_run_record(status="cancelled", ended_at=_now_ts(), error=str(e))
             _audit_run("run.cancel", True, detail={"reason": str(e)})
             _record_run_status(config, "cancelled")
         else:
+            if run_id is None:
+                run_id = _create_fallback_run_record(
+                    namespace=namespace_value,
+                    pipeline_id=str(config.get("pipeline_id")) if config.get("pipeline_id") else None,
+                    pipeline_name=pipeline_name,
+                    metadata=run_metadata if "run_metadata" in locals() else {},
+                    status="failed",
+                    error=str(e),
+                )
             _update_run_record(status="failed", ended_at=_now_ts(), error=str(e))
             _audit_run("run.fail", False, detail={"error": str(e)})
             _record_run_status(config, "failed")

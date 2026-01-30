@@ -250,7 +250,7 @@ export default function DataCenterDatasetDetailPage() {
             <p className="mt-1 text-xs text-slate-400">
               {sourceLabels[dataset?.source || ""] ||
                 dataset?.source ||
-                "数据中心"}
+                "数据货架"}
             </p>
           </div>
         </div>

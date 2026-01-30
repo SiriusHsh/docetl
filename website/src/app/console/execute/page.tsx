@@ -125,7 +125,7 @@ const formatDatasetSource = (source: string) => {
   if (source === "user_upload") {
     return "用户上传";
   }
-  return "数据中心";
+  return "数据货架";
 };
 
 const DataSourceIcon = ({ type }: { type: DataSourceItem["type"] }) => {
@@ -396,7 +396,7 @@ const ExecuteLeftPanel: React.FC<{
           <div className="space-y-3 overflow-y-auto pr-2 flex-1">
             {isLoadingDataSources ? (
               <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
-                正在加载数据中心数据...
+                正在加载数据货架数据...
               </div>
             ) : dataSourceError ? (
               <div className="text-center py-8 text-red-600 text-sm border border-dashed border-red-200 rounded-lg">
@@ -467,7 +467,7 @@ const ExecuteLeftPanel: React.FC<{
           <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
             {availableDataSources.length === 0 ? (
               <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
-                数据中心暂无可用数据集
+                数据货架暂无可用数据集
               </div>
             ) : (
               availableDataSources.map((ds) => {
@@ -734,7 +734,7 @@ const ExecuteWorkspace: React.FC = () => {
           name: dataset.name,
           path: dataset.path,
           type: "json",
-          parentFolder: "数据中心",
+          parentFolder: "数据货架",
         },
       })
     );

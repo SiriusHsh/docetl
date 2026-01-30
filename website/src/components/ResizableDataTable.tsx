@@ -1081,7 +1081,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                 disabled={storeToDataCenterDisabled || isStoreToDataCenterLoading}
               >
                 <Database className="h-3.5 w-3.5" />
-                {isStoreToDataCenterLoading ? "存储中..." : "存储至数据中心"}
+                {isStoreToDataCenterLoading ? "存储中..." : "存储至数据货架"}
               </Button>
             )}
             {onDownload && (
