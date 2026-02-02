@@ -168,7 +168,7 @@ const FilePreviewDialog = ({
               <div className="text-sm text-red-400">{error}</div>
             ) : (
               <ScrollArea className="h-[360px] rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <pre className="text-xs text-slate-700 whitespace-pre-wrap">
+                <pre className="w-full max-w-full text-xs text-slate-700 whitespace-pre-wrap break-all">
                   {content || (loading ? "加载中..." : "暂无内容")}
                 </pre>
               </ScrollArea>
