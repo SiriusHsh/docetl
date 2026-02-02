@@ -2,17 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  AlertTriangle,
-  ChevronRight,
-  Loader2,
-  RefreshCw,
-  Square,
-} from "lucide-react";
+import { ChevronRight, Loader2, RefreshCw, Square } from "lucide-react";
 
 import { backendFetch } from "@/lib/backendFetch";
 import { getBackendUrl } from "@/lib/api-config";
-import { readNamespace, subscribeToNamespaceChanges } from "@/lib/namespace";
+import { readNamespace } from "@/lib/namespace";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { subscribeRunsUpdated } from "@/lib/run-events";
@@ -114,7 +108,7 @@ const statusClassMap: Record<RunStatus, string> = {
 export default function RunsPage() {
   const { toast } = useToast();
   const backendUrl = useMemo(() => getBackendUrl(), []);
-  const [namespace, setNamespace] = useState<string | null>(null);
+  const namespace = readNamespace() || "default";
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [pipelines, setPipelines] = useState<PipelineRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -127,15 +121,7 @@ export default function RunsPage() {
   );
   const loadingRef = useRef(false);
 
-  useEffect(() => {
-    setNamespace(readNamespace());
-    return subscribeToNamespaceChanges((next) => {
-      setNamespace(next);
-    });
-  }, []);
-
   const loadPipelines = useCallback(async () => {
-    if (!namespace) return;
     try {
       const response = await backendFetch(
         `${backendUrl}/pipelines?namespace=${encodeURIComponent(namespace)}`
@@ -156,7 +142,7 @@ export default function RunsPage() {
   }, [backendUrl, namespace, toast]);
 
   const loadRuns = useCallback(async () => {
-    if (!namespace || loadingRef.current) return;
+    if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
     setError(null);
@@ -182,17 +168,14 @@ export default function RunsPage() {
   }, [backendUrl, namespace, pipelineFilter, statusFilter]);
 
   useEffect(() => {
-    if (!namespace) return;
     void loadRuns();
   }, [namespace, loadRuns]);
 
   useEffect(() => {
-    if (!namespace) return;
     void loadPipelines();
   }, [namespace, loadPipelines]);
 
   useEffect(() => {
-    if (!namespace) return;
     const unsubscribe = subscribeRunsUpdated(() => {
       void loadRuns();
     });
@@ -413,12 +396,7 @@ export default function RunsPage() {
         )}
       </div>
 
-      {!namespace ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          请先选择工作区查看运行记录。
-        </div>
-      ) : null}
+      
     </div>
   );
 }

@@ -16,13 +16,7 @@ import {
 import * as localStorageKeys from "@/app/localStorageKeys";
 import { toast } from "@/hooks/use-toast";
 import { backendFetch } from "@/lib/backendFetch";
-import {
-  readNamespace,
-  subscribeToNamespaceChanges,
-  writeNamespace,
-} from "@/lib/namespace";
-
-const DEFAULT_NAMESPACE = "default";
+import { readNamespace } from "@/lib/namespace";
 
 export interface PipelineState {
   pipelineId: string | null;
@@ -89,10 +83,7 @@ interface PipelineContextType extends PipelineState {
   setOptimizerModel: React.Dispatch<React.SetStateAction<string>>;
   saveProgress: () => void;
   unsavedChanges: boolean;
-  clearPipelineState: (options?: {
-    preserveNamespace?: boolean;
-    nextNamespace?: string | null;
-  }) => void;
+  clearPipelineState: () => void;
   serializeState: () => Promise<string>;
   setAutoOptimizeCheck: React.Dispatch<React.SetStateAction<boolean>>;
   setHighLevelGoal: React.Dispatch<React.SetStateAction<string>>;
@@ -102,7 +93,6 @@ interface PipelineContextType extends PipelineState {
       persona: string | null;
     }>
   >;
-  setNamespace: React.Dispatch<React.SetStateAction<string | null>>;
   setApiKeys: React.Dispatch<React.SetStateAction<APIKey[]>>;
   getSerializableState: () => PipelineStateSnapshot;
   loadPipelineSnapshot: (
@@ -421,7 +411,7 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const buildInitialState = (): PipelineState => {
-    return createDefaultPipelineState(null);
+    return createDefaultPipelineState(readNamespace());
   };
 
   const [state, setState] = useState<PipelineState>(buildInitialState);
@@ -429,8 +419,6 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isMounted, setIsMounted] = useState(false);
   const [hasHydratedSnapshot, setHasHydratedSnapshot] = useState(false);
   const stateRef = useRef(state);
-  const suppressNamespaceEventRef = useRef<string | null>(null);
-  const externalNamespaceUpdateRef = useRef(false);
 
   useEffect(() => {
     stateRef.current = state;
@@ -439,18 +427,6 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!isMounted || !hasHydratedSnapshot) {
-      return;
-    }
-    const storedNamespace = readNamespace();
-    if (storedNamespace) {
-      return;
-    }
-    writeNamespace(DEFAULT_NAMESPACE);
-    setState((prev) => ({ ...prev, namespace: DEFAULT_NAMESPACE }));
-  }, [isMounted, hasHydratedSnapshot]);
 
   const persistSnapshotToLocalStorage = useCallback(
     (snapshot: PipelineStateSnapshot) => {
@@ -542,39 +518,22 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     setUnsavedChanges(false);
   }, [persistSnapshotToLocalStorage]);
 
-  const clearPipelineState = useCallback(
-    (options?: { preserveNamespace?: boolean; nextNamespace?: string | null }) => {
-      const preserveNamespace = options?.preserveNamespace ?? false;
-      const nextNamespace = options?.nextNamespace ?? null;
+  const clearPipelineState = useCallback(() => {
+    Object.values(localStorageKeys).forEach((key) => {
+      if (typeof key !== "string") return;
+      if (key.startsWith("docetl_auth_")) return;
+      if (key === localStorageKeys.NAMESPACE_KEY) return;
+      localStorage.removeItem(key);
+    });
 
-      Object.values(localStorageKeys).forEach((key) => {
-        if (typeof key !== "string") return;
-        if (key.startsWith("docetl_auth_")) return;
-        if (preserveNamespace && key === localStorageKeys.NAMESPACE_KEY) return;
-        localStorage.removeItem(key);
-      });
-
-      if (preserveNamespace) {
-        if (nextNamespace === null) {
-          localStorage.removeItem(localStorageKeys.NAMESPACE_KEY);
-        } else {
-          localStorage.setItem(
-            localStorageKeys.NAMESPACE_KEY,
-            JSON.stringify(nextNamespace)
-          );
-        }
-      }
-
-      const defaults = createDefaultPipelineState(null);
-      setState({
-        ...defaults,
-        apiKeys: stateRef.current.apiKeys,
-        namespace: preserveNamespace ? nextNamespace : defaults.namespace,
-      });
-      setUnsavedChanges(false);
-    },
-    []
-  );
+    const defaults = createDefaultPipelineState(readNamespace());
+    setState({
+      ...defaults,
+      apiKeys: stateRef.current.apiKeys,
+      namespace: defaults.namespace,
+    });
+    setUnsavedChanges(false);
+  }, []);
 
   const setStateAndUpdate = useCallback(
     <K extends keyof PipelineState>(
@@ -591,50 +550,16 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
               )
             : value;
         if (newValue !== prevState[key]) {
-          if (key === "namespace") {
-            clearPipelineState({
-              preserveNamespace: true,
-              nextNamespace: (newValue as string | null) ?? null,
-            });
-            if (!externalNamespaceUpdateRef.current) {
-              suppressNamespaceEventRef.current =
-                (newValue as string | null) ?? null;
-              writeNamespace((newValue as string | null) ?? null);
-            }
-            return { ...prevState, [key]: newValue, pipelineId: null };
-          } else {
-            if (key !== "apiKeys" && key !== "pipelineId") {
-              setUnsavedChanges(true);
-            }
-            return { ...prevState, [key]: newValue };
+          if (key !== "apiKeys" && key !== "pipelineId") {
+            setUnsavedChanges(true);
           }
+          return { ...prevState, [key]: newValue };
         }
         return prevState;
       });
     },
     [clearPipelineState]
   );
-
-  useEffect(() => {
-    if (!isMounted) {
-      return;
-    }
-    return subscribeToNamespaceChanges((next) => {
-      if (
-        suppressNamespaceEventRef.current &&
-        suppressNamespaceEventRef.current === next
-      ) {
-        suppressNamespaceEventRef.current = null;
-        return;
-      }
-      if (!next || next === stateRef.current.namespace) {
-        return;
-      }
-      externalNamespaceUpdateRef.current = true;
-      setStateAndUpdate("namespace", next);
-      externalNamespaceUpdateRef.current = false;
-    });
-  }, [isMounted, setStateAndUpdate]);
 
   const loadPipelineSnapshot = useCallback(
     (
@@ -835,10 +760,6 @@ export const PipelineProvider: React.FC<{ children: React.ReactNode }> = ({
     ),
     setSystemPrompt: useCallback(
       (value) => setStateAndUpdate("systemPrompt", value),
-      [setStateAndUpdate]
-    ),
-    setNamespace: useCallback(
-      (value) => setStateAndUpdate("namespace", value),
       [setStateAndUpdate]
     ),
     setApiKeys: useCallback(

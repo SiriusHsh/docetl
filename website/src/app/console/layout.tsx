@@ -22,22 +22,7 @@ import {
   getAuthToken,
   getStoredAuthUser,
 } from "@/lib/auth";
-import { backendFetch } from "@/lib/backendFetch";
-import { getBackendUrl } from "@/lib/api-config";
-import {
-  readNamespace,
-  subscribeToNamespaceChanges,
-  writeNamespace,
-} from "@/lib/namespace";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type NavItem = {
   label: string;
@@ -49,13 +34,6 @@ type NavGroup = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   children: NavItem[];
-};
-
-type MembershipRecord = {
-  namespace: string;
-  role: string;
-  created_at: number;
-  updated_at: number;
 };
 
 const DATA_GENERATION_CHILDREN: NavItem[] = [
@@ -87,12 +65,6 @@ export default function ConsoleLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
-  const backendUrl = useMemo(() => getBackendUrl(), []);
-  const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
-  const [loadingMemberships, setLoadingMemberships] = useState(false);
-  const [membershipError, setMembershipError] = useState<string | null>(null);
-  const [activeNamespace, setActiveNamespace] = useState<string | null>(null);
-  const [selectedNamespace, setSelectedNamespace] = useState("");
   const activePath = useMemo(() => pathname || "", [pathname]);
   const dataGenerationActive = useMemo(
     () =>
@@ -118,61 +90,6 @@ export default function ConsoleLayout({
     const user = getStoredAuthUser();
     setIsAdmin(user?.platform_role === "platform_admin");
   }, []);
-
-  useEffect(() => {
-    const stored = readNamespace();
-    if (stored) {
-      setActiveNamespace(stored);
-      setSelectedNamespace(stored);
-    }
-    return subscribeToNamespaceChanges((next) => {
-      setActiveNamespace(next);
-      setSelectedNamespace(next ?? "");
-    });
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadMemberships = async () => {
-      const token = getAuthToken();
-      if (!token) return;
-      setLoadingMemberships(true);
-      setMembershipError(null);
-      try {
-        const response = await backendFetch(`${backendUrl}/auth/me`);
-        if (!response.ok) {
-          const detail = await response.text();
-          throw new Error(detail || "加载权限失败");
-        }
-        const data = (await response.json()) as {
-          memberships?: MembershipRecord[];
-        };
-        if (cancelled) return;
-        const list = data.memberships || [];
-        setMemberships(list);
-        if (list.length > 0 && (!activeNamespace || !list.some((m) => m.namespace === activeNamespace))) {
-          const fallbackNamespace = list[0].namespace;
-          setSelectedNamespace(fallbackNamespace);
-          writeNamespace(fallbackNamespace);
-          setActiveNamespace(fallbackNamespace);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setMembershipError(
-            error instanceof Error ? error.message : "加载权限失败"
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingMemberships(false);
-        }
-      }
-    };
-    void loadMemberships();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeNamespace, backendUrl]);
 
   useEffect(() => {
     if (dataGenerationActive) {
@@ -315,65 +232,6 @@ export default function ConsoleLayout({
         </aside>
         <main className="flex-1">
           <div className="min-h-screen bg-slate-50 flex flex-col">
-            <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3">
-                <div className="text-sm text-slate-600">
-                  工作区：{" "}
-                  <span className="text-slate-900">
-                    {activeNamespace || "-"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {membershipError ? (
-                    <span className="text-xs text-red-400">{membershipError}</span>
-                  ) : memberships.length === 0 ? (
-                    <span className="text-xs text-slate-500">
-                      暂无可用工作区
-                    </span>
-                  ) : (
-                    <>
-                      <Select
-                        value={selectedNamespace || ""}
-                        onValueChange={setSelectedNamespace}
-                        disabled={loadingMemberships}
-                      >
-                        <SelectTrigger className="h-8 w-[220px] bg-white border-slate-200 text-slate-700">
-                          <SelectValue placeholder="选择工作区" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white border-slate-200 text-slate-900">
-                          {memberships.map((membership) => (
-                            <SelectItem
-                              key={membership.namespace}
-                              value={membership.namespace}
-                            >
-                              {membership.namespace} ({membership.role})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="border-slate-300 text-slate-700 hover:bg-slate-100"
-                        disabled={
-                          loadingMemberships ||
-                          !selectedNamespace ||
-                          selectedNamespace === activeNamespace
-                        }
-                        onClick={() => {
-                          if (!selectedNamespace) return;
-                          writeNamespace(selectedNamespace);
-                          setActiveNamespace(selectedNamespace);
-                        }}
-                      >
-                        应用
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
             <div className="flex-1">{children}</div>
           </div>
         </main>

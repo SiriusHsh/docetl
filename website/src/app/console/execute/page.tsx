@@ -73,7 +73,6 @@ const DatasetView = dynamic(() => import("@/components/DatasetView"), {
   ),
 });
 
-const DEFAULT_NAMESPACE = "default";
 const DATA_GENERATION_SCOPE_MAP: Record<string, string> = {
   "/console/data-generation": DEFAULT_PIPELINE_SCOPE,
   "/console/data-generation/distillation": "distillation",
@@ -674,8 +673,7 @@ const ExecuteBottomPanel: React.FC<ExecuteBottomPanelProps> = ({
 };
 
 const ExecuteWorkspace: React.FC = () => {
-  const { namespace, setNamespace, currentFile, setCurrentFile } =
-    usePipelineContext();
+  const { namespace, currentFile, setCurrentFile } = usePipelineContext();
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
   const [bottomPanelTab, setBottomPanelTab] = useState<
@@ -689,10 +687,6 @@ const ExecuteWorkspace: React.FC = () => {
 
   useEffect(() => {
     const loadDatasets = async () => {
-      if (!namespace) {
-        setDataCenterDatasets([]);
-        return;
-      }
       setDataCenterLoading(true);
       setDataCenterError(null);
       try {

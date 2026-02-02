@@ -41,7 +41,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type PlatformRole = "platform_admin" | "user";
-type NamespaceRole = "namespace_admin" | "editor" | "viewer";
 
 type UserRecord = {
   id: string;
@@ -54,12 +53,6 @@ type UserRecord = {
   last_login_at?: number | null;
 };
 
-type MembershipRecord = {
-  namespace: string;
-  role: NamespaceRole;
-  created_at: number;
-  updated_at: number;
-};
 
 type GroupRecord = {
   id: string;
@@ -79,13 +72,6 @@ type GroupMemberRecord = {
   joined_at: number;
 };
 
-type GroupNamespaceAccessRecord = {
-  group_id: string;
-  namespace: string;
-  role: NamespaceRole;
-  created_at: number;
-  updated_at: number;
-};
 
 type AuditLogEntry = {
   id: string;
@@ -106,12 +92,6 @@ type AuditLogEntry = {
 const PLATFORM_ROLES: Array<{ value: PlatformRole; label: string }> = [
   { value: "platform_admin", label: "平台管理员" },
   { value: "user", label: "用户" },
-];
-
-const NAMESPACE_ROLES: Array<{ value: NamespaceRole; label: string }> = [
-  { value: "namespace_admin", label: "工作区管理员" },
-  { value: "editor", label: "编辑者" },
-  { value: "viewer", label: "查看者" },
 ];
 
 const formatTimestamp = (value?: number | null) => {
@@ -154,17 +134,9 @@ export default function AdminPage() {
   const [resetPassword, setResetPassword] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
 
-  const [membershipDialogOpen, setMembershipDialogOpen] = useState(false);
-  const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
-  const [membershipLoading, setMembershipLoading] = useState(false);
-  const [membershipNamespace, setMembershipNamespace] = useState("");
-  const [membershipRole, setMembershipRole] = useState<NamespaceRole>("viewer");
-  const [membershipSaving, setMembershipSaving] = useState(false);
-
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
-  const [auditNamespace, setAuditNamespace] = useState("");
   const [auditAction, setAuditAction] = useState("");
   const [auditActorUserId, setAuditActorUserId] = useState("");
 
@@ -186,12 +158,6 @@ export default function AdminPage() {
   const [memberToAdd, setMemberToAdd] = useState("");
   const [memberSaving, setMemberSaving] = useState(false);
 
-  const [groupAccess, setGroupAccess] = useState<GroupNamespaceAccessRecord[]>([]);
-  const [groupAccessLoading, setGroupAccessLoading] = useState(false);
-  const [groupAccessError, setGroupAccessError] = useState<string | null>(null);
-  const [accessNamespace, setAccessNamespace] = useState("");
-  const [accessRole, setAccessRole] = useState<NamespaceRole>("viewer");
-  const [accessSaving, setAccessSaving] = useState(false);
 
   useEffect(() => {
     const stored = getStoredAuthUser();
@@ -226,7 +192,6 @@ export default function AdminPage() {
     setAuditError(null);
     try {
       const query = new URLSearchParams({ limit: "200" });
-      if (auditNamespace.trim()) query.set("namespace", auditNamespace.trim());
       if (auditAction.trim()) query.set("action", auditAction.trim());
       if (auditActorUserId.trim())
         query.set("actor_user_id", auditActorUserId.trim());
@@ -246,7 +211,7 @@ export default function AdminPage() {
     } finally {
       setAuditLoading(false);
     }
-  }, [auditAction, auditActorUserId, auditNamespace, backendUrl]);
+  }, [auditAction, auditActorUserId, backendUrl]);
 
   const loadGroups = useCallback(async () => {
     setGroupsLoading(true);
@@ -432,80 +397,6 @@ export default function AdminPage() {
     }
   };
 
-  const loadMemberships = async (userId: string) => {
-    setMembershipLoading(true);
-    try {
-      const response = await backendFetch(
-        `${backendUrl}/users/${userId}/memberships`
-      );
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "加载权限失败");
-      }
-      const data = (await response.json()) as MembershipRecord[];
-      setMemberships(data);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "加载失败",
-        description:
-          error instanceof Error ? error.message : "加载权限失败",
-      });
-    } finally {
-      setMembershipLoading(false);
-    }
-  };
-
-  const handleOpenMemberships = async (user: UserRecord) => {
-    setSelectedUser(user);
-    setMembershipNamespace("");
-    setMembershipRole("viewer");
-    setMembershipDialogOpen(true);
-    await loadMemberships(user.id);
-  };
-
-  const handleSaveMembership = async () => {
-    if (!selectedUser) return;
-    if (!membershipNamespace.trim()) {
-      toast({
-        variant: "destructive",
-        title: "需要工作区",
-      });
-      return;
-    }
-    setMembershipSaving(true);
-    try {
-      const namespace = membershipNamespace.trim();
-      const response = await backendFetch(
-        `${backendUrl}/users/${selectedUser.id}/namespaces/${encodeURIComponent(
-          namespace
-        )}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role: membershipRole }),
-        }
-      );
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "更新权限失败");
-      }
-      await loadMemberships(selectedUser.id);
-      setMembershipNamespace("");
-      setMembershipRole("viewer");
-      toast({ title: "权限已更新" });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "更新失败",
-        description:
-          error instanceof Error ? error.message : "更新权限失败",
-      });
-    } finally {
-      setMembershipSaving(false);
-    }
-  };
-
   const handleOpenGroupForm = (group?: GroupRecord) => {
     if (group) {
       setEditingGroup(group);
@@ -625,35 +516,11 @@ export default function AdminPage() {
     }
   };
 
-  const loadGroupAccess = async (groupId: string) => {
-    setGroupAccessLoading(true);
-    setGroupAccessError(null);
-    try {
-      const response = await backendFetch(
-        `${backendUrl}/groups/${groupId}/namespace-access`
-      );
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "加载权限失败");
-      }
-      const data = (await response.json()) as GroupNamespaceAccessRecord[];
-      setGroupAccess(data);
-    } catch (error) {
-      setGroupAccessError(
-        error instanceof Error ? error.message : "加载权限失败"
-      );
-    } finally {
-      setGroupAccessLoading(false);
-    }
-  };
-
   const handleOpenManageGroup = async (group: GroupRecord) => {
     setActiveGroup(group);
     setMemberToAdd("");
-    setAccessNamespace("");
-    setAccessRole("viewer");
     setManageGroupOpen(true);
-    await Promise.all([loadGroupMembers(group.id), loadGroupAccess(group.id)]);
+    await loadGroupMembers(group.id);
   };
 
   const handleAddMember = async () => {
@@ -710,72 +577,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleSaveGroupAccess = async () => {
-    if (!activeGroup) return;
-    if (!accessNamespace.trim()) {
-      toast({
-        variant: "destructive",
-        title: "需要工作区",
-      });
-      return;
-    }
-    setAccessSaving(true);
-    try {
-      const response = await backendFetch(
-        `${backendUrl}/groups/${activeGroup.id}/namespace-access/${encodeURIComponent(
-          accessNamespace.trim()
-        )}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role: accessRole }),
-        }
-      );
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "保存权限失败");
-      }
-      setAccessNamespace("");
-      setAccessRole("viewer");
-      await loadGroupAccess(activeGroup.id);
-      toast({ title: "权限已保存" });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "保存失败",
-        description:
-          error instanceof Error ? error.message : "保存权限失败",
-      });
-    } finally {
-      setAccessSaving(false);
-    }
-  };
-
-  const handleRemoveGroupAccess = async (namespace: string) => {
-    if (!activeGroup) return;
-    try {
-      const response = await backendFetch(
-        `${backendUrl}/groups/${activeGroup.id}/namespace-access/${encodeURIComponent(
-          namespace
-        )}`,
-        { method: "DELETE" }
-      );
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "移除权限失败");
-      }
-      await loadGroupAccess(activeGroup.id);
-      toast({ title: "权限已移除" });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "移除失败",
-        description:
-          error instanceof Error ? error.message : "移除权限失败",
-      });
-    }
-  };
-
   if (!checkedAuth) {
     return (
       <div className="px-6 py-6">
@@ -819,7 +620,7 @@ export default function AdminPage() {
             <h1 className="text-2xl font-semibold text-slate-900">管理后台</h1>
           </div>
           <p className="mt-2 text-sm text-slate-400">
-            管理用户、权限与审计日志。
+            管理用户、分组与审计日志。
           </p>
         </div>
         <Button
@@ -974,27 +775,17 @@ export default function AdminPage() {
                           {formatTimestamp(user.last_login_at)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-slate-200 text-slate-700 hover:bg-slate-50"
-                              onClick={() => handleOpenMemberships(user)}
-                            >
-                              权限
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-slate-200 text-slate-700 hover:bg-slate-50"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setResetDialogOpen(true);
-                              }}
-                            >
-                              重置密码
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setResetDialogOpen(true);
+                            }}
+                          >
+                            重置密码
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -1008,15 +799,6 @@ export default function AdminPage() {
         <TabsContent value="audit" className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex flex-wrap items-end gap-3">
-              <div className="flex flex-col gap-2">
-                <Label className="text-xs text-slate-400">工作区</Label>
-                <Input
-                  value={auditNamespace}
-                  onChange={(event) => setAuditNamespace(event.target.value)}
-                  placeholder="工作区"
-                  className="w-48 bg-white border-slate-200 text-slate-700"
-                />
-              </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-xs text-slate-400">动作</Label>
                 <Input
@@ -1062,7 +844,6 @@ export default function AdminPage() {
                     <TableHead className="text-slate-600">操作者</TableHead>
                     <TableHead className="text-slate-600">动作</TableHead>
                     <TableHead className="text-slate-600">资源</TableHead>
-                    <TableHead className="text-slate-600">工作区</TableHead>
                     <TableHead className="text-slate-600">结果</TableHead>
                     <TableHead className="text-slate-600">详情</TableHead>
                   </TableRow>
@@ -1082,9 +863,6 @@ export default function AdminPage() {
                       <TableCell className="text-sm text-slate-400">
                         {log.resource_type || "-"}
                         {log.resource_id ? `:${log.resource_id}` : ""}
-                      </TableCell>
-                      <TableCell className="text-sm text-slate-400">
-                        {log.namespace || "-"}
                       </TableCell>
                       <TableCell>
                         <span
@@ -1320,107 +1098,6 @@ export default function AdminPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={membershipDialogOpen} onOpenChange={setMembershipDialogOpen}>
-        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[640px]">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-900">
-              工作区权限
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-sm text-slate-600">
-              用户：{" "}
-              <span className="font-semibold text-slate-900">
-                {selectedUser?.username}
-              </span>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <div className="text-xs text-slate-400 mb-2">当前权限</div>
-              {membershipLoading ? (
-                <div className="text-sm text-slate-400 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> 加载中...
-                </div>
-              ) : memberships.length === 0 ? (
-                <div className="text-sm text-slate-500">暂无权限记录。</div>
-              ) : (
-                <div className="space-y-2">
-                  {memberships.map((item) => (
-                    <div
-                      key={item.namespace}
-                      className="flex items-center justify-between text-sm text-slate-700"
-                    >
-                      <div>
-                        <span className="font-medium text-slate-900">
-                          {item.namespace}
-                        </span>
-                        <span className="ml-2 text-xs text-slate-500">
-                          {formatTimestamp(item.updated_at)}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="text-xs text-blue-400 hover:text-blue-300"
-                        onClick={() => {
-                          setMembershipNamespace(item.namespace);
-                          setMembershipRole(item.role);
-                        }}
-                      >
-                        编辑
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-400">工作区</Label>
-                <Input
-                  value={membershipNamespace}
-                  onChange={(event) => setMembershipNamespace(event.target.value)}
-                  placeholder="工作区"
-                  className="bg-white border-slate-200 text-slate-700"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-400">角色</Label>
-                <Select
-                  value={membershipRole}
-                  onValueChange={(value) => setMembershipRole(value as NamespaceRole)}
-                >
-                  <SelectTrigger className="bg-white border-slate-200 text-slate-700">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 text-slate-900">
-                    {NAMESPACE_ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={handleSaveMembership}
-              disabled={membershipSaving}
-              className="w-full bg-blue-600 hover:bg-blue-500"
-            >
-              {membershipSaving ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Shield className="mr-2 h-4 w-4" />
-              )}
-              保存权限
-            </Button>
-            <div className="text-xs text-slate-500">
-              暂不支持移除权限。
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
         <DialogContent className="bg-white border border-slate-200 text-slate-900">
           <DialogHeader>
@@ -1486,7 +1163,7 @@ export default function AdminPage() {
                 {activeGroup?.name || "-"}
               </span>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-3">
                 <div className="text-xs uppercase tracking-wider text-slate-400">
                   成员
@@ -1562,95 +1239,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div className="text-xs uppercase tracking-wider text-slate-400">
-                  工作区权限
-                </div>
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  {groupAccessError ? (
-                    <div className="text-sm text-red-400">{groupAccessError}</div>
-                  ) : groupAccessLoading ? (
-                    <div className="text-sm text-slate-400 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> 正在加载权限...
-                    </div>
-                  ) : groupAccess.length === 0 ? (
-                    <div className="text-sm text-slate-500">暂无权限记录。</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {groupAccess.map((entry) => (
-                        <div
-                          key={entry.namespace}
-                          className="flex items-center justify-between text-sm text-slate-700"
-                        >
-                          <div>
-                            <span className="font-medium text-slate-900">
-                              {entry.namespace}
-                            </span>
-                            <span className="ml-2 text-xs text-slate-500">
-                              {entry.role}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              className="text-xs text-blue-400 hover:text-blue-300"
-                              onClick={() => {
-                                setAccessNamespace(entry.namespace);
-                                setAccessRole(entry.role);
-                              }}
-                            >
-                              编辑
-                            </button>
-                            <button
-                              type="button"
-                              className="text-xs text-red-300 hover:text-red-200"
-                              onClick={() => handleRemoveGroupAccess(entry.namespace)}
-                            >
-                              移除
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_160px] gap-2">
-                  <Input
-                    value={accessNamespace}
-                    onChange={(event) => setAccessNamespace(event.target.value)}
-                    placeholder="工作区"
-                    className="bg-white border-slate-200 text-slate-700"
-                  />
-                  <Select
-                    value={accessRole}
-                    onValueChange={(value) => setAccessRole(value as NamespaceRole)}
-                  >
-                    <SelectTrigger className="bg-white border-slate-200 text-slate-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-900">
-                      {NAMESPACE_ROLES.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
-                          {role.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleSaveGroupAccess}
-                  disabled={accessSaving}
-                  className="bg-blue-600 hover:bg-blue-500"
-                >
-                  {accessSaving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Shield className="mr-2 h-4 w-4" />
-                  )}
-                  保存权限
-                </Button>
-              </div>
             </div>
           </div>
         </DialogContent>

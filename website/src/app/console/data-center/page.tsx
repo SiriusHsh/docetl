@@ -10,10 +10,7 @@ import {
 } from "lucide-react";
 
 import { backendFetch } from "@/lib/backendFetch";
-import {
-  readNamespace,
-  subscribeToNamespaceChanges,
-} from "@/lib/namespace";
+import { readNamespace } from "@/lib/namespace";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -52,7 +49,7 @@ type DatasetRecord = {
 };
 
 export default function DataCenterPage() {
-  const [namespace, setNamespace] = useState<string | null>(null);
+  const namespace = readNamespace() || "default";
   const [datasets, setDatasets] = useState<DatasetRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -78,13 +75,6 @@ export default function DataCenterPage() {
   const [datasetToDelete, setDatasetToDelete] =
     useState<DatasetRecord | null>(null);
 
-  useEffect(() => {
-    setNamespace(readNamespace());
-    return subscribeToNamespaceChanges((next) => {
-      setNamespace(next);
-    });
-  }, []);
-
   const isExcel = useMemo(() => {
     if (!file?.name) return false;
     const lower = file.name.toLowerCase();
@@ -92,7 +82,6 @@ export default function DataCenterPage() {
   }, [file]);
 
   const loadDatasets = useCallback(async () => {
-    if (!namespace) return;
     setLoading(true);
     setError(null);
     try {
@@ -117,7 +106,6 @@ export default function DataCenterPage() {
   }, [loadDatasets]);
 
   useEffect(() => {
-    if (!namespace) return;
     const hasProcessing = datasets.some(
       (dataset) => dataset.ingest_status === "processing"
     );
@@ -129,7 +117,7 @@ export default function DataCenterPage() {
   }, [datasets, loadDatasets, namespace]);
 
   const handleUpload = async () => {
-    if (!namespace || !file) return;
+    if (!file) return;
     setUploading(true);
     setError(null);
 
@@ -178,7 +166,6 @@ export default function DataCenterPage() {
   };
 
   const handleDelete = async (dataset: DatasetRecord) => {
-    if (!namespace) return;
     setDeletingId(dataset.id);
     setError(null);
     try {
@@ -369,7 +356,7 @@ export default function DataCenterPage() {
             <button
               type="button"
               onClick={handleUpload}
-              disabled={!file || !namespace || uploading}
+              disabled={!file || uploading}
               className="inline-flex items-center gap-2 rounded-lg border border-blue-600 bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 disabled:opacity-50"
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

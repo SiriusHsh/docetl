@@ -457,11 +457,6 @@ const CodeEditorPipelineApp: React.FC = () => {
               <span className="text-sm font-semibold text-foreground">
                 Zhongjing DataFlow
               </span>
-              {isMounted && (
-                <span className="text-xs text-muted-foreground truncate">
-                  ({namespace})
-                </span>
-              )}
             </div>
 
             <Separator orientation="vertical" className="h-6" />

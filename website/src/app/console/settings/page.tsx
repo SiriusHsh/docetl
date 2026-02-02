@@ -1,44 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, User, Layers } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
-import { backendFetch } from "@/lib/backendFetch";
 import { clearAuthSession, getAuthToken, type StoredAuthUser } from "@/lib/auth";
+import { backendFetch } from "@/lib/backendFetch";
 import { getBackendUrl } from "@/lib/api-config";
 import * as localStorageKeys from "@/app/localStorageKeys";
-import {
-  readNamespace,
-  subscribeToNamespaceChanges,
-  writeNamespace,
-} from "@/lib/namespace";
-import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-type MembershipRecord = {
-  namespace: string;
-  role: string;
-  created_at: number;
-  updated_at: number;
-};
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { toast } = useToast();
-  const backendUrl = useMemo(() => getBackendUrl(), []);
+  const backendUrl = getBackendUrl();
   const [user, setUser] = useState<StoredAuthUser | null>(null);
-  const [namespace, setNamespace] = useState<string | null>(null);
-  const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
-  const [loadingMemberships, setLoadingMemberships] = useState(false);
-  const [membershipError, setMembershipError] = useState<string | null>(null);
 
   useEffect(() => {
     const raw = window.localStorage.getItem(localStorageKeys.AUTH_USER_KEY);
@@ -49,52 +23,6 @@ export default function SettingsPage() {
       setUser(null);
     }
   }, []);
-
-  useEffect(() => {
-    setNamespace(readNamespace());
-    return subscribeToNamespaceChanges((next) => {
-      setNamespace(next);
-    });
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadMemberships = async () => {
-      setLoadingMemberships(true);
-      setMembershipError(null);
-      try {
-        const response = await backendFetch(`${backendUrl}/auth/me`);
-        if (!response.ok) {
-          const detail = await response.text();
-          throw new Error(detail || "加载权限失败");
-        }
-        const data = (await response.json()) as {
-          memberships?: MembershipRecord[];
-        };
-        if (cancelled) return;
-        const list = data.memberships || [];
-        setMemberships(list);
-        if (!namespace && list.length > 0) {
-          setNamespace(list[0].namespace);
-          writeNamespace(list[0].namespace);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setMembershipError(
-            error instanceof Error ? error.message : "加载权限失败"
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingMemberships(false);
-        }
-      }
-    };
-    void loadMemberships();
-    return () => {
-      cancelled = true;
-    };
-  }, [backendUrl]);
 
   const handleLogout = async () => {
     try {
@@ -134,59 +62,6 @@ export default function SettingsPage() {
           <LogOut className="h-4 w-4" />
           退出登录
         </button>
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Layers className="h-5 w-5 text-slate-600" />
-          <div>
-            <div className="text-sm font-medium text-slate-700">
-              工作区权限
-            </div>
-            <div className="text-xs text-slate-500">
-              选择要操作的工作区。
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <Label className="text-xs text-slate-500">工作区</Label>
-          {membershipError ? (
-            <div className="text-sm text-rose-600">{membershipError}</div>
-          ) : loadingMemberships ? (
-            <div className="text-sm text-slate-500">正在加载权限...</div>
-          ) : memberships.length === 0 ? (
-            <div className="text-sm text-slate-500">
-              当前账号暂无工作区权限。
-            </div>
-          ) : (
-            <Select
-              value={namespace || ""}
-              onValueChange={(value) => {
-                setNamespace(value);
-                writeNamespace(value);
-                toast({
-                  title: "工作区已更新",
-                  description: "已切换到选定工作区。",
-                });
-              }}
-            >
-              <SelectTrigger className="bg-white border-slate-200 text-slate-700">
-                <SelectValue placeholder="选择工作区" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-200 text-slate-700">
-                {memberships.map((membership) => (
-                  <SelectItem
-                    key={membership.namespace}
-                    value={membership.namespace}
-                  >
-                    {membership.namespace} ({membership.role})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -188,14 +188,6 @@ export default function ModelRegistryPage() {
   };
 
   const handleSave = () => {
-    if (!namespace) {
-      toast({
-        title: "缺少工作区",
-        description: "请先选择工作区后再保存模型。",
-        variant: "destructive",
-      });
-      return;
-    }
     if (!formState.name.trim() || !formState.modelId.trim()) {
       toast({
         title: "请补充必填信息",
@@ -262,7 +254,6 @@ export default function ModelRegistryPage() {
   };
 
   const handleDelete = (model: ModelRegistryEntry) => {
-    if (!namespace) return;
     deleteModel(namespace, model.id);
     toast({
       title: "模型已删除",
@@ -321,19 +312,14 @@ export default function ModelRegistryPage() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">模型配置中心</h1>
           <p className="mt-1 text-sm text-slate-500">
-            统一管理工作区可用的大模型配置，并用于模型选择与测试。
+            统一管理平台可用的大模型配置，并用于模型选择与测试。
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="gap-2" disabled={!namespace}>
+        <Button onClick={openCreateDialog} className="gap-2">
           <Plus className="h-4 w-4" />
           添加模型
         </Button>
       </div>
-      {!namespace ? (
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          请先在右上角选择工作区后再配置模型。
-        </div>
-      ) : null}
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">

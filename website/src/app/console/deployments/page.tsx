@@ -14,7 +14,7 @@ import {
 
 import { backendFetch } from "@/lib/backendFetch";
 import { getBackendUrl } from "@/lib/api-config";
-import { readNamespace, subscribeToNamespaceChanges } from "@/lib/namespace";
+import { readNamespace } from "@/lib/namespace";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -119,7 +119,7 @@ const formatSchedule = (deployment: DeploymentRecord) => {
 export default function DeploymentsPage() {
   const { toast } = useToast();
   const backendUrl = useMemo(() => getBackendUrl(), []);
-  const [namespace, setNamespace] = useState<string | null>(null);
+  const namespace = readNamespace() || "default";
 
   const [deployments, setDeployments] = useState<DeploymentRecord[]>([]);
   const [pipelines, setPipelines] = useState<PipelineRecord[]>([]);
@@ -150,15 +150,7 @@ export default function DeploymentsPage() {
   const [formNotifyOnFinalFailure, setFormNotifyOnFinalFailure] = useState(false);
   const [formNotifyWebhookUrl, setFormNotifyWebhookUrl] = useState("");
 
-  useEffect(() => {
-    setNamespace(readNamespace());
-    return subscribeToNamespaceChanges((next) => {
-      setNamespace(next);
-    });
-  }, []);
-
   const loadDeployments = useCallback(async () => {
-    if (!namespace) return;
     setLoading(true);
     try {
       const response = await backendFetch(
@@ -181,7 +173,6 @@ export default function DeploymentsPage() {
   }, [backendUrl, namespace, toast]);
 
   const loadPipelines = useCallback(async () => {
-    if (!namespace) return;
     const response = await backendFetch(
       `${backendUrl}/pipelines?namespace=${encodeURIComponent(namespace)}`
     );
@@ -191,7 +182,6 @@ export default function DeploymentsPage() {
   }, [backendUrl, namespace]);
 
   const loadDatasets = useCallback(async () => {
-    if (!namespace) return;
     const response = await backendFetch(
       `/api/data-center/datasets?namespace=${encodeURIComponent(namespace)}`
     );
@@ -202,7 +192,6 @@ export default function DeploymentsPage() {
   }, [namespace]);
 
   useEffect(() => {
-    if (!namespace) return;
     void loadDeployments();
     void loadPipelines();
     void loadDatasets();

@@ -5,29 +5,16 @@ import {
   getModelsForNamespace,
   subscribeToModelRegistryChanges,
 } from "@/lib/model-registry";
-import { readNamespace, subscribeToNamespaceChanges } from "@/lib/namespace";
+import { readNamespace } from "@/lib/namespace";
 
 export const useModelRegistry = (namespaceOverride?: string | null) => {
-  const [namespace, setNamespace] = useState<string | null>(
-    namespaceOverride ?? readNamespace()
+  const namespace = useMemo(
+    () => namespaceOverride ?? readNamespace() ?? "default",
+    [namespaceOverride]
   );
   const [models, setModels] = useState<ModelRegistryEntry[]>(() =>
-    getModelsForNamespace(namespaceOverride ?? readNamespace())
+    getModelsForNamespace(namespace)
   );
-
-  useEffect(() => {
-    if (namespaceOverride !== undefined) {
-      setNamespace(namespaceOverride ?? null);
-    }
-  }, [namespaceOverride]);
-
-  useEffect(() => {
-    if (namespaceOverride !== undefined) return;
-    setNamespace(readNamespace());
-    return subscribeToNamespaceChanges((next) => {
-      setNamespace(next);
-    });
-  }, [namespaceOverride]);
 
   useEffect(() => {
     setModels(getModelsForNamespace(namespace));

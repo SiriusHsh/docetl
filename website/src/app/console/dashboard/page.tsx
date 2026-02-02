@@ -21,7 +21,7 @@ import Link from "next/link";
 
 import { backendFetch } from "@/lib/backendFetch";
 import { getBackendUrl } from "@/lib/api-config";
-import { readNamespace, subscribeToNamespaceChanges } from "@/lib/namespace";
+import { readNamespace } from "@/lib/namespace";
 import { subscribeRunsUpdated } from "@/lib/run-events";
 import { cn } from "@/lib/utils";
 
@@ -76,20 +76,13 @@ function StatCard({ label, value, helper, icon: Icon, highlight }: StatCardProps
 
 export default function DashboardPage() {
   const backendUrl = useMemo(() => getBackendUrl(), []);
-  const [namespace, setNamespace] = useState<string | null>(null);
+  const namespace = readNamespace();
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [pipelineCount, setPipelineCount] = useState<number | null>(null);
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false);
-
-  useEffect(() => {
-    setNamespace(readNamespace());
-    return subscribeToNamespaceChanges((next) => {
-      setNamespace(next);
-    });
-  }, []);
 
   const loadDashboard = useCallback(async () => {
     if (!namespace || loadingRef.current) return;
@@ -224,9 +217,7 @@ export default function DashboardPage() {
     <div className="px-6 py-6">
       <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold text-slate-900">看板</h1>
-        <p className="text-sm text-slate-500">
-          {namespace ? `当前工作区：${namespace}` : "请在执行页选择工作区后继续"}
-        </p>
+        <p className="text-sm text-slate-500">运行概览与统计。</p>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
