@@ -111,11 +111,6 @@ const formatDuration = (run: RunRecord) => {
   return `${hours}小时 ${mins}分`;
 };
 
-const formatCost = (value?: number | null) => {
-  if (value == null) return "-";
-  return `$${value.toFixed(4)}`;
-};
-
 const statusLabelMap: Record<RunStatus, string> = {
   pending: "等待中",
   running: "运行中",
@@ -576,7 +571,6 @@ export default function RunsPage() {
                 <TableHead className="text-slate-600">触发方式</TableHead>
                 <TableHead className="text-slate-600">开始时间</TableHead>
                 <TableHead className="text-slate-600">耗时</TableHead>
-                <TableHead className="text-slate-600">成本</TableHead>
                 <TableHead className="text-slate-600 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -620,9 +614,6 @@ export default function RunsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-slate-600">
                       {formatDuration(run)}
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-600">
-                      {formatCost(run.cost)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
