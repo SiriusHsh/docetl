@@ -118,6 +118,14 @@ export default function DataCenterDatasetDetailPage() {
     user_upload: "用户上传",
     pipeline_generated: "流水线产出",
   };
+  const displayFormat = dataset?.original_format?.toUpperCase() ||
+    dataset?.format?.toUpperCase() ||
+    "-";
+  const normalizedFormat = dataset?.format?.toUpperCase();
+  const showNormalizedFormat =
+    Boolean(dataset?.original_format) &&
+    Boolean(normalizedFormat) &&
+    displayFormat !== normalizedFormat;
 
   const ingestStatusLabels: Record<string, string> = {
     ready: "就绪",
@@ -330,10 +338,12 @@ export default function DataCenterDatasetDetailPage() {
               <div>
                 <div className="text-xs text-slate-400">格式</div>
                 <div className="mt-1">
-                  {dataset.format}
-                  {dataset.original_format
-                    ? ` (${dataset.original_format})`
-                    : ""}
+                  {displayFormat}
+                  {showNormalizedFormat ? (
+                    <span className="ml-2 text-xs text-slate-400">
+                      已标准化为 {normalizedFormat}
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div>

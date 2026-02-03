@@ -13,6 +13,7 @@ import {
   FileText,
   MoreVertical,
   Pencil,
+  Pin,
   Plus,
   Table2,
   Trash,
@@ -94,13 +95,16 @@ const resolvePipelineScope = (pathname: string) => {
   return undefined;
 };
 
+const PINNED_PIPELINE_STORAGE_KEY = "docetl.pinnedPipelines";
+
 const formatRecordCount = (count: string) =>
   count === "-" ? "记录数未知" : `${count} 条记录`;
 
 type DataSourceItem = {
   id: string;
   name: string;
-  type: "json" | "csv" | "sql" | "text";
+  type: "json" | "csv" | "sql" | "text" | "excel";
+  displayFormat: string;
   recordCount: string;
   sourceLabel: string;
   file: File;
@@ -127,11 +131,29 @@ const formatDatasetSource = (source: string) => {
   return "数据货架";
 };
 
+const resolveDisplayFormat = (dataset: DataCenterDataset) => {
+  const normalized = dataset.format?.toUpperCase();
+  const original = dataset.original_format?.toUpperCase();
+  if (original && original !== normalized) return original;
+  return normalized || "-";
+};
+
+const resolveDisplayType = (dataset: DataCenterDataset) => {
+  const original = dataset.original_format?.toLowerCase();
+  if (original === "xlsx" || original === "xls") return "excel";
+  if (original === "csv") return "csv";
+  if (original === "json") return "json";
+  if (dataset.format === "csv") return "csv";
+  if (dataset.format === "sql") return "sql";
+  return "json";
+};
+
 const DataSourceIcon = ({ type }: { type: DataSourceItem["type"] }) => {
   switch (type) {
     case "json":
       return <FileJson className="w-4 h-4 text-yellow-500" />;
     case "csv":
+    case "excel":
       return <Table2 className="w-4 h-4 text-green-500" />;
     case "sql":
       return <Database className="w-4 h-4 text-blue-500" />;
@@ -171,6 +193,9 @@ const ExecuteLeftPanel: React.FC<{
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false);
+  const [pinnedPipelineIds, setPinnedPipelineIds] = useState<Set<string>>(
+    new Set()
+  );
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -183,6 +208,39 @@ const ExecuteLeftPanel: React.FC<{
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(PINNED_PIPELINE_STORAGE_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setPinnedPipelineIds(new Set(parsed));
+      }
+    } catch {
+      // Ignore malformed storage.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      PINNED_PIPELINE_STORAGE_KEY,
+      JSON.stringify(Array.from(pinnedPipelineIds))
+    );
+  }, [pinnedPipelineIds]);
+
+  useEffect(() => {
+    setPinnedPipelineIds((prev) => {
+      if (prev.size === 0) return prev;
+      const allowed = new Set(pipelines.map((pipeline) => pipeline.id));
+      const next = new Set(
+        Array.from(prev).filter((id) => allowed.has(id))
+      );
+      return next.size === prev.size ? prev : next;
+    });
+  }, [pipelines]);
+
   const startRenaming = (pipelineId: string, name: string) => {
     setActiveMenuId(null);
     setEditingId(pipelineId);
@@ -194,6 +252,19 @@ const ExecuteLeftPanel: React.FC<{
       void renamePipeline(editingId, editName.trim());
     }
     setEditingId(null);
+  };
+
+  const togglePinnedPipeline = (pipelineId: string) => {
+    setActiveMenuId(null);
+    setPinnedPipelineIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(pipelineId)) {
+        next.delete(pipelineId);
+      } else {
+        next.add(pipelineId);
+      }
+      return next;
+    });
   };
 
   return (
@@ -224,6 +295,7 @@ const ExecuteLeftPanel: React.FC<{
               const isSelected = pipeline.id === activePipelineId;
               const isMenuOpen = activeMenuId === pipeline.id;
               const isEditing = editingId === pipeline.id;
+              const isPinned = pinnedPipelineIds.has(pipeline.id);
 
               return (
                 <div
@@ -278,13 +350,20 @@ const ExecuteLeftPanel: React.FC<{
                         </button>
                       </div>
                     ) : (
-                      <span
-                        className={`text-sm font-bold leading-tight truncate flex-1 pr-2 ${
-                          isSelected ? "text-blue-700" : "text-slate-800"
-                        }`}
-                      >
-                        {pipeline.name}
-                      </span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
+                        <span
+                          className={`text-sm font-bold leading-tight truncate ${
+                            isSelected ? "text-blue-700" : "text-slate-800"
+                          }`}
+                        >
+                          {pipeline.name}
+                        </span>
+                        {isPinned ? (
+                          <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2 py-0.5">
+                            预设
+                          </span>
+                        ) : null}
+                      </div>
                     )}
 
                     {!isEditing && (
@@ -299,67 +378,87 @@ const ExecuteLeftPanel: React.FC<{
                             <CircleDashed className="w-3.5 h-3.5 text-slate-400" />
                           )}
                         </div>
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setActiveMenuId(isMenuOpen ? null : pipeline.id);
-                            }}
-                            className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
-                              isMenuOpen
-                                ? "bg-slate-100 text-slate-700 opacity-100"
-                                : "text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700"
-                            }`}
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-
-                          {isMenuOpen && (
-                            <div
-                              ref={menuRef}
-                              className="absolute right-0 top-7 w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-50 flex flex-col py-1"
-                              onClick={(event) => event.stopPropagation()}
+                        <button
+                          type="button"
+                          aria-pressed={isPinned}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            togglePinnedPipeline(pipeline.id);
+                          }}
+                          className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                            isPinned
+                              ? "bg-amber-50 text-amber-600"
+                              : "text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                          }`}
+                          title={isPinned ? "取消固定" : "固定为预设"}
+                        >
+                          <Pin className="w-3.5 h-3.5" />
+                        </button>
+                        {!isPinned ? (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setActiveMenuId(
+                                  isMenuOpen ? null : pipeline.id
+                                );
+                              }}
+                              className={`flex items-center justify-center w-6 h-6 rounded-md transition-all duration-200 ${
+                                isMenuOpen
+                                  ? "bg-slate-100 text-slate-700 opacity-100"
+                                  : "text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-100 hover:text-slate-700"
+                              }`}
                             >
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  startRenaming(pipeline.id, pipeline.name);
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left"
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+
+                            {isMenuOpen && (
+                              <div
+                                ref={menuRef}
+                                className="absolute right-0 top-7 w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-50 flex flex-col py-1"
+                                onClick={(event) => event.stopPropagation()}
                               >
-                                <Pencil className="w-3.5 h-3.5" />
-                                重命名
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void duplicatePipeline(pipeline.id);
-                                  setActiveMenuId(null);
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left"
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                                复制
-                              </button>
-                              <div className="h-px bg-slate-200 my-1 mx-2"></div>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void deletePipeline(pipeline.id);
-                                  setActiveMenuId(null);
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors text-left"
-                              >
-                                <Trash className="w-3.5 h-3.5" />
-                                删除
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    startRenaming(pipeline.id, pipeline.name);
+                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                  重命名
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void duplicatePipeline(pipeline.id);
+                                    setActiveMenuId(null);
+                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                  复制
+                                </button>
+                                <div className="h-px bg-slate-200 my-1 mx-2"></div>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    void deletePipeline(pipeline.id);
+                                    setActiveMenuId(null);
+                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors text-left"
+                                >
+                                  <Trash className="w-3.5 h-3.5" />
+                                  删除
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     )}
                   </div>
@@ -412,7 +511,7 @@ const ExecuteLeftPanel: React.FC<{
                       {selectedDataSource.name}
                     </span>
                     <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">
-                      {selectedDataSource.type.toUpperCase()}
+                      {selectedDataSource.displayFormat}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-slate-500">
@@ -504,7 +603,7 @@ const ExecuteLeftPanel: React.FC<{
                           {ds.name}
                         </span>
                         <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">
-                          {ds.type.toUpperCase()}
+                          {ds.displayFormat}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-slate-500">
@@ -721,7 +820,8 @@ const ExecuteWorkspace: React.FC = () => {
       (dataset): DataSourceItem => ({
         id: dataset.path,
         name: dataset.name,
-        type: "json",
+        type: resolveDisplayType(dataset),
+        displayFormat: resolveDisplayFormat(dataset),
         recordCount: dataset.row_count != null ? String(dataset.row_count) : "-",
         sourceLabel: formatDatasetSource(dataset.source),
         file: {
