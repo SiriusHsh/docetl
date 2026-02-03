@@ -11,7 +11,6 @@ import {
   Rocket,
   Database,
   Cpu,
-  BarChart3,
   Settings,
   Shield,
   ChevronDown,
@@ -55,7 +54,6 @@ const MAIN_NAV: Array<NavItem | NavGroup> = [
   },
   { label: "部署", href: "/console/deployments", icon: Rocket },
   { label: "数据货架", href: "/console/data-center", icon: Database },
-  { label: "数据指标", href: "/console/data-metrics", icon: BarChart3 },
   { label: "模型资源池", href: "/console/models", icon: Cpu },
 ];
 
