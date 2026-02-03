@@ -2,7 +2,25 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Loader2, RefreshCw, Square } from "lucide-react";
+import type { ComponentType } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  ChevronRight,
+  Layers,
+  Loader2,
+  PlayCircle,
+  RefreshCw,
+  Square,
+} from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { backendFetch } from "@/lib/backendFetch";
 import { getBackendUrl } from "@/lib/api-config";
@@ -50,6 +68,15 @@ type RunRecord = {
   attempt?: number;
   max_attempts?: number | null;
   triggered_by_user_id?: string | null;
+};
+
+type RunSummary = {
+  total: number;
+  running: number;
+  failed: number;
+  completed: number;
+  cancelled: number;
+  last_run_at: number | null;
 };
 
 type PipelineRecord = {
@@ -105,11 +132,41 @@ const statusClassMap: Record<RunStatus, string> = {
   cancelled: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
+type StatCardProps = {
+  label: string;
+  value: number | null;
+  helper?: string;
+  icon: ComponentType<{ className?: string }>;
+  highlight?: boolean;
+};
+
+function StatCard({ label, value, helper, icon: Icon, highlight }: StatCardProps) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm",
+        highlight && "border-emerald-300 shadow-emerald-100/60"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-slate-600">{label}</span>
+        <Icon className="h-4 w-4 text-slate-400" />
+      </div>
+      <div className="mt-2 text-3xl font-semibold text-slate-900">
+        {value ?? "--"}
+      </div>
+      {helper ? <div className="mt-1 text-xs text-slate-500">{helper}</div> : null}
+    </div>
+  );
+}
+
 export default function RunsPage() {
   const { toast } = useToast();
   const backendUrl = useMemo(() => getBackendUrl(), []);
   const namespace = readNamespace() || "default";
   const [runs, setRuns] = useState<RunRecord[]>([]);
+  const [overviewRuns, setOverviewRuns] = useState<RunRecord[]>([]);
+  const [summary, setSummary] = useState<RunSummary | null>(null);
   const [pipelines, setPipelines] = useState<PipelineRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +177,7 @@ export default function RunsPage() {
     {}
   );
   const loadingRef = useRef(false);
+  const overviewLoadingRef = useRef(false);
 
   const loadPipelines = useCallback(async () => {
     try {
@@ -140,6 +198,33 @@ export default function RunsPage() {
       });
     }
   }, [backendUrl, namespace, toast]);
+
+  const loadOverview = useCallback(async () => {
+    if (overviewLoadingRef.current) return;
+    overviewLoadingRef.current = true;
+    try {
+      const [summaryResponse, runsResponse] = await Promise.all([
+        backendFetch(
+          `${backendUrl}/runs/summary?namespace=${encodeURIComponent(namespace)}`
+        ),
+        backendFetch(
+          `${backendUrl}/runs?namespace=${encodeURIComponent(namespace)}`
+        ),
+      ]);
+
+      if (summaryResponse.ok) {
+        const data = (await summaryResponse.json()) as RunSummary;
+        setSummary(data);
+      }
+
+      if (runsResponse.ok) {
+        const data = (await runsResponse.json()) as RunRecord[];
+        setOverviewRuns(data);
+      }
+    } finally {
+      overviewLoadingRef.current = false;
+    }
+  }, [backendUrl, namespace]);
 
   const loadRuns = useCallback(async () => {
     if (loadingRef.current) return;
@@ -172,21 +257,75 @@ export default function RunsPage() {
   }, [namespace, loadRuns]);
 
   useEffect(() => {
+    void loadOverview();
+  }, [namespace, loadOverview]);
+
+  useEffect(() => {
     void loadPipelines();
   }, [namespace, loadPipelines]);
 
   useEffect(() => {
     const unsubscribe = subscribeRunsUpdated(() => {
       void loadRuns();
+      void loadOverview();
     });
     const intervalId = window.setInterval(() => {
       void loadRuns();
+      void loadOverview();
     }, 15000);
     return () => {
       unsubscribe();
       window.clearInterval(intervalId);
     };
   }, [namespace, loadRuns]);
+
+  const trendData = useMemo(() => {
+    const days = 14;
+    const now = new Date();
+    const buckets: Array<{ key: string; label: string; count: number }> = [];
+    const formatLabel = (date: Date) =>
+      date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      buckets.push({ key, label: formatLabel(date), count: 0 });
+    }
+
+    const bucketIndex = new Map(buckets.map((bucket, index) => [bucket.key, index]));
+
+    overviewRuns.forEach((run) => {
+      const date = new Date(run.created_at * 1000);
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      const index = bucketIndex.get(key);
+      if (index != null) {
+        buckets[index].count += 1;
+      }
+    });
+
+    return buckets.map((bucket) => ({
+      label: bucket.label,
+      runs: bucket.count,
+    }));
+  }, [overviewRuns]);
+
+  const topPipelines = useMemo(() => {
+    const counts = new Map<string, { name: string; total: number; failed: number }>();
+    overviewRuns.forEach((run) => {
+      const name = run.pipeline_name || run.pipeline_id || "未知流水线";
+      const entry = counts.get(name) || { name, total: 0, failed: 0 };
+      entry.total += 1;
+      if (run.status === "failed") {
+        entry.failed += 1;
+      }
+      counts.set(name, entry);
+    });
+
+    return Array.from(counts.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+  }, [overviewRuns]);
 
   const filteredRuns = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -249,6 +388,130 @@ export default function RunsPage() {
           )}
           刷新
         </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="流水线"
+          value={pipelines.length || null}
+          helper="已登记流水线"
+          icon={Layers}
+        />
+        <StatCard
+          label="运行中"
+          value={summary?.running ?? null}
+          helper={loading ? "加载中..." : "进行中的运行"}
+          icon={Activity}
+          highlight
+        />
+        <StatCard
+          label="失败"
+          value={summary?.failed ?? null}
+          helper="需要关注的运行"
+          icon={AlertTriangle}
+        />
+        <StatCard
+          label="总运行数"
+          value={summary?.total ?? null}
+          helper="累计执行"
+          icon={PlayCircle}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-slate-600">运行趋势</div>
+              <div className="text-xs text-slate-500">最近 14 天</div>
+            </div>
+            <div className="text-xs text-slate-500">
+              已加载 {overviewRuns.length} 次运行
+            </div>
+          </div>
+          <div className="mt-4 h-[220px]">
+            {trendData.every((item) => item.runs === 0) ? (
+              <div className="h-full rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-sm text-slate-500">
+                暂无运行活动
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ left: -20, right: 10 }}>
+                  <defs>
+                    <linearGradient id="runTrendRunsPage" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.6} />
+                      <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fill: "#64748b", fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "#64748b", fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid rgba(148, 163, 184, 0.3)",
+                      borderRadius: 8,
+                      color: "#0f172a",
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: "#64748b" }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="runs"
+                    stroke="hsl(var(--chart-2))"
+                    fill="url(#runTrendRunsPage)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="text-sm text-slate-600">热门流水线</div>
+          <div className="mt-4 space-y-4">
+            {topPipelines.length === 0 ? (
+              <div className="text-sm text-slate-500">暂无流水线活动。</div>
+            ) : (
+              topPipelines.map((pipeline) => {
+                const failureRate =
+                  pipeline.total > 0
+                    ? Math.round((pipeline.failed / pipeline.total) * 100)
+                    : 0;
+                return (
+                  <div key={pipeline.name} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-slate-700 truncate">
+                        {pipeline.name}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {pipeline.total} 次运行 · {failureRate}% 失败
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-100">
+                      <div
+                        className="h-1.5 rounded-full bg-emerald-500/70"
+                        style={{
+                          width: `${Math.min(100, Math.max(8, (pipeline.total / topPipelines[0].total) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
