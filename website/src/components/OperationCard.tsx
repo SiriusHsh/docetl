@@ -508,17 +508,6 @@ const OperationHeader: React.FC<OperationHeaderProps> = React.memo(
                   </Button>
                 )}
 
-                {/* Settings */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={onToggleSettings}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  其他参数
-                </Button>
-
                 {/* Visibility Toggle */}
                 <Button
                   variant="ghost"

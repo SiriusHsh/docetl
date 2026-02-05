@@ -224,7 +224,9 @@ export default function DeploymentsPage() {
     setEditingDeployment(deployment);
     setFormName(deployment.name);
     setFormPipelineId(deployment.pipeline_id);
-    setFormScheduleType(deployment.schedule_type);
+    const normalizedScheduleType =
+      deployment.schedule_type === "cron" ? "interval" : deployment.schedule_type;
+    setFormScheduleType(normalizedScheduleType);
     setFormCron(String(deployment.schedule?.cron || ""));
     setFormIntervalEvery(String(deployment.schedule?.every || "15"));
     setFormIntervalUnit(String(deployment.schedule?.unit || "minutes"));
@@ -581,7 +583,7 @@ export default function DeploymentsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label className="text-xs text-slate-500">调度类型</Label>
                 <Select
                   value={formScheduleType}
@@ -591,21 +593,15 @@ export default function DeploymentsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-white border-slate-200 text-slate-700">
-                    {Object.entries(scheduleTypeLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                    {Object.entries(scheduleTypeLabels)
+                      .filter(([value]) => value !== "cron")
+                      .map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-500">时区</Label>
-                <Input
-                  value={formTimezone}
-                  onChange={(event) => setFormTimezone(event.target.value)}
-                  className="bg-white border-slate-200 text-slate-700"
-                />
               </div>
             </div>
 
@@ -664,7 +660,7 @@ export default function DeploymentsPage() {
             ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label className="text-xs text-slate-500">输入数据集</Label>
                 <Select
                   value={formInputDatasetId}
@@ -682,18 +678,6 @@ export default function DeploymentsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-500">启用</Label>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formEnabled}
-                    onCheckedChange={setFormEnabled}
-                  />
-                  <span className="text-xs text-slate-500">
-                    {formEnabled ? "已启用" : "已停用"}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -718,81 +702,6 @@ export default function DeploymentsPage() {
                   />
                 </div>
               ) : null}
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-slate-500">重试策略</div>
-                <span className="text-xs text-slate-500">
-                  最大重试与退避
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500">最大重试次数</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={formMaxAttempts}
-                    onChange={(event) => setFormMaxAttempts(event.target.value)}
-                    className="bg-white border-slate-200 text-slate-700"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500">
-                    退避秒数
-                  </Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={formBackoffSeconds}
-                    onChange={(event) => setFormBackoffSeconds(event.target.value)}
-                    className="bg-white border-slate-200 text-slate-700"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500">
-                    退避倍率
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    step="0.1"
-                    value={formBackoffMultiplier}
-                    onChange={(event) => setFormBackoffMultiplier(event.target.value)}
-                    className="bg-white border-slate-200 text-slate-700"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500">
-                    最大退避秒数
-                  </Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={formMaxBackoffSeconds}
-                    onChange={(event) => setFormMaxBackoffSeconds(event.target.value)}
-                    className="bg-white border-slate-200 text-slate-700"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={formNotifyOnFinalFailure}
-                    onCheckedChange={setFormNotifyOnFinalFailure}
-                  />
-                  <span className="text-xs text-slate-500">
-                    最终失败通知
-                  </span>
-                </div>
-                <Input
-                  value={formNotifyWebhookUrl}
-                  onChange={(event) => setFormNotifyWebhookUrl(event.target.value)}
-                  placeholder="回调地址（可选）"
-                  className="bg-white border-slate-200 text-slate-700 md:max-w-sm"
-                />
-              </div>
             </div>
 
             <Button

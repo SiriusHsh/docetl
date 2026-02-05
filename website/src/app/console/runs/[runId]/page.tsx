@@ -17,6 +17,16 @@ import { getBackendUrl } from "@/lib/api-config";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -157,7 +167,7 @@ const FilePreviewDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-sm font-semibold text-slate-100">
+          <DialogTitle className="text-sm font-semibold text-slate-900">
             {title}
           </DialogTitle>
         </DialogHeader>
@@ -222,6 +232,7 @@ export default function RunDetailPage() {
   const [logOpen, setLogOpen] = useState(false);
   const [outputOpen, setOutputOpen] = useState(false);
   const [pendingCancel, setPendingCancel] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const loadRun = useCallback(async () => {
     if (!runId) return;
@@ -246,10 +257,8 @@ export default function RunDetailPage() {
     void loadRun();
   }, [loadRun]);
 
-  const handleCancel = async () => {
+  const cancelRun = async () => {
     if (!runId) return;
-    const confirmed = window.confirm("确认取消该运行吗？");
-    if (!confirmed) return;
     setPendingCancel(true);
     try {
       const response = await backendFetch(`${backendUrl}/runs/${runId}/cancel`, {
@@ -270,6 +279,11 @@ export default function RunDetailPage() {
     } finally {
       setPendingCancel(false);
     }
+  };
+
+  const confirmCancel = async () => {
+    setCancelDialogOpen(false);
+    await cancelRun();
   };
 
   const canCancel =
@@ -316,8 +330,8 @@ export default function RunDetailPage() {
             <Button
               type="button"
               variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50"
-              onClick={handleCancel}
+              className="rounded-full border-red-200/80 bg-red-50/70 text-red-600 shadow-sm transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-700 hover:shadow-md focus-visible:ring-red-200 disabled:border-red-200/60 disabled:bg-red-50/40 disabled:text-red-400"
+              onClick={() => setCancelDialogOpen(true)}
               disabled={pendingCancel}
             >
               {pendingCancel ? (
@@ -330,6 +344,51 @@ export default function RunDetailPage() {
           ) : null}
         </div>
       </div>
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent className="max-w-md border-slate-200 bg-white p-6">
+          <AlertDialogHeader className="text-left">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="space-y-2">
+                <AlertDialogTitle className="text-base text-slate-900">
+                  确认取消运行？
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm text-slate-600">
+                  取消后运行将立即终止，当前结果可能不完整。
+                </AlertDialogDescription>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  <div className="font-medium text-slate-700">
+                    {run?.pipeline_name || "未命名流水线"}
+                  </div>
+                  <div className="mt-1 break-all text-slate-500">
+                    运行 ID · {run?.id || runId}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="rounded-full border-slate-200 text-slate-600 hover:bg-slate-50">
+              继续运行
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full bg-red-600 text-white shadow-sm hover:bg-red-500 focus-visible:ring-red-200"
+              onClick={() => void confirmCancel()}
+              disabled={pendingCancel}
+            >
+              {pendingCancel ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Square className="mr-2 h-4 w-4" />
+              )}
+              确认取消
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
