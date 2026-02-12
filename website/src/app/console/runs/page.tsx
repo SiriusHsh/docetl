@@ -130,12 +130,15 @@ const statusLabelMap: Record<RunStatus, string> = {
 };
 
 const statusClassMap: Record<RunStatus, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  running: "bg-sky-50 text-sky-700 border-sky-200",
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  failed: "bg-red-50 text-red-700 border-red-200",
-  cancelled: "bg-slate-100 text-slate-600 border-slate-200",
+  pending: "border-amber-200 bg-amber-50 text-amber-700",
+  running: "border-sky-200 bg-sky-50 text-sky-700",
+  completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  failed: "border-red-200 bg-red-50 text-red-700",
+  cancelled: "border-slate-200 bg-slate-100 text-slate-600",
 };
+
+const surfaceCardClass =
+  "rounded-2xl border border-slate-200/80 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur";
 
 type StatCardProps = {
   label: string;
@@ -143,24 +146,41 @@ type StatCardProps = {
   helper?: string;
   icon: ComponentType<{ className?: string }>;
   highlight?: boolean;
+  iconToneClass?: string;
 };
 
-function StatCard({ label, value, helper, icon: Icon, highlight }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  helper,
+  icon: Icon,
+  highlight,
+  iconToneClass,
+}: StatCardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm",
-        highlight && "border-emerald-300 shadow-emerald-100/60"
+        "rounded-2xl border p-4 shadow-sm transition-all",
+        "border-slate-200/80 bg-gradient-to-b from-white to-slate-50/80",
+        highlight &&
+          "border-emerald-200 bg-gradient-to-b from-emerald-50/50 to-white shadow-emerald-100/70"
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-600">{label}</span>
-        <Icon className="h-4 w-4 text-slate-400" />
+      <div className="flex items-start justify-between">
+        <span className="text-sm font-medium text-slate-600">{label}</span>
+        <span
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white",
+            highlight && "border-emerald-200 bg-emerald-50/70"
+          )}
+        >
+          <Icon className={cn("h-4 w-4 text-slate-400", iconToneClass)} />
+        </span>
       </div>
-      <div className="mt-2 text-3xl font-semibold text-slate-900">
+      <div className="mt-3 text-4xl font-semibold leading-none text-slate-900">
         {value ?? "--"}
       </div>
-      {helper ? <div className="mt-1 text-xs text-slate-500">{helper}</div> : null}
+      {helper ? <div className="mt-2 text-xs text-slate-500">{helper}</div> : null}
     </div>
   );
 }
@@ -399,18 +419,23 @@ export default function RunsPage() {
   };
 
   return (
-    <div className="px-6 py-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen space-y-6 bg-slate-50/40 px-4 py-6 md:px-6">
+      <div
+        className={cn(
+          surfaceCardClass,
+          "flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-white via-slate-50/80 to-blue-50/40 p-5"
+        )}
+      >
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">运行记录</h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-1.5 text-sm text-slate-500">
             跟踪流水线执行并管理运行生命周期。
           </p>
         </div>
         <Button
           type="button"
           variant="outline"
-          className="border-slate-300 text-slate-700 hover:bg-slate-100"
+          className="h-10 rounded-lg border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
           onClick={() => void loadRuns()}
           disabled={loading}
         >
@@ -429,33 +454,37 @@ export default function RunsPage() {
           value={pipelines.length || null}
           helper="已登记流水线"
           icon={Layers}
+          iconToneClass="text-indigo-500"
         />
         <StatCard
           label="运行中"
           value={summary?.running ?? null}
-          helper={loading ? "加载中..." : "进行中的运行"}
+          helper={loading ? "加载中..." : "运行中的流水线"}
           icon={Activity}
           highlight
+          iconToneClass="text-emerald-600"
         />
         <StatCard
           label="失败"
           value={summary?.failed ?? null}
           helper="需要关注的运行"
           icon={AlertTriangle}
+          iconToneClass="text-red-500"
         />
         <StatCard
           label="总运行数"
           value={summary?.total ?? null}
           helper="累计执行"
           icon={PlayCircle}
+          iconToneClass="text-blue-500"
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className={cn(surfaceCardClass, "bg-gradient-to-b from-white to-slate-50/70 p-5")}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-slate-600">运行趋势</div>
+              <div className="text-base font-semibold text-slate-800">运行趋势</div>
               <div className="text-xs text-slate-500">最近 14 天</div>
             </div>
             <div className="text-xs text-slate-500">
@@ -464,7 +493,7 @@ export default function RunsPage() {
           </div>
           <div className="mt-4 h-[220px]">
             {trendData.every((item) => item.runs === 0) ? (
-              <div className="h-full rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-sm text-slate-500">
+              <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/70 text-sm text-slate-500">
                 暂无运行活动
               </div>
             ) : (
@@ -510,11 +539,13 @@ export default function RunsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="text-sm text-slate-600">热门流水线</div>
+        <div className={cn(surfaceCardClass, "bg-gradient-to-b from-white to-slate-50/70 p-5")}>
+          <div className="text-base font-semibold text-slate-800">热门流水线</div>
           <div className="mt-4 space-y-4">
             {topPipelines.length === 0 ? (
-              <div className="text-sm text-slate-500">暂无流水线活动。</div>
+              <div className="rounded-xl border border-dashed border-slate-200 bg-white/70 p-4 text-sm text-slate-500">
+                暂无流水线活动。
+              </div>
             ) : (
               topPipelines.map((pipeline) => {
                 const failureRate =
@@ -522,7 +553,7 @@ export default function RunsPage() {
                     ? Math.round((pipeline.failed / pipeline.total) * 100)
                     : 0;
                 return (
-                  <div key={pipeline.name} className="space-y-2">
+                  <div key={pipeline.name} className="space-y-2 rounded-xl border border-slate-200/80 bg-white/70 p-3">
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-slate-700 truncate">
                         {pipeline.name}
@@ -531,7 +562,7 @@ export default function RunsPage() {
                         {pipeline.total} 次运行 · {failureRate}% 失败
                       </div>
                     </div>
-                    <div className="h-1.5 rounded-full bg-slate-100">
+                    <div className="h-1.5 rounded-full bg-slate-200/70">
                       <div
                         className="h-1.5 rounded-full bg-emerald-500/70"
                         style={{
@@ -547,13 +578,18 @@ export default function RunsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div
+        className={cn(
+          surfaceCardClass,
+          "bg-gradient-to-r from-white via-slate-50/70 to-white p-4"
+        )}
+      >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[180px_240px_1fr]">
           <Select
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as RunStatus | "all")}
           >
-            <SelectTrigger className="bg-white border-slate-200 text-slate-700">
+            <SelectTrigger className="h-11 rounded-lg border-slate-200 bg-white text-slate-700">
               <SelectValue placeholder="状态" />
             </SelectTrigger>
             <SelectContent className="bg-white border-slate-200 text-slate-900">
@@ -566,7 +602,7 @@ export default function RunsPage() {
           </Select>
 
           <Select value={pipelineFilter} onValueChange={setPipelineFilter}>
-            <SelectTrigger className="bg-white border-slate-200 text-slate-700">
+            <SelectTrigger className="h-11 rounded-lg border-slate-200 bg-white text-slate-700">
               <SelectValue placeholder="流水线" />
             </SelectTrigger>
             <SelectContent className="bg-white border-slate-200 text-slate-900">
@@ -583,12 +619,12 @@ export default function RunsPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="按运行 ID / 流水线 / 触发方式搜索"
-            className="bg-white border-slate-200 text-slate-700"
+            className="h-11 rounded-lg border-slate-200 bg-white text-slate-700"
           />
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white">
+      <div className={cn(surfaceCardClass, "overflow-hidden bg-white")}>
         {error ? (
           <div className="p-6 text-sm text-red-400">{error}</div>
         ) : loading ? (
@@ -601,7 +637,7 @@ export default function RunsPage() {
           </div>
         ) : (
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader className="bg-gradient-to-r from-slate-50 to-white">
               <TableRow className="border-slate-200">
                 <TableHead className="text-slate-600">运行</TableHead>
                 <TableHead className="text-slate-600">流水线</TableHead>
@@ -617,7 +653,7 @@ export default function RunsPage() {
                 const canCancel = run.status === "running" || run.status === "pending";
                 const isPending = pendingActions[run.id];
                 return (
-                  <TableRow key={run.id} className="border-slate-200">
+                  <TableRow key={run.id} className="border-slate-200 transition-colors hover:bg-slate-50/70">
                     <TableCell>
                       <div className="text-sm text-slate-700 font-medium">
                         {run.id.slice(0, 8)}
@@ -637,7 +673,7 @@ export default function RunsPage() {
                     <TableCell>
                       <span
                         className={cn(
-                          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs",
+                          "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
                           statusClassMap[run.status]
                         )}
                       >
@@ -673,7 +709,7 @@ export default function RunsPage() {
                         ) : null}
                         <Link
                           href={`/console/runs/${run.id}`}
-                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500"
+                          className="inline-flex items-center gap-1 rounded-full border border-blue-100 bg-blue-50/70 px-2.5 py-1 text-xs font-medium text-blue-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                         >
                           查看
                           <ChevronRight className="h-3.5 w-3.5" />
@@ -692,7 +728,7 @@ export default function RunsPage() {
         open={cancelDialogOpen}
         onOpenChange={handleCancelDialogChange}
       >
-        <AlertDialogContent className="max-w-md border-slate-200 bg-white p-6">
+        <AlertDialogContent className="max-w-md border-slate-200/90 bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.16)]">
           <AlertDialogHeader className="text-left">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
@@ -719,7 +755,7 @@ export default function RunsPage() {
             </div>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-2">
-            <AlertDialogCancel className="rounded-full border-slate-200 text-slate-600 hover:bg-slate-50">
+            <AlertDialogCancel className="rounded-full border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
               继续运行
             </AlertDialogCancel>
             <AlertDialogAction

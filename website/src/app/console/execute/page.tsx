@@ -657,10 +657,10 @@ const ExecuteBottomPanel: React.FC<ExecuteBottomPanelProps> = ({
 
   return (
     <div
-      className="fixed bottom-0 right-0 z-20 transition-all duration-300 ease-in-out bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] flex flex-col"
+      className="fixed bottom-0 right-0 z-20 flex flex-col overflow-hidden rounded-t-xl border border-slate-200 bg-white/95 shadow-[0_-10px_28px_rgba(15,23,42,0.12)] backdrop-blur transition-all duration-300 ease-in-out"
       style={{ width: "calc(100% - 16rem)", height: isOpen ? "450px" : "40px" }}
     >
-      <div className="h-10 flex items-center justify-between bg-slate-50 border-b border-slate-200 select-none">
+      <div className="h-10 flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white select-none">
         <div className="flex items-center h-full">
           <button
             type="button"
@@ -846,8 +846,8 @@ const ExecuteWorkspace: React.FC = () => {
   const hasStaleSelection = Boolean(currentFile && !selectedDataSource);
 
   return (
-    <div className="flex h-screen flex-col min-w-0">
-      <div className="flex-1 p-6 flex min-h-0 overflow-hidden pb-12">
+    <div className="flex h-screen min-w-0 flex-col bg-slate-50/40">
+      <div className="flex min-h-0 flex-1 overflow-hidden p-4 pb-12 md:p-6">
         <div
           className={`flex flex-col gap-6 h-full flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
             isLeftPanelOpen
@@ -867,16 +867,13 @@ const ExecuteWorkspace: React.FC = () => {
         </div>
 
         <div
-          className="relative w-6 flex-shrink-0 flex flex-col items-center justify-center cursor-pointer group select-none z-20"
+          className="relative z-20 flex w-6 flex-shrink-0 cursor-pointer select-none flex-col items-center justify-center group"
           onClick={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
+          aria-label={isLeftPanelOpen ? "收起左侧面板" : "展开左侧面板"}
           title={isLeftPanelOpen ? "收起面板" : "展开面板"}
         >
-          <div
-            className={`w-[1px] h-full transition-colors duration-300 ${
-              isLeftPanelOpen ? "bg-slate-200" : "bg-slate-200"
-            } group-hover:bg-blue-500/50`}
-          ></div>
-          <div className="absolute top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-5 h-10 bg-white border border-slate-200 rounded-full transition-all duration-300 group-hover:border-blue-300 shadow-sm">
+          <div className="h-full w-[1px] bg-gradient-to-b from-transparent via-slate-200 to-transparent transition-colors duration-300 group-hover:via-blue-300"></div>
+          <div className="absolute top-1/2 z-10 flex h-10 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200/90 bg-white/95 shadow-[0_6px_18px_rgba(15,23,42,0.12)] backdrop-blur transition-all duration-300 group-hover:border-blue-300 group-hover:shadow-[0_8px_20px_rgba(59,130,246,0.2)]">
             {isLeftPanelOpen ? (
               <ChevronLeft className="w-3 h-3 text-slate-500 group-hover:text-blue-600" />
             ) : (
@@ -885,7 +882,7 @@ const ExecuteWorkspace: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-white border border-slate-200 rounded-lg h-full min-h-0 relative shadow-sm min-w-0">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50 shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
           <PipelineGUI
             variant="execute"
             onRunComplete={() => {

@@ -7,9 +7,13 @@ import {
   CheckCircle2,
   KeyRound,
   Loader2,
+  Mail,
   Plus,
   RefreshCw,
+  Search,
   Shield,
+  UserMinus,
+  UserPlus,
   Users,
 } from "lucide-react";
 
@@ -19,9 +23,11 @@ import { getStoredAuthUser, type StoredAuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -160,7 +166,10 @@ export default function AdminPage() {
   const [scenarioUsersLoading, setScenarioUsersLoading] = useState(false);
   const [scenarioAssignmentsError, setScenarioAssignmentsError] = useState<string | null>(null);
   const [scenarioUserToAssign, setScenarioUserToAssign] = useState("");
+  const [scenarioAssignedSearch, setScenarioAssignedSearch] = useState("");
+  const [scenarioAssignableSearch, setScenarioAssignableSearch] = useState("");
   const [scenarioAssignLoading, setScenarioAssignLoading] = useState(false);
+  const [scenarioRemovingUsers, setScenarioRemovingUsers] = useState<Record<string, boolean>>({});
 
 
   useEffect(() => {
@@ -282,6 +291,54 @@ export default function AdminPage() {
     const assigned = new Set(scenarioUsers.map((item) => item.user_id));
     return users.filter((user) => !assigned.has(user.id));
   }, [scenarioUsers, users]);
+
+  const filteredScenarioUsers = useMemo(() => {
+    const query = scenarioAssignedSearch.trim().toLowerCase();
+    if (!query) return scenarioUsers;
+    return scenarioUsers.filter((member) => {
+      const email = member.email || "";
+      return (
+        member.username.toLowerCase().includes(query) ||
+        email.toLowerCase().includes(query)
+      );
+    });
+  }, [scenarioAssignedSearch, scenarioUsers]);
+
+  const filteredAvailableScenarioUsers = useMemo(() => {
+    const query = scenarioAssignableSearch.trim().toLowerCase();
+    if (!query) return availableScenarioUsers;
+    return availableScenarioUsers.filter((user) => {
+      const email = user.email || "";
+      return (
+        user.username.toLowerCase().includes(query) ||
+        email.toLowerCase().includes(query)
+      );
+    });
+  }, [availableScenarioUsers, scenarioAssignableSearch]);
+
+  const selectableScenarioUsers = useMemo(() => {
+    if (!scenarioUserToAssign) return filteredAvailableScenarioUsers;
+    const hasSelectedInList = filteredAvailableScenarioUsers.some(
+      (user) => user.id === scenarioUserToAssign
+    );
+    if (hasSelectedInList) return filteredAvailableScenarioUsers;
+    const selectedUser = availableScenarioUsers.find(
+      (user) => user.id === scenarioUserToAssign
+    );
+    return selectedUser
+      ? [selectedUser, ...filteredAvailableScenarioUsers]
+      : filteredAvailableScenarioUsers;
+  }, [availableScenarioUsers, filteredAvailableScenarioUsers, scenarioUserToAssign]);
+
+  useEffect(() => {
+    if (!scenarioUserToAssign) return;
+    const stillAvailable = availableScenarioUsers.some(
+      (user) => user.id === scenarioUserToAssign
+    );
+    if (!stillAvailable) {
+      setScenarioUserToAssign("");
+    }
+  }, [availableScenarioUsers, scenarioUserToAssign]);
 
   const updateUser = async (userId: string, payload: Partial<UserRecord>) => {
     setPendingUsers((prev) => ({ ...prev, [userId]: true }));
@@ -494,6 +551,9 @@ export default function AdminPage() {
     setActiveScenario(scenario);
     setManageScenarioOpen(true);
     setScenarioUserToAssign("");
+    setScenarioAssignedSearch("");
+    setScenarioAssignableSearch("");
+    setScenarioRemovingUsers({});
     await loadScenarioUsers(scenario.namespace);
   };
 
@@ -512,6 +572,7 @@ export default function AdminPage() {
         throw new Error(detail || "分配用户失败");
       }
       setScenarioUserToAssign("");
+      setScenarioAssignableSearch("");
       await loadScenarioUsers(activeScenario.namespace);
       toast({ title: "用户已分配到业务场景" });
     } catch (error) {
@@ -527,6 +588,7 @@ export default function AdminPage() {
 
   const handleRemoveScenarioUser = async (userId: string) => {
     if (!activeScenario) return;
+    setScenarioRemovingUsers((prev) => ({ ...prev, [userId]: true }));
     try {
       const response = await backendFetch(
         `${backendUrl}/scenarios/${activeScenario.namespace}/users/${userId}`,
@@ -544,6 +606,8 @@ export default function AdminPage() {
         title: "移除失败",
         description: error instanceof Error ? error.message : "移除用户失败",
       });
+    } finally {
+      setScenarioRemovingUsers((prev) => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -1126,102 +1190,223 @@ export default function AdminPage() {
           setManageScenarioOpen(open);
           if (!open) {
             setActiveScenario(null);
+            setScenarioUserToAssign("");
+            setScenarioAssignedSearch("");
+            setScenarioAssignableSearch("");
+            setScenarioRemovingUsers({});
           }
         }}
       >
-        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[980px]">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold text-slate-900">
-              业务场景授权管理
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-sm text-slate-600">
-              场景：{" "}
-              <span className="font-semibold text-slate-900">
-                {activeScenario?.display_name || "-"}
-              </span>
-              <span className="ml-2 text-xs text-slate-500 font-mono">
-                {activeScenario?.namespace || ""}
-              </span>
-            </div>
+        <DialogContent className="max-w-4xl overflow-hidden border border-slate-200 bg-white p-0 text-slate-900">
+          <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50/60 px-6 py-5">
+            <DialogHeader className="space-y-3 text-left">
+              <DialogTitle className="text-lg font-semibold text-slate-900">
+                业务场景授权管理
+              </DialogTitle>
+              <p className="text-sm text-slate-600">
+                为业务场景配置可访问用户，支持快速查找、批量识别状态并安全移除授权。
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="border-slate-300 bg-white/80 text-slate-700"
+                >
+                  场景：{activeScenario?.display_name || "-"}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-slate-300 bg-white/80 font-mono text-slate-600"
+                >
+                  {activeScenario?.namespace || "未选择"}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-blue-200 bg-blue-50 text-blue-700"
+                >
+                  已授权 {scenarioUsers.length} 人
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                >
+                  可添加 {availableScenarioUsers.length} 人
+                </Badge>
+              </div>
+            </DialogHeader>
+          </div>
 
+          <div className="space-y-5 px-6 py-6">
             {scenarioAssignmentsError ? (
-              <div className="text-sm text-red-400">{scenarioAssignmentsError}</div>
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {scenarioAssignmentsError}
+              </div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-3">
-                <div className="text-xs uppercase tracking-wider text-slate-400">
-                  用户授权
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+              <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900">已授权用户</h3>
+                  <span className="text-xs text-slate-500">
+                    {filteredScenarioUsers.length} / {scenarioUsers.length}
+                  </span>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  {scenarioUsersLoading ? (
-                    <div className="text-sm text-slate-400 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> 正在加载用户授权...
-                    </div>
-                  ) : scenarioUsers.length === 0 ? (
-                    <div className="text-sm text-slate-500">暂无用户授权。</div>
-                  ) : (
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    value={scenarioAssignedSearch}
+                    onChange={(event) => setScenarioAssignedSearch(event.target.value)}
+                    placeholder="搜索已授权用户（用户名/邮箱）"
+                    className="border-slate-200 bg-white pl-9 text-slate-700"
+                  />
+                </div>
+
+                {scenarioUsersLoading ? (
+                  <div className="flex min-h-[240px] items-center justify-center text-sm text-slate-500">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    正在加载用户授权...
+                  </div>
+                ) : scenarioUsers.length === 0 ? (
+                  <div className="flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 text-center">
+                    <Users className="h-8 w-8 text-slate-300" />
+                    <p className="mt-3 text-sm font-medium text-slate-700">当前还没有授权用户</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      右侧选择用户后点击“添加到场景”，即可完成授权。
+                    </p>
+                  </div>
+                ) : filteredScenarioUsers.length === 0 ? (
+                  <div className="flex min-h-[240px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-500">
+                    未找到匹配的用户。
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[300px] pr-2">
                     <div className="space-y-2">
-                      {scenarioUsers.map((member) => (
-                        <div
-                          key={member.user_id}
-                          className="flex items-center justify-between text-sm text-slate-700"
-                        >
-                          <div>
-                            <span className="font-medium text-slate-900">
-                              {member.username}
-                            </span>
-                            <span className="ml-2 text-xs text-slate-500">
-                              编辑者
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className="text-xs text-red-300 hover:text-red-200"
-                            onClick={() => handleRemoveScenarioUser(member.user_id)}
+                      {filteredScenarioUsers.map((member) => {
+                        const isRemoving = Boolean(scenarioRemovingUsers[member.user_id]);
+                        return (
+                          <div
+                            key={member.user_id}
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-3 transition hover:border-slate-300 hover:shadow-sm"
                           >
-                            移除
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="truncate text-sm font-semibold text-slate-900">
+                                    {member.username}
+                                  </p>
+                                  <Badge
+                                    variant="outline"
+                                    className="border-slate-300 bg-slate-50 text-slate-600"
+                                  >
+                                    编辑者
+                                  </Badge>
+                                  {member.platform_role === "platform_admin" ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-indigo-200 bg-indigo-50 text-indigo-700"
+                                    >
+                                      平台管理员
+                                    </Badge>
+                                  ) : null}
+                                  {!member.is_active ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-amber-200 bg-amber-50 text-amber-700"
+                                    >
+                                      已停用
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                                <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                                  <Mail className="h-3.5 w-3.5" />
+                                  <span className="truncate">{member.email || "无邮箱信息"}</span>
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isRemoving || scenarioUsersLoading}
+                                onClick={() => handleRemoveScenarioUser(member.user_id)}
+                                className="border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+                              >
+                                {isRemoving ? (
+                                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <UserMinus className="mr-1.5 h-3.5 w-3.5" />
+                                )}
+                                移除
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
+                  </ScrollArea>
+                )}
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">添加授权</h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    仅显示未授权到该场景的用户。支持按用户名或邮箱搜索。
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={scenarioUserToAssign}
-                    onValueChange={setScenarioUserToAssign}
-                  >
-                    <SelectTrigger className="bg-white border-slate-200 text-slate-700">
-                      <SelectValue placeholder="选择用户" />
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500">搜索候选用户</Label>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      value={scenarioAssignableSearch}
+                      onChange={(event) => setScenarioAssignableSearch(event.target.value)}
+                      placeholder="输入用户名或邮箱"
+                      className="border-slate-200 bg-white pl-9 text-slate-700"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500">选择用户</Label>
+                  <Select value={scenarioUserToAssign} onValueChange={setScenarioUserToAssign}>
+                    <SelectTrigger className="border-slate-200 bg-white text-slate-700">
+                      <SelectValue placeholder="请选择要授权的用户" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-900">
-                      {availableScenarioUsers.length === 0 ? (
+                    <SelectContent className="border-slate-200 bg-white text-slate-900">
+                      {selectableScenarioUsers.length === 0 ? (
                         <SelectItem value="__none_user" disabled>
-                          暂无可添加用户
+                          暂无匹配用户
                         </SelectItem>
                       ) : (
-                        availableScenarioUsers.map((user) => (
+                        selectableScenarioUsers.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
-                            {user.username}
+                            <div className="flex min-w-0 flex-col">
+                              <span className="truncate">{user.username}</span>
+                              <span className="truncate text-xs text-slate-500">
+                                {user.email || "无邮箱信息"}
+                              </span>
+                            </div>
                           </SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
-                  <Button
-                    type="button"
-                    onClick={handleAssignScenarioUser}
-                    disabled={!scenarioUserToAssign || scenarioAssignLoading}
-                    className="bg-blue-600 hover:bg-blue-500"
-                  >
-                    添加
-                  </Button>
                 </div>
-              </div>
 
+                <Button
+                  type="button"
+                  onClick={handleAssignScenarioUser}
+                  disabled={!scenarioUserToAssign || scenarioAssignLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-500"
+                >
+                  {scenarioAssignLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserPlus className="mr-2 h-4 w-4" />
+                  )}
+                  添加到场景
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

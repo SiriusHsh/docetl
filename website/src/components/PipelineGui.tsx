@@ -822,30 +822,64 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
     }
   }, [saveActivePipeline, toast, unsavedChanges]);
 
+  const showExecuteEmptyState = variant === "execute" && operations.length === 0;
+
   return (
     <div className="flex flex-col h-full">
       <div
         ref={headerRef}
         className={`flex-none relative sticky top-0 z-10 ${
           variant === "execute"
-            ? "border-b border-slate-200 bg-white"
+            ? "border-b border-slate-200/80 bg-white/95 backdrop-blur"
             : "bg-background border-b shadow-sm"
         }`}
       >
         {variant === "execute" ? (
-          <div className="flex items-center justify-between px-6 py-4 bg-white">
-            <div className="flex items-center gap-4">
-              <h3 className="text-xs uppercase tracking-wider font-bold text-slate-500">
-                执行流程
-              </h3>
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-white via-slate-50/70 to-blue-50/40 px-6 py-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50">
+                <Play className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  执行流程
+                </h3>
+                <p className="mt-0.5 truncate text-xs text-slate-600">
+                  {showExecuteEmptyState
+                    ? "当前为空白画布，先添加一个操作开始编排。"
+                    : `已配置 ${operations.length} 个操作，可直接运行或继续编排。`}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                  unsavedChanges
+                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                )}
+              >
+                {unsavedChanges ? "待保存" : "已同步"}
+              </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <AddOperationDropdown
+                onAddOperation={handleAddOperation}
+                trigger={
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    添加操作
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                }
+              />
               <button
                 type="button"
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   unsavedChanges
                     ? "text-amber-700 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                    : "text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-100"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
                 onClick={handleManualSave}
                 disabled={isSavingPipeline}
@@ -862,7 +896,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                 onClick={handleStop}
                 disabled={!isLoadingOutputs}
               >
@@ -871,7 +905,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50"
                 onClick={() => onRunAll(true)}
                 disabled={isLoadingOutputs}
               >
@@ -884,7 +918,7 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 px-4 py-1.5 text-white bg-blue-600 hover:bg-blue-500 rounded-md text-xs font-medium shadow-sm transition-all disabled:opacity-50 disabled:bg-slate-300"
+                className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-blue-500 disabled:bg-slate-300 disabled:opacity-50"
                 onClick={() => onRunAll(false)}
                 disabled={isLoadingOutputs}
               >
@@ -1302,37 +1336,68 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
       </div>
       <div
         className={`flex-1 overflow-y-auto min-h-0 ${
-          variant === "execute" ? "p-6 bg-slate-50" : "p-2"
+          variant === "execute"
+            ? "bg-gradient-to-b from-slate-50 via-white to-slate-50 p-5 sm:p-6"
+            : "p-2"
         }`}
       >
         <div
           className={cn(
-            "space-y-2",
+            "space-y-3",
             variant === "execute" &&
-              "relative before:absolute before:inset-y-6 before:left-3 before:w-px before:bg-slate-200"
+              "relative rounded-2xl border border-slate-200/70 bg-white/70 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:p-5",
+            variant === "execute" &&
+              !showExecuteEmptyState &&
+              "before:absolute before:bottom-20 before:left-7 before:top-10 before:w-[2px] before:rounded-full before:bg-gradient-to-b before:from-transparent before:via-slate-300/75 before:to-slate-300/30"
           )}
         >
-          {operations.map((op, index) => (
-            <div key={op.id} id={`op-${op.id}`} className="scroll-mt-28">
-              <OperationCard index={index} id={op.id} variant={variant} />
+          {showExecuteEmptyState ? (
+            <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-gradient-to-b from-slate-50 to-white px-6 text-center">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50">
+                <Plus className="h-5 w-5 text-blue-600" />
+              </div>
+              <h4 className="text-base font-semibold text-slate-900">
+                开始构建你的执行流程
+              </h4>
+              <p className="mt-2 max-w-md text-sm text-slate-600">
+                添加第一个操作后，你可以在这里编排步骤、调试结果并一键运行整条流水线。
+              </p>
+              <AddOperationDropdown
+                onAddOperation={handleAddOperation}
+                trigger={
+                  <Button className="mt-5 rounded-lg bg-blue-600 px-5 text-white hover:bg-blue-500">
+                    添加首个操作
+                    <Plus className="ml-2 h-4 w-4" />
+                  </Button>
+                }
+              />
             </div>
-          ))}
-          <AddOperationDropdown
-            onAddOperation={handleAddOperation}
-            trigger={
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full border-dashed h-16 hover:border-primary hover:bg-accent/50 transition-colors",
-                  variant === "execute" &&
-                    "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                )}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                添加操作
-              </Button>
-            }
-          />
+          ) : (
+            <>
+              {operations.map((op, index) => (
+                <div key={op.id} id={`op-${op.id}`} className="scroll-mt-28">
+                  <OperationCard index={index} id={op.id} variant={variant} />
+                </div>
+              ))}
+              <AddOperationDropdown
+                onAddOperation={handleAddOperation}
+                trigger={
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "relative h-16 w-full border-dashed transition-colors",
+                      variant === "execute"
+                        ? "border-slate-300 bg-gradient-to-r from-white to-slate-50 text-slate-600 hover:border-blue-300 hover:bg-blue-50/60 hover:text-slate-900"
+                        : "hover:border-primary hover:bg-accent/50"
+                    )}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    添加操作
+                  </Button>
+                }
+              />
+            </>
+          )}
         </div>
       </div>
       <OptimizationDialog
