@@ -6,12 +6,11 @@ from server.app.deps import get_db
 from server.app.models import (
     MembershipRecord,
     ResetPasswordRequest,
-    SetMembershipRequest,
     UserCreateRequest,
     UserPublic,
     UserUpdateRequest,
 )
-from server.app.security import CurrentUser, get_request_meta, require_platform_admin
+from server.app.security import CurrentUser, get_request_meta, require_platform_admin, validate_namespace
 from server.app.storage import metadata_db
 
 
@@ -172,14 +171,14 @@ def set_namespace_membership(
     request: Request,
     user_id: str,
     namespace: str,
-    payload: SetMembershipRequest,
     current_user: CurrentUser = Depends(require_platform_admin),
     conn=Depends(get_db),
 ) -> None:
     user = metadata_db.get_user_by_id(conn, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    metadata_db.upsert_membership(conn, user_id=user_id, namespace=namespace, role=payload.role.value)
+    namespace = validate_namespace(namespace)
+    metadata_db.upsert_membership(conn, user_id=user_id, namespace=namespace)
     meta = get_request_meta(request)
     metadata_db.insert_audit_log(
         conn,
@@ -193,7 +192,7 @@ def set_namespace_membership(
         ip=meta["ip"],
         user_agent=meta["user_agent"],
         request_id=meta["request_id"],
-        detail={"role": payload.role.value},
+        detail={"role": "editor"},
     )
 
 

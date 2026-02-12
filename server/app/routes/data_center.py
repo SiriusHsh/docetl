@@ -29,6 +29,7 @@ from server.app.security import (
     get_current_user,
     get_request_meta,
     resolve_docetl_namespace_for_path,
+    resolve_namespace_for_read,
 )
 from server.app.storage import metadata_db
 from server.app.storage.paths import (
@@ -799,7 +800,7 @@ def list_datasets(
     current_user: CurrentUser = Depends(get_current_user),
     conn=Depends(get_db),
 ) -> list[DatasetRecord]:
-    assert_namespace_role(
+    namespace_value = resolve_namespace_for_read(
         conn=conn,
         current_user=current_user,
         namespace=namespace,
@@ -807,7 +808,7 @@ def list_datasets(
     )
     rows = metadata_db.list_datasets(
         conn,
-        namespace=namespace,
+        namespace=namespace_value,
         source=source.value if source is not None else None,
     )
     return [_to_dataset_record(row) for row in rows]

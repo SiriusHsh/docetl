@@ -264,6 +264,7 @@ class UserPublic(BaseModel):
 
 class MembershipRecord(BaseModel):
     namespace: str
+    display_name: str | None = None
     role: NamespaceRole
     created_at: int
     updated_at: int
@@ -294,10 +295,6 @@ class UserUpdateRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     password: str
-
-
-class SetMembershipRequest(BaseModel):
-    role: NamespaceRole
 
 
 class GroupCreateRequest(BaseModel):
@@ -342,6 +339,88 @@ class GroupNamespaceAccessRecord(BaseModel):
     role: NamespaceRole
     created_at: int
     updated_at: int
+
+
+class BusinessScenarioRecord(BaseModel):
+    namespace: str
+    display_name: str
+    description: str | None = None
+    is_active: bool = True
+    created_by_user_id: str | None = None
+    created_at: int
+    updated_at: int
+
+
+class BusinessScenarioMineRecord(BaseModel):
+    namespace: str
+    display_name: str
+    description: str | None = None
+    is_active: bool = True
+    effective_role: NamespaceRole
+    created_at: int
+    updated_at: int
+
+
+class BusinessScenarioCreateRequest(BaseModel):
+    display_name: str
+    description: str | None = None
+
+
+class BusinessScenarioUpdateRequest(BaseModel):
+    display_name: str | None = None
+    description: str | None = None
+    is_active: bool | None = None
+
+
+class ScenarioUserAssignmentRecord(BaseModel):
+    user_id: str
+    username: str
+    email: str | None = None
+    is_active: bool
+    platform_role: PlatformRole
+    namespace: str
+    role: NamespaceRole
+    created_at: int
+    updated_at: int
+
+
+class ModelRegistryProtocol(str, Enum):
+    OPENAI = "openai"
+    OPENAI_COMPATIBLE = "openai-compatible"
+    AZURE = "azure"
+
+
+class ModelRegistryStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class ModelRegistryRecord(BaseModel):
+    id: str
+    name: str
+    model_id: str
+    protocol: ModelRegistryProtocol
+    base_url: str
+    api_key: str
+    tags: list[str] = []
+    description: str = ""
+    status: ModelRegistryStatus = ModelRegistryStatus.ACTIVE
+    params: dict[str, Any] | None = None
+    created_at: int
+    updated_at: int
+
+
+class ModelRegistryUpsertRequest(BaseModel):
+    id: str | None = None
+    name: str
+    model_id: str
+    protocol: ModelRegistryProtocol
+    base_url: str
+    api_key: str
+    tags: list[str] = []
+    description: str = ""
+    status: ModelRegistryStatus = ModelRegistryStatus.ACTIVE
+    params: dict[str, Any] | None = None
 
 
 class AuditLogEntry(BaseModel):

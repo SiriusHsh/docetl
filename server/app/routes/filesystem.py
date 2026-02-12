@@ -19,8 +19,10 @@ from server.app.security import (
     get_current_user,
     require_namespace_role,
     resolve_docetl_namespace_for_path,
+    resolve_legacy_public_namespace_alias,
     validate_namespace,
 )
+from server.app.storage import paths as storage_paths
 
 router = APIRouter()
 
@@ -49,13 +51,33 @@ def _authorize_docetl_path(
     min_role: NamespaceRole,
 ) -> Path:
     namespace, resolved = resolve_docetl_namespace_for_path(path)
-    assert_namespace_role(
+    try:
+        assert_namespace_role(
+            conn=conn,
+            current_user=current_user,
+            namespace=namespace,
+            min_role=min_role,
+        )
+        return resolved
+    except HTTPException as exc:
+        if exc.status_code != 403 or str(exc.detail) != "No access to namespace":
+            raise
+
+    aliased_namespace = resolve_legacy_public_namespace_alias(
         conn=conn,
         current_user=current_user,
         namespace=namespace,
         min_role=min_role,
     )
-    return resolved
+    if aliased_namespace is None:
+        raise HTTPException(status_code=403, detail="No access to namespace")
+
+    docetl_root = storage_paths.get_docetl_root_dir().expanduser().resolve(strict=False)
+    relative = resolved.relative_to(docetl_root)
+    mapped = docetl_root / aliased_namespace
+    if len(relative.parts) > 1:
+        mapped = mapped.joinpath(*relative.parts[1:])
+    return mapped
 
 
 def _validate_pipeline_name_for_paths(name: str) -> None:

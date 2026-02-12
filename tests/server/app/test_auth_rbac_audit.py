@@ -15,6 +15,7 @@ def client(tmp_path, monkeypatch) -> TestClient:
     monkeypatch.setenv("DOCETL_AUTH_SECRET", "test-secret")
     monkeypatch.setenv("DOCETL_BOOTSTRAP_ADMIN_USERNAME", "admin")
     monkeypatch.setenv("DOCETL_BOOTSTRAP_ADMIN_PASSWORD", "adminpass123")
+    monkeypatch.setenv("DOCETL_DISABLE_SCHEDULER", "true")
 
     app = create_app()
     with TestClient(app) as test_client:
@@ -37,7 +38,10 @@ def test_register_login_logout_me(client: TestClient) -> None:
     assert me.status_code == 200, me.text
     me_json = me.json()
     assert me_json["user"]["username"] == "alice"
-    assert any(m["role"] == "namespace_admin" for m in me_json["memberships"])
+    assert any(
+        m["namespace"] == "public_business" and m["role"] == "editor"
+        for m in me_json["memberships"]
+    )
 
     logout = client.post("/auth/logout", headers=_auth_headers(token))
     assert logout.status_code == 204
@@ -82,7 +86,6 @@ def test_admin_rbac_and_audit_logs(client: TestClient) -> None:
     set_membership = client.put(
         f"/users/{created_user_id}/namespaces/project_x",
         headers=_auth_headers(admin_token),
-        json={"role": "editor"},
     )
     assert set_membership.status_code == 204
 

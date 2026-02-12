@@ -4,6 +4,7 @@ import hmac
 import json
 import os
 import secrets
+import shutil
 import sqlite3
 import uuid
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Literal
 
+from server.app.storage import paths as storage_paths
 from server.app.storage.paths import get_platform_db_path, get_platform_dir
 
 
@@ -62,6 +64,23 @@ def init_schema(conn: sqlite3.Connection) -> None:
         );
 
         CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+        CREATE TABLE IF NOT EXISTS platform_meta (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS namespace_catalog (
+          namespace TEXT PRIMARY KEY,
+          display_name TEXT NOT NULL UNIQUE,
+          description TEXT,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          created_by_user_id TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          FOREIGN KEY(created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+        );
 
         CREATE TABLE IF NOT EXISTS memberships (
           user_id TEXT NOT NULL,
@@ -216,7 +235,338 @@ def init_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_datasets_namespace ON datasets(namespace);
         CREATE INDEX IF NOT EXISTS idx_datasets_source ON datasets(source);
         CREATE INDEX IF NOT EXISTS idx_datasets_name ON datasets(name);
+
+        CREATE TABLE IF NOT EXISTS model_registry (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          model_id TEXT NOT NULL,
+          protocol TEXT NOT NULL,
+          base_url TEXT NOT NULL,
+          api_key TEXT NOT NULL,
+          tags_json TEXT NOT NULL,
+          description TEXT NOT NULL,
+          status TEXT NOT NULL,
+          params_json TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_model_registry_status ON model_registry(status);
+        CREATE INDEX IF NOT EXISTS idx_model_registry_updated_at ON model_registry(updated_at);
         """
+    )
+    _backfill_namespace_catalog(conn)
+    _ensure_default_public_business_namespace(conn)
+    _migrate_legacy_namespaces_to_public_business(conn)
+    _normalize_membership_roles_to_editor(conn)
+
+
+def _backfill_namespace_catalog(conn: sqlite3.Connection) -> None:
+    now = utc_now_ts()
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO namespace_catalog (
+          namespace, display_name, description, is_active, created_by_user_id, created_at, updated_at
+        )
+        SELECT src.namespace, src.namespace, NULL, 1, NULL, ?, ?
+        FROM (
+          SELECT DISTINCT namespace FROM memberships
+          UNION
+          SELECT DISTINCT namespace FROM runs
+          UNION
+          SELECT DISTINCT namespace FROM deployments
+          UNION
+          SELECT DISTINCT namespace FROM datasets
+        ) AS src
+        WHERE src.namespace IS NOT NULL AND TRIM(src.namespace) <> ''
+        """,
+        (now, now),
+    )
+
+
+def _ensure_default_public_business_namespace(conn: sqlite3.Connection) -> None:
+    now = utc_now_ts()
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO namespace_catalog (
+          namespace, display_name, description, is_active, created_by_user_id, created_at, updated_at
+        )
+        VALUES (?, ?, ?, 1, NULL, ?, ?)
+        """,
+        ("public_business", "公共业务", "默认公共业务场景", now, now),
+    )
+
+
+def _get_platform_meta(conn: sqlite3.Connection, key: str) -> str | None:
+    row = conn.execute(
+        "SELECT value FROM platform_meta WHERE key = ?",
+        (key,),
+    ).fetchone()
+    if row is None:
+        return None
+    return str(row["value"])
+
+
+def _set_platform_meta(conn: sqlite3.Connection, *, key: str, value: str) -> None:
+    now = utc_now_ts()
+    conn.execute(
+        """
+        INSERT INTO platform_meta (key, value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+        """,
+        (key, value, now),
+    )
+
+
+def _rewrite_namespace_path(path_value: str | None, *, old_ns: str, new_ns: str) -> str | None:
+    if not path_value:
+        return path_value
+    marker = os.path.join(".docetl", old_ns)
+    if marker not in path_value:
+        return path_value
+    return path_value.replace(
+        os.path.join(".docetl", old_ns),
+        os.path.join(".docetl", new_ns),
+    )
+
+
+def _merge_namespace_files(*, old_ns: str, new_ns: str) -> None:
+    old_root = storage_paths.get_namespace_dir(old_ns)
+    new_root = storage_paths.get_namespace_dir(new_ns)
+    if not old_root.exists():
+        return
+    new_root.mkdir(parents=True, exist_ok=True)
+
+    for source in old_root.rglob("*"):
+        relative = source.relative_to(old_root)
+        target = new_root / relative
+        if source.is_dir():
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            continue
+        try:
+            shutil.copy2(source, target)
+        except OSError:
+            continue
+
+
+def _normalize_pipeline_store_namespace(*, public_ns: str, legacy_namespaces: set[str]) -> None:
+    if not legacy_namespaces:
+        return
+
+    def _normalize_value(value: Any) -> tuple[Any, bool]:
+        if isinstance(value, dict):
+            changed = False
+            normalized: dict[str, Any] = {}
+            for key, item in value.items():
+                if key == "namespace" and isinstance(item, str) and item in legacy_namespaces:
+                    normalized[key] = public_ns
+                    changed = True
+                    continue
+                normalized_item, item_changed = _normalize_value(item)
+                normalized[key] = normalized_item
+                changed = changed or item_changed
+            return normalized, changed
+        if isinstance(value, list):
+            changed = False
+            normalized_list: list[Any] = []
+            for item in value:
+                normalized_item, item_changed = _normalize_value(item)
+                normalized_list.append(normalized_item)
+                changed = changed or item_changed
+            return normalized_list, changed
+        if isinstance(value, str):
+            rewritten = value
+            for legacy_ns in legacy_namespaces:
+                rewritten = _rewrite_namespace_path(
+                    rewritten,
+                    old_ns=legacy_ns,
+                    new_ns=public_ns,
+                ) or rewritten
+            return rewritten, rewritten != value
+        return value, False
+
+    store_dir = storage_paths.get_namespace_dir(public_ns) / "pipelines" / "store"
+    if not store_dir.exists():
+        return
+    for file_path in store_dir.glob("*.json"):
+        try:
+            payload = json.loads(file_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        normalized_payload, changed = _normalize_value(payload)
+        if not changed:
+            continue
+        try:
+            file_path.write_text(
+                json.dumps(normalized_payload, ensure_ascii=True, indent=2),
+                encoding="utf-8",
+            )
+        except OSError:
+            continue
+
+
+def _role_rank(value: str) -> int:
+    ranks = {"viewer": 0, "editor": 1, "namespace_admin": 2}
+    return ranks.get(value, -1)
+
+
+def _migrate_legacy_namespaces_to_public_business(conn: sqlite3.Connection) -> None:
+    migration_key = "migration_legacy_to_public_business_v2"
+    if _get_platform_meta(conn, migration_key) == "done":
+        return
+
+    public_ns = "public_business"
+    _ensure_default_public_business_namespace(conn)
+
+    legacy_rows = conn.execute(
+        """
+        SELECT nc.namespace
+        FROM namespace_catalog nc
+        WHERE nc.namespace <> ?
+          AND (
+            nc.created_by_user_id IS NULL
+            OR EXISTS (
+              SELECT 1 FROM users u WHERE u.username = nc.namespace
+            )
+          )
+        ORDER BY nc.namespace ASC
+        """,
+        (public_ns,),
+    ).fetchall()
+    legacy_namespaces = [str(row["namespace"]) for row in legacy_rows]
+    if not legacy_namespaces:
+        _set_platform_meta(conn, key=migration_key, value="done")
+        return
+
+    # Merge filesystem artifacts first so rewritten paths are resolvable.
+    for legacy_ns in legacy_namespaces:
+        _merge_namespace_files(old_ns=legacy_ns, new_ns=public_ns)
+    _normalize_pipeline_store_namespace(
+        public_ns=public_ns,
+        legacy_namespaces=set(legacy_namespaces),
+    )
+
+    # Consolidate user memberships into the default public namespace.
+    rows = conn.execute(
+        """
+        SELECT user_id, role
+        FROM memberships
+        WHERE namespace = ? OR namespace IN (%s)
+        """
+        % ",".join("?" for _ in legacy_namespaces),
+        (public_ns, *legacy_namespaces),
+    ).fetchall()
+    best_user_role: dict[str, str] = {}
+    for row in rows:
+        user_id = str(row["user_id"])
+        role = str(row["role"])
+        existing = best_user_role.get(user_id)
+        if existing is None or _role_rank(role) > _role_rank(existing):
+            best_user_role[user_id] = role
+    for user_id in best_user_role:
+        upsert_membership(
+            conn,
+            user_id=user_id,
+            namespace=public_ns,
+        )
+    conn.execute(
+        "DELETE FROM memberships WHERE namespace IN (%s)"
+        % ",".join("?" for _ in legacy_namespaces),
+        tuple(legacy_namespaces),
+    )
+
+    # Avoid unique(namespace, name) collisions for deployments before namespace rewrite.
+    for legacy_ns in legacy_namespaces:
+        deployment_rows = conn.execute(
+            """
+            SELECT id, name
+            FROM deployments
+            WHERE namespace = ?
+            ORDER BY created_at ASC
+            """,
+            (legacy_ns,),
+        ).fetchall()
+        for row in deployment_rows:
+            deployment_id = str(row["id"])
+            name = str(row["name"])
+            candidate = name
+            suffix = 2
+            while conn.execute(
+                "SELECT 1 FROM deployments WHERE namespace = ? AND name = ? LIMIT 1",
+                (public_ns, candidate),
+            ).fetchone() is not None:
+                candidate = f"{name}-{legacy_ns}-{suffix}"
+                suffix += 1
+            if candidate != name:
+                conn.execute(
+                    "UPDATE deployments SET name = ?, updated_at = ? WHERE id = ?",
+                    (candidate, utc_now_ts(), deployment_id),
+                )
+
+    # Rewrite namespace columns for historical data.
+    for legacy_ns in legacy_namespaces:
+        conn.execute("UPDATE runs SET namespace = ? WHERE namespace = ?", (public_ns, legacy_ns))
+        conn.execute("UPDATE deployments SET namespace = ? WHERE namespace = ?", (public_ns, legacy_ns))
+        conn.execute("UPDATE datasets SET namespace = ? WHERE namespace = ?", (public_ns, legacy_ns))
+        conn.execute("UPDATE audit_logs SET namespace = ? WHERE namespace = ?", (public_ns, legacy_ns))
+
+    # Rewrite path fields that embed namespace segments.
+    run_rows = conn.execute(
+        "SELECT id, output_path, log_path FROM runs WHERE namespace = ?",
+        (public_ns,),
+    ).fetchall()
+    for row in run_rows:
+        run_id = str(row["id"])
+        output_path = str(row["output_path"]) if row["output_path"] is not None else None
+        log_path = str(row["log_path"]) if row["log_path"] is not None else None
+        new_output = output_path
+        new_log = log_path
+        for legacy_ns in legacy_namespaces:
+            new_output = _rewrite_namespace_path(new_output, old_ns=legacy_ns, new_ns=public_ns)
+            new_log = _rewrite_namespace_path(new_log, old_ns=legacy_ns, new_ns=public_ns)
+        if new_output != output_path or new_log != log_path:
+            conn.execute(
+                "UPDATE runs SET output_path = ?, log_path = ? WHERE id = ?",
+                (new_output, new_log, run_id),
+            )
+
+    dataset_rows = conn.execute(
+        "SELECT id, path, raw_path FROM datasets WHERE namespace = ?",
+        (public_ns,),
+    ).fetchall()
+    for row in dataset_rows:
+        dataset_id = str(row["id"])
+        path = str(row["path"])
+        raw_path = str(row["raw_path"]) if row["raw_path"] is not None else None
+        new_path = path
+        new_raw_path = raw_path
+        for legacy_ns in legacy_namespaces:
+            new_path = _rewrite_namespace_path(new_path, old_ns=legacy_ns, new_ns=public_ns) or new_path
+            new_raw_path = _rewrite_namespace_path(
+                new_raw_path, old_ns=legacy_ns, new_ns=public_ns
+            )
+        if new_path != path or new_raw_path != raw_path:
+            conn.execute(
+                "UPDATE datasets SET path = ?, raw_path = ? WHERE id = ?",
+                (new_path, new_raw_path, dataset_id),
+            )
+
+    # Remove legacy scenario catalogs.
+    conn.execute(
+        "DELETE FROM namespace_catalog WHERE namespace IN (%s)"
+        % ",".join("?" for _ in legacy_namespaces),
+        tuple(legacy_namespaces),
+    )
+    _set_platform_meta(conn, key=migration_key, value="done")
+
+
+def _normalize_membership_roles_to_editor(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "UPDATE memberships SET role = 'editor' WHERE role IS NOT NULL AND role <> 'editor'"
     )
 
 
@@ -337,6 +687,33 @@ class GroupNamespaceAccessRow:
 
 
 @dataclass(frozen=True)
+class NamespaceCatalogRow:
+    namespace: str
+    display_name: str
+    description: str | None
+    is_active: bool
+    created_by_user_id: str | None
+    created_at: int
+    updated_at: int
+
+
+@dataclass(frozen=True)
+class ModelRegistryRow:
+    id: str
+    name: str
+    model_id: str
+    protocol: str
+    base_url: str
+    api_key: str
+    tags: list[str]
+    description: str
+    status: str
+    params: dict[str, Any] | None
+    created_at: int
+    updated_at: int
+
+
+@dataclass(frozen=True)
 class RunRow:
     id: str
     namespace: str
@@ -449,6 +826,39 @@ def _row_to_group_namespace_access(row: sqlite3.Row) -> GroupNamespaceAccessRow:
     )
 
 
+def _row_to_namespace_catalog(row: sqlite3.Row) -> NamespaceCatalogRow:
+    return NamespaceCatalogRow(
+        namespace=str(row["namespace"]),
+        display_name=str(row["display_name"]),
+        description=str(row["description"]) if row["description"] is not None else None,
+        is_active=bool(row["is_active"]),
+        created_by_user_id=(
+            str(row["created_by_user_id"])
+            if row["created_by_user_id"] is not None
+            else None
+        ),
+        created_at=int(row["created_at"]),
+        updated_at=int(row["updated_at"]),
+    )
+
+
+def _row_to_model_registry(row: sqlite3.Row) -> ModelRegistryRow:
+    return ModelRegistryRow(
+        id=str(row["id"]),
+        name=str(row["name"]),
+        model_id=str(row["model_id"]),
+        protocol=str(row["protocol"]),
+        base_url=str(row["base_url"]),
+        api_key=str(row["api_key"]),
+        tags=json.loads(row["tags_json"]) if row["tags_json"] else [],
+        description=str(row["description"]),
+        status=str(row["status"]),
+        params=json.loads(row["params_json"]) if row["params_json"] else None,
+        created_at=int(row["created_at"]),
+        updated_at=int(row["updated_at"]),
+    )
+
+
 def _row_to_run(row: sqlite3.Row) -> RunRow:
     return RunRow(
         id=str(row["id"]),
@@ -538,6 +948,442 @@ _DATASET_COLUMNS = (
     "ingest_status, ingest_config_json, created_at, updated_at, schema_json, "
     "row_count, lineage_json, tags_json, description, error"
 )
+
+_NAMESPACE_CATALOG_COLUMNS = (
+    "namespace, display_name, description, is_active, created_by_user_id, created_at, updated_at"
+)
+
+_MODEL_REGISTRY_COLUMNS = (
+    "id, name, model_id, protocol, base_url, api_key, tags_json, description, status, "
+    "params_json, created_at, updated_at"
+)
+
+
+def ensure_namespace_catalog_entry(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    display_name: str | None = None,
+    description: str | None = None,
+    created_by_user_id: str | None = None,
+    is_active: bool = True,
+) -> NamespaceCatalogRow:
+    now = utc_now_ts()
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO namespace_catalog (
+          namespace, display_name, description, is_active, created_by_user_id, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            namespace,
+            display_name or namespace,
+            description,
+            1 if is_active else 0,
+            created_by_user_id,
+            now,
+            now,
+        ),
+    )
+    row = conn.execute(
+        f"SELECT {_NAMESPACE_CATALOG_COLUMNS} FROM namespace_catalog WHERE namespace = ?",
+        (namespace,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError("Failed to ensure namespace catalog entry")
+    return _row_to_namespace_catalog(row)
+
+
+def create_namespace_catalog_entry(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    display_name: str,
+    description: str | None = None,
+    created_by_user_id: str | None = None,
+) -> NamespaceCatalogRow:
+    now = utc_now_ts()
+    try:
+        conn.execute(
+            """
+            INSERT INTO namespace_catalog (
+              namespace, display_name, description, is_active, created_by_user_id, created_at, updated_at
+            )
+            VALUES (?, ?, ?, 1, ?, ?, ?)
+            """,
+            (namespace, display_name, description, created_by_user_id, now, now),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("namespace_or_display_name_exists") from exc
+    row = conn.execute(
+        f"SELECT {_NAMESPACE_CATALOG_COLUMNS} FROM namespace_catalog WHERE namespace = ?",
+        (namespace,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError("Failed to load created namespace catalog entry")
+    return _row_to_namespace_catalog(row)
+
+
+def get_namespace_catalog(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+) -> NamespaceCatalogRow | None:
+    row = conn.execute(
+        f"SELECT {_NAMESPACE_CATALOG_COLUMNS} FROM namespace_catalog WHERE namespace = ?",
+        (namespace,),
+    ).fetchone()
+    if row is None:
+        return None
+    return _row_to_namespace_catalog(row)
+
+
+def list_namespace_catalog(
+    conn: sqlite3.Connection,
+    *,
+    include_inactive: bool = False,
+    limit: int = 500,
+    offset: int = 0,
+) -> list[NamespaceCatalogRow]:
+    where = "1=1" if include_inactive else "is_active = 1"
+    rows = conn.execute(
+        f"""
+        SELECT {_NAMESPACE_CATALOG_COLUMNS}
+        FROM namespace_catalog
+        WHERE {where}
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (limit, offset),
+    ).fetchall()
+    return [_row_to_namespace_catalog(row) for row in rows]
+
+
+def list_namespace_values(
+    conn: sqlite3.Connection,
+    *,
+    include_inactive: bool = False,
+) -> list[str]:
+    where = "1=1" if include_inactive else "is_active = 1"
+    rows = conn.execute(
+        f"SELECT namespace FROM namespace_catalog WHERE {where} ORDER BY namespace ASC"
+    ).fetchall()
+    return [str(row["namespace"]) for row in rows]
+
+
+def update_namespace_catalog(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+    display_name: str | Any = _UNSET,
+    description: str | None | Any = _UNSET,
+    is_active: bool | Any = _UNSET,
+) -> NamespaceCatalogRow:
+    updates: list[str] = []
+    params: list[Any] = []
+
+    if display_name is not _UNSET:
+        updates.append("display_name = ?")
+        params.append(display_name)
+    if description is not _UNSET:
+        updates.append("description = ?")
+        params.append(description)
+    if is_active is not _UNSET:
+        updates.append("is_active = ?")
+        params.append(1 if bool(is_active) else 0)
+
+    if not updates:
+        existing = get_namespace_catalog(conn, namespace=namespace)
+        if existing is None:
+            raise ValueError("namespace_not_found")
+        return existing
+
+    updates.append("updated_at = ?")
+    params.append(utc_now_ts())
+    params.append(namespace)
+    try:
+        conn.execute(
+            f"UPDATE namespace_catalog SET {', '.join(updates)} WHERE namespace = ?",
+            tuple(params),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("display_name_exists") from exc
+
+    row = conn.execute(
+        f"SELECT {_NAMESPACE_CATALOG_COLUMNS} FROM namespace_catalog WHERE namespace = ?",
+        (namespace,),
+    ).fetchone()
+    if row is None:
+        raise ValueError("namespace_not_found")
+    return _row_to_namespace_catalog(row)
+
+
+def list_namespace_users(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT
+          m.user_id,
+          m.namespace,
+          m.role,
+          m.created_at,
+          m.updated_at,
+          u.username,
+          u.email,
+          u.is_active,
+          u.platform_role
+        FROM memberships m
+        JOIN users u ON u.id = m.user_id
+        WHERE m.namespace = ?
+        ORDER BY m.updated_at DESC
+        """,
+        (namespace,),
+    ).fetchall()
+    return [
+        {
+            "user_id": str(row["user_id"]),
+            "namespace": str(row["namespace"]),
+            "role": str(row["role"]),
+            "created_at": int(row["created_at"]),
+            "updated_at": int(row["updated_at"]),
+            "username": str(row["username"]),
+            "email": str(row["email"]) if row["email"] is not None else None,
+            "is_active": bool(row["is_active"]),
+            "platform_role": str(row["platform_role"]),
+        }
+        for row in rows
+    ]
+
+
+def remove_membership(conn: sqlite3.Connection, *, user_id: str, namespace: str) -> None:
+    conn.execute(
+        "DELETE FROM memberships WHERE user_id = ? AND namespace = ?",
+        (user_id, namespace),
+    )
+
+
+def list_namespace_groups(
+    conn: sqlite3.Connection,
+    *,
+    namespace: str,
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT
+          gnr.group_id,
+          gnr.namespace,
+          gnr.role,
+          gnr.created_at,
+          gnr.updated_at,
+          g.name,
+          g.description
+        FROM group_namespace_roles gnr
+        JOIN groups g ON g.id = gnr.group_id
+        WHERE gnr.namespace = ?
+        ORDER BY gnr.updated_at DESC
+        """,
+        (namespace,),
+    ).fetchall()
+    return [
+        {
+            "group_id": str(row["group_id"]),
+            "namespace": str(row["namespace"]),
+            "role": str(row["role"]),
+            "created_at": int(row["created_at"]),
+            "updated_at": int(row["updated_at"]),
+            "name": str(row["name"]),
+            "description": str(row["description"]) if row["description"] is not None else None,
+        }
+        for row in rows
+    ]
+
+
+def list_effective_memberships(
+    conn: sqlite3.Connection,
+    *,
+    user_id: str,
+    include_inactive: bool = True,
+) -> list[dict[str, Any]]:
+    role_rank: dict[str, int] = {"viewer": 0, "editor": 1, "namespace_admin": 2}
+    direct = list_memberships(conn, user_id=user_id)
+    effective: dict[str, dict[str, Any]] = {}
+
+    for record in direct:
+        namespace = str(record["namespace"])
+        role = str(record["role"])
+        created_at = int(record["created_at"])
+        updated_at = int(record["updated_at"])
+        existing = effective.get(namespace)
+        if existing is None or role_rank.get(role, -1) > role_rank.get(str(existing["role"]), -1):
+            effective[namespace] = {
+                "namespace": namespace,
+                "role": role,
+                "created_at": created_at,
+                "updated_at": updated_at,
+            }
+        elif existing is not None and updated_at > int(existing["updated_at"]):
+            existing["updated_at"] = updated_at
+
+    if not effective:
+        return []
+
+    namespaces = list(effective.keys())
+    placeholders = ",".join("?" for _ in namespaces)
+    rows = conn.execute(
+        f"""
+        SELECT namespace, display_name, description, is_active
+        FROM namespace_catalog
+        WHERE namespace IN ({placeholders})
+        """,
+        tuple(namespaces),
+    ).fetchall()
+    catalog = {
+        str(row["namespace"]): {
+            "display_name": str(row["display_name"]),
+            "description": str(row["description"]) if row["description"] is not None else None,
+            "is_active": bool(row["is_active"]),
+        }
+        for row in rows
+    }
+
+    results: list[dict[str, Any]] = []
+    for namespace, value in effective.items():
+        meta = catalog.get(namespace)
+        is_active = bool(meta["is_active"]) if meta is not None else True
+        if not include_inactive and not is_active:
+            continue
+        results.append(
+            {
+                **value,
+                "display_name": (
+                    str(meta["display_name"]) if meta is not None else namespace
+                ),
+                "description": meta["description"] if meta is not None else None,
+                "is_active": is_active,
+            }
+        )
+    results.sort(key=lambda item: str(item["namespace"]))
+    return results
+
+
+def list_model_registry(
+    conn: sqlite3.Connection,
+    *,
+    include_inactive: bool = True,
+    limit: int = 500,
+    offset: int = 0,
+) -> list[ModelRegistryRow]:
+    where = "1=1" if include_inactive else "status = 'active'"
+    rows = conn.execute(
+        f"""
+        SELECT {_MODEL_REGISTRY_COLUMNS}
+        FROM model_registry
+        WHERE {where}
+        ORDER BY updated_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (limit, offset),
+    ).fetchall()
+    return [_row_to_model_registry(row) for row in rows]
+
+
+def get_model_registry(conn: sqlite3.Connection, *, model_id: str) -> ModelRegistryRow | None:
+    row = conn.execute(
+        f"SELECT {_MODEL_REGISTRY_COLUMNS} FROM model_registry WHERE id = ?",
+        (model_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return _row_to_model_registry(row)
+
+
+def upsert_model_registry(
+    conn: sqlite3.Connection,
+    *,
+    model_id: str | None,
+    name: str,
+    llm_model_id: str,
+    protocol: str,
+    base_url: str,
+    api_key: str,
+    tags: list[str] | None,
+    description: str,
+    status: str,
+    params: dict[str, Any] | None = None,
+) -> ModelRegistryRow:
+    now = utc_now_ts()
+    record_id = model_id or str(uuid.uuid4())
+    existing = get_model_registry(conn, model_id=record_id)
+    if existing is None:
+        conn.execute(
+            """
+            INSERT INTO model_registry (
+              id, name, model_id, protocol, base_url, api_key, tags_json,
+              description, status, params_json, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                record_id,
+                name,
+                llm_model_id,
+                protocol,
+                base_url,
+                api_key,
+                json.dumps(tags or []),
+                description,
+                status,
+                json.dumps(params) if params is not None else None,
+                now,
+                now,
+            ),
+        )
+    else:
+        conn.execute(
+            """
+            UPDATE model_registry
+            SET
+              name = ?,
+              model_id = ?,
+              protocol = ?,
+              base_url = ?,
+              api_key = ?,
+              tags_json = ?,
+              description = ?,
+              status = ?,
+              params_json = ?,
+              updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                name,
+                llm_model_id,
+                protocol,
+                base_url,
+                api_key,
+                json.dumps(tags or []),
+                description,
+                status,
+                json.dumps(params) if params is not None else None,
+                now,
+                record_id,
+            ),
+        )
+    row = conn.execute(
+        f"SELECT {_MODEL_REGISTRY_COLUMNS} FROM model_registry WHERE id = ?",
+        (record_id,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError("Failed to load upserted model registry row")
+    return _row_to_model_registry(row)
+
+
+def delete_model_registry(conn: sqlite3.Connection, *, model_id: str) -> None:
+    conn.execute("DELETE FROM model_registry WHERE id = ?", (model_id,))
 
 
 def create_user(
@@ -785,6 +1631,7 @@ def upsert_group_namespace_role(
     role: NamespaceRole,
 ) -> None:
     now = utc_now_ts()
+    ensure_namespace_catalog_entry(conn, namespace=namespace)
     conn.execute(
         """
         INSERT INTO group_namespace_roles (group_id, namespace, role, created_at, updated_at)
@@ -912,26 +1759,32 @@ def upsert_membership(
     *,
     user_id: str,
     namespace: str,
-    role: NamespaceRole,
 ) -> None:
     now = utc_now_ts()
+    ensure_namespace_catalog_entry(conn, namespace=namespace)
     conn.execute(
         """
         INSERT INTO memberships (user_id, namespace, role, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(user_id, namespace) DO UPDATE SET role=excluded.role, updated_at=excluded.updated_at
         """,
-        (user_id, namespace, role, now, now),
+        (user_id, namespace, "editor", now, now),
     )
 
 
 def list_memberships(conn: sqlite3.Connection, *, user_id: str) -> list[dict[str, Any]]:
     rows = conn.execute(
         """
-        SELECT namespace, role, created_at, updated_at
-        FROM memberships
-        WHERE user_id = ?
-        ORDER BY namespace ASC
+        SELECT
+          m.namespace,
+          m.role,
+          m.created_at,
+          m.updated_at,
+          nc.display_name
+        FROM memberships m
+        LEFT JOIN namespace_catalog nc ON nc.namespace = m.namespace
+        WHERE m.user_id = ?
+        ORDER BY m.namespace ASC
         """,
         (user_id,),
     ).fetchall()
@@ -941,6 +1794,11 @@ def list_memberships(conn: sqlite3.Connection, *, user_id: str) -> list[dict[str
             "role": str(row["role"]),
             "created_at": int(row["created_at"]),
             "updated_at": int(row["updated_at"]),
+            "display_name": (
+                str(row["display_name"])
+                if row["display_name"] is not None
+                else str(row["namespace"])
+            ),
         }
         for row in rows
     ]
@@ -1261,14 +2119,17 @@ def get_run(conn: sqlite3.Connection, run_id: str) -> RunRow | None:
 def list_runs(
     conn: sqlite3.Connection,
     *,
-    namespace: str,
+    namespace: str | None,
     status: str | None = None,
     pipeline_id: str | None = None,
     limit: int = 200,
     offset: int = 0,
 ) -> list[RunRow]:
-    where: list[str] = ["namespace = ?"]
-    params: list[Any] = [namespace]
+    where: list[str] = []
+    params: list[Any] = []
+    if namespace is not None:
+        where.append("namespace = ?")
+        params.append(namespace)
     if status is not None:
         where.append("status = ?")
         params.append(status)
@@ -1276,7 +2137,7 @@ def list_runs(
         where.append("pipeline_id = ?")
         params.append(pipeline_id)
 
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
     rows = conn.execute(
         f"""
         SELECT {_RUN_COLUMNS}
@@ -1290,9 +2151,11 @@ def list_runs(
     return [_row_to_run(row) for row in rows]
 
 
-def get_run_summary(conn: sqlite3.Connection, *, namespace: str) -> dict[str, int | None]:
+def get_run_summary(conn: sqlite3.Connection, *, namespace: str | None) -> dict[str, int | None]:
+    where_sql = "WHERE namespace = ?" if namespace is not None else ""
+    params: tuple[Any, ...] = (namespace,) if namespace is not None else ()
     row = conn.execute(
-        """
+        f"""
         SELECT
           COUNT(*) AS total,
           SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) AS running,
@@ -1301,9 +2164,9 @@ def get_run_summary(conn: sqlite3.Connection, *, namespace: str) -> dict[str, in
           SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
           MAX(created_at) AS last_run_at
         FROM runs
-        WHERE namespace = ?
+        {where_sql}
         """,
-        (namespace,),
+        params,
     ).fetchone()
     if row is None:
         return {
@@ -1718,18 +2581,21 @@ def get_dataset(conn: sqlite3.Connection, dataset_id: str) -> DatasetRow | None:
 def list_datasets(
     conn: sqlite3.Connection,
     *,
-    namespace: str,
+    namespace: str | None,
     source: str | None = None,
     limit: int = 200,
     offset: int = 0,
 ) -> list[DatasetRow]:
-    where: list[str] = ["namespace = ?"]
-    params: list[Any] = [namespace]
+    where: list[str] = []
+    params: list[Any] = []
+    if namespace is not None:
+        where.append("namespace = ?")
+        params.append(namespace)
     if source is not None:
         where.append("source = ?")
         params.append(source)
 
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
     rows = conn.execute(
         f"""
         SELECT {_DATASET_COLUMNS}

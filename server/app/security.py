@@ -14,6 +14,8 @@ from server.app.storage import paths as storage_paths
 
 
 SESSION_COOKIE_NAME = "docetl_session"
+ALL_NAMESPACES = "__all__"
+DEFAULT_PUBLIC_NAMESPACE = "public_business"
 
 _NAMESPACE_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$")
 
@@ -114,6 +116,10 @@ def assert_namespace_role(
     if current_user.platform_role == PlatformRole.PLATFORM_ADMIN:
         return NamespaceRole.NAMESPACE_ADMIN
 
+    namespace_meta = metadata_db.get_namespace_catalog(conn, namespace=namespace)
+    if namespace_meta is not None and not namespace_meta.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Namespace is inactive")
+
     roles: list[NamespaceRole] = []
 
     direct_role = metadata_db.get_namespace_role(
@@ -124,14 +130,6 @@ def assert_namespace_role(
     if direct_role is not None:
         roles.append(NamespaceRole(direct_role))
 
-    group_roles = metadata_db.list_group_roles_for_namespace(
-        conn,
-        user_id=current_user.id,
-        namespace=namespace,
-    )
-    for role_value in group_roles:
-        roles.append(NamespaceRole(role_value))
-
     if not roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No access to namespace")
 
@@ -140,6 +138,73 @@ def assert_namespace_role(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role for namespace")
 
     return role
+
+
+def resolve_legacy_public_namespace_alias(
+    *,
+    conn,
+    current_user: CurrentUser,
+    namespace: str,
+    min_role: NamespaceRole,
+) -> str | None:
+    if current_user.platform_role == PlatformRole.PLATFORM_ADMIN:
+        return None
+
+    namespace_value = str(namespace).strip()
+    if namespace_value == DEFAULT_PUBLIC_NAMESPACE:
+        return None
+
+    # Backward compatibility: legacy personal namespaces matched username.
+    if namespace_value != current_user.username:
+        return None
+
+    try:
+        assert_namespace_role(
+            conn=conn,
+            current_user=current_user,
+            namespace=DEFAULT_PUBLIC_NAMESPACE,
+            min_role=min_role,
+        )
+    except HTTPException:
+        return None
+
+    return DEFAULT_PUBLIC_NAMESPACE
+
+
+def resolve_namespace_for_read(
+    *,
+    conn,
+    current_user: CurrentUser,
+    namespace: str,
+    min_role: NamespaceRole = NamespaceRole.VIEWER,
+) -> str | None:
+    namespace_value = str(namespace).strip()
+    if namespace_value == ALL_NAMESPACES:
+        if current_user.platform_role != PlatformRole.PLATFORM_ADMIN:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No access to all namespaces")
+        return None
+    validated = validate_namespace(namespace_value)
+    try:
+        assert_namespace_role(
+            conn=conn,
+            current_user=current_user,
+            namespace=validated,
+            min_role=min_role,
+        )
+        return validated
+    except HTTPException as exc:
+        if exc.status_code != status.HTTP_403_FORBIDDEN or str(exc.detail) != "No access to namespace":
+            raise
+
+    aliased_namespace = resolve_legacy_public_namespace_alias(
+        conn=conn,
+        current_user=current_user,
+        namespace=validated,
+        min_role=min_role,
+    )
+    if aliased_namespace is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No access to namespace")
+    return aliased_namespace
 
 
 def resolve_docetl_namespace_for_path(path: str) -> tuple[str, Path]:

@@ -49,7 +49,7 @@ type DatasetRecord = {
 };
 
 export default function DataCenterPage() {
-  const namespace = readNamespace() || "default";
+  const namespace = readNamespace() || "public_business";
   const [datasets, setDatasets] = useState<DatasetRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);

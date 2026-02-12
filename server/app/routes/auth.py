@@ -15,6 +15,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,63}$")
+DEFAULT_PUBLIC_NAMESPACE = "public_business"
 
 
 def _validate_username(username: str) -> None:
@@ -23,11 +24,6 @@ def _validate_username(username: str) -> None:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid username (3-64 chars; letters, digits, _ . -)",
         )
-
-
-def _personal_namespace(username: str) -> str:
-    namespace = re.sub(r"[^a-zA-Z0-9_-]+", "_", username.strip()).strip("_").lower()
-    return namespace or f"user_{username.lower()}"
 
 
 def _to_user_public(user: metadata_db.UserRow) -> UserPublic:
@@ -62,14 +58,17 @@ def register(request: Request, payload: RegisterRequest, response: Response, con
             raise HTTPException(status_code=400, detail="Username or email already exists") from exc
         raise
 
-    namespace = _personal_namespace(payload.username)
+    metadata_db.ensure_namespace_catalog_entry(
+        conn,
+        namespace=DEFAULT_PUBLIC_NAMESPACE,
+        display_name="公共业务",
+        description="默认公共业务场景",
+    )
     metadata_db.upsert_membership(
         conn,
         user_id=user.id,
-        namespace=namespace,
-        role="namespace_admin",
+        namespace=DEFAULT_PUBLIC_NAMESPACE,
     )
-
     token, expires_at = metadata_db.create_session(conn, user_id=user.id, ttl=timedelta(days=7))
     response.set_cookie(
         SESSION_COOKIE_NAME,
@@ -86,7 +85,7 @@ def register(request: Request, payload: RegisterRequest, response: Response, con
         action="auth.register",
         resource_type="user",
         resource_id=user.id,
-        namespace=namespace,
+        namespace=DEFAULT_PUBLIC_NAMESPACE,
         success=True,
         ip=meta["ip"],
         user_agent=meta["user_agent"],
@@ -193,28 +192,11 @@ def me(current_user: CurrentUser = Depends(get_current_user), conn=Depends(get_d
     user_row = metadata_db.get_user_by_id(conn, current_user.id)
     if user_row is None:
         raise HTTPException(status_code=404, detail="User not found")
-    memberships = metadata_db.list_memberships(conn, user_id=current_user.id)
-    group_access = metadata_db.list_group_namespace_access_for_user(conn, user_id=current_user.id)
-    role_rank = {"viewer": 0, "editor": 1, "namespace_admin": 2}
-    effective: dict[str, dict[str, int | str]] = {}
-
-    for record in memberships + group_access:
-        namespace = str(record["namespace"])
-        role = str(record["role"])
-        created_at = int(record["created_at"])
-        updated_at = int(record["updated_at"])
-        existing = effective.get(namespace)
-        if existing is None or role_rank[role] > role_rank[str(existing["role"])]:
-            effective[namespace] = {
-                "namespace": namespace,
-                "role": role,
-                "created_at": created_at,
-                "updated_at": updated_at,
-            }
-        elif existing is not None and updated_at > int(existing["updated_at"]):
-            existing["updated_at"] = updated_at
-
-    memberships = sorted(effective.values(), key=lambda item: str(item["namespace"]))
+    memberships = metadata_db.list_effective_memberships(
+        conn,
+        user_id=current_user.id,
+        include_inactive=False,
+    )
     return MeResponse(
         user=_to_user_public(user_row),
         memberships=memberships,  # type: ignore[arg-type]

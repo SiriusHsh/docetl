@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Loader2,
   Play,
@@ -32,13 +32,10 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import {
-  ModelRegistryEntry,
-  generateModelId,
-  deleteModel,
-  upsertModel,
-} from "@/lib/model-registry";
-import { useModelRegistry } from "@/hooks/useModelRegistry";
+import { ModelRegistryEntry } from "@/lib/model-registry";
+import { getBackendUrl } from "@/lib/api-config";
+import { backendFetch } from "@/lib/backendFetch";
+import { getStoredAuthUser } from "@/lib/auth";
 
 type ModelFormState = {
   name: string;
@@ -85,9 +82,31 @@ const createEmptyForm = (): ModelFormState => ({
   maxTokens: "",
 });
 
+type BackendModelRecord = {
+  id: string;
+  name: string;
+  model_id: string;
+  protocol: ModelRegistryEntry["protocol"];
+  api_key: string;
+  base_url: string;
+  description: string;
+  tags: string[];
+  status: ModelRegistryEntry["status"];
+  params?: {
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+  } | null;
+  created_at: number;
+  updated_at: number;
+};
+
 export default function ModelRegistryPage() {
   const { toast } = useToast();
-  const { namespace, models } = useModelRegistry();
+  const backendUrl = useMemo(() => getBackendUrl(), []);
+  const [models, setModels] = useState<ModelRegistryEntry[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [search, setSearch] = useState("");
   const [protocolFilter, setProtocolFilter] = useState<string>("all");
@@ -105,6 +124,58 @@ export default function ModelRegistryPage() {
   const [testResult, setTestResult] = useState("");
   const [testError, setTestError] = useState<string | null>(null);
   const [testLoading, setTestLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const loadModels = useCallback(async () => {
+    setModelsLoading(true);
+    try {
+      const response = await backendFetch(
+        `${backendUrl}/models${isAdmin ? "?include_inactive=true" : ""}`
+      );
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "加载模型失败");
+      }
+      const data = (await response.json()) as BackendModelRecord[];
+      const mapped = data.map((item) => ({
+        id: item.id,
+        name: item.name,
+        modelId: item.model_id,
+        protocol: item.protocol,
+        apiKey: item.api_key,
+        baseUrl: item.base_url,
+        description: item.description || "",
+        tags: item.tags || [],
+        status: item.status || "active",
+        params: {
+          temperature: item.params?.temperature,
+          top_p: item.params?.top_p,
+          max_tokens: item.params?.max_tokens,
+        },
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      })) as ModelRegistryEntry[];
+      setModels(mapped);
+    } catch (error) {
+      setModels([]);
+      toast({
+        variant: "destructive",
+        title: "模型加载失败",
+        description: error instanceof Error ? error.message : "模型加载失败",
+      });
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [backendUrl, isAdmin, toast]);
+
+  useEffect(() => {
+    const user = getStoredAuthUser();
+    setIsAdmin(user?.platform_role === "platform_admin");
+  }, []);
+
+  useEffect(() => {
+    void loadModels();
+  }, [loadModels]);
 
   useEffect(() => {
     if (!formOpen) {
@@ -187,7 +258,8 @@ export default function ModelRegistryPage() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!isAdmin) return;
     if (!formState.name.trim() || !formState.modelId.trim()) {
       toast({
         title: "请补充必填信息",
@@ -213,19 +285,18 @@ export default function ModelRegistryPage() {
       return;
     }
 
-    const now = Date.now();
     const parseNumber = (value: string) => {
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : undefined;
     };
 
-    const entry: ModelRegistryEntry = {
-      id: editingModel?.id ?? generateModelId(),
+    const payload = {
+      id: editingModel?.id ?? null,
       name: formState.name.trim(),
-      modelId: formState.modelId.trim(),
+      model_id: formState.modelId.trim(),
       protocol: formState.protocol,
-      apiKey: formState.apiKey.trim(),
-      baseUrl: formState.baseUrl.trim(),
+      api_key: formState.apiKey.trim(),
+      base_url: formState.baseUrl.trim(),
       description: formState.description.trim(),
       tags: formState.tags,
       status: formState.status,
@@ -241,24 +312,63 @@ export default function ModelRegistryPage() {
             ? undefined
             : parseNumber(formState.maxTokens),
       },
-      createdAt: editingModel?.createdAt ?? now,
-      updatedAt: now,
     };
 
-    upsertModel(namespace, entry);
-    setFormOpen(false);
-    toast({
-      title: editingModel ? "模型已更新" : "模型已添加",
-      description: "模型配置已保存到本地浏览器。",
-    });
+    setSaveLoading(true);
+    try {
+      const response = await backendFetch(
+        editingModel
+          ? `${backendUrl}/models/${editingModel.id}`
+          : `${backendUrl}/models`,
+        {
+          method: editingModel ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "模型保存失败");
+      }
+      setFormOpen(false);
+      await loadModels();
+      toast({
+        title: editingModel ? "模型已更新" : "模型已添加",
+        description: "模型配置已保存到平台。",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "保存失败",
+        description: error instanceof Error ? error.message : "模型保存失败",
+      });
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
-  const handleDelete = (model: ModelRegistryEntry) => {
-    deleteModel(namespace, model.id);
-    toast({
-      title: "模型已删除",
-      description: `已删除 ${model.name}。`,
-    });
+  const handleDelete = async (model: ModelRegistryEntry) => {
+    if (!isAdmin) return;
+    try {
+      const response = await backendFetch(`${backendUrl}/models/${model.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || "模型删除失败");
+      }
+      await loadModels();
+      toast({
+        title: "模型已删除",
+        description: `已删除 ${model.name}。`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "删除失败",
+        description: error instanceof Error ? error.message : "模型删除失败",
+      });
+    }
   };
 
   const openTestDialog = (model: ModelRegistryEntry) => {
@@ -315,10 +425,14 @@ export default function ModelRegistryPage() {
             统一管理平台可用的大模型配置，并用于模型选择与测试。
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="gap-2">
-          <Plus className="h-4 w-4" />
-          添加模型
-        </Button>
+        {isAdmin ? (
+          <Button onClick={openCreateDialog} className="gap-2">
+            <Plus className="h-4 w-4" />
+            添加模型
+          </Button>
+        ) : (
+          <div className="text-xs text-slate-500">当前为只读模式</div>
+        )}
       </div>
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -370,7 +484,9 @@ export default function ModelRegistryPage() {
           </div>
           {filteredModels.length === 0 ? (
             <div className="px-4 py-10 text-sm text-slate-500 text-center">
-              {models.length === 0
+              {modelsLoading
+                ? "模型加载中..."
+                : models.length === 0
                 ? "暂无模型配置，点击右上角添加。"
                 : "没有匹配的模型。"}
             </div>
@@ -418,20 +534,24 @@ export default function ModelRegistryPage() {
                   >
                     <Play className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => openEditDialog(model)}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => handleDelete(model)}
-                  >
-                    <Trash2 className="h-4 w-4 text-rose-500" />
-                  </Button>
+                  {isAdmin ? (
+                    <>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => openEditDialog(model)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDelete(model)}
+                      >
+                        <Trash2 className="h-4 w-4 text-rose-500" />
+                      </Button>
+                    </>
+                  ) : null}
                 </div>
               </div>
             ))
@@ -637,7 +757,16 @@ export default function ModelRegistryPage() {
             <Button variant="ghost" onClick={() => setFormOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleSave}>保存模型</Button>
+            <Button onClick={handleSave} disabled={saveLoading}>
+              {saveLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  保存中
+                </>
+              ) : (
+                "保存模型"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

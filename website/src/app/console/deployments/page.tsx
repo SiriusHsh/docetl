@@ -119,7 +119,7 @@ const formatSchedule = (deployment: DeploymentRecord) => {
 export default function DeploymentsPage() {
   const { toast } = useToast();
   const backendUrl = useMemo(() => getBackendUrl(), []);
-  const namespace = readNamespace() || "default";
+  const namespace = readNamespace() || "public_business";
 
   const [deployments, setDeployments] = useState<DeploymentRecord[]>([]);
   const [pipelines, setPipelines] = useState<PipelineRecord[]>([]);

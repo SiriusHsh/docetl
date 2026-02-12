@@ -11,7 +11,14 @@ from server.app.models import (
     PipelineRecord,
     PipelineUpdateRequest,
 )
-from server.app.security import CurrentUser, assert_namespace_role, get_current_user, require_namespace_role
+from server.app.security import (
+    CurrentUser,
+    assert_namespace_role,
+    get_current_user,
+    require_namespace_role,
+    resolve_namespace_for_read,
+)
+from server.app.storage import metadata_db
 from server.app.storage.pipeline_store import (
     create_pipeline,
     delete_pipeline,
@@ -33,13 +40,23 @@ def _validate_pipeline_id(pipeline_id: str) -> None:
 @router.get("", response_model=list[PipelineMetadata])
 def list_all_pipelines(
     namespace: str,
-    ctx: tuple[CurrentUser, str, NamespaceRole] = Depends(
-        require_namespace_role(min_role=NamespaceRole.VIEWER)
-    ),
+    current_user: CurrentUser = Depends(get_current_user),
+    conn=Depends(get_db),
 ) -> list[PipelineMetadata]:
     """List all pipelines for a namespace."""
-    _, namespace_value, _ = ctx
-    pipelines = list_pipelines(namespace_value)
+    namespace_value = resolve_namespace_for_read(
+        conn=conn,
+        current_user=current_user,
+        namespace=namespace,
+        min_role=NamespaceRole.VIEWER,
+    )
+    if namespace_value is None:
+        pipelines = []
+        for namespace_item in metadata_db.list_namespace_values(conn, include_inactive=True):
+            pipelines.extend(list_pipelines(namespace_item))
+        pipelines.sort(key=lambda record: record.updated_at, reverse=True)
+    else:
+        pipelines = list_pipelines(namespace_value)
     return [
         PipelineMetadata.model_validate(pipeline.model_dump())
         for pipeline in pipelines

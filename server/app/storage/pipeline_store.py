@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +9,11 @@ from typing import Any
 from fastapi import HTTPException
 
 from server.app.models import PipelineRecord
+
+
+_DOCETL_NAMESPACE_SEGMENT_RE = re.compile(
+    r"(^|[/\\])\.docetl([/\\])([^/\\]+)([/\\])"
+)
 
 
 def _get_home_dir() -> str:
@@ -26,17 +32,93 @@ def _get_pipeline_path(namespace: str, pipeline_id: str) -> Path:
     return _get_store_dir(namespace) / f"{pipeline_id}.json"
 
 
-def _read_pipeline(path: Path) -> PipelineRecord:
-    with path.open("r") as handle:
+def _rewrite_docetl_namespace_segment(value: str, namespace: str) -> str:
+    def _replace(match: re.Match[str]) -> str:
+        current = match.group(3)
+        if current == namespace or current.startswith("_"):
+            return match.group(0)
+        return f"{match.group(1)}.docetl{match.group(2)}{namespace}{match.group(4)}"
+
+    return _DOCETL_NAMESPACE_SEGMENT_RE.sub(_replace, value)
+
+
+def _normalize_namespace_payload(value: Any, *, namespace: str) -> tuple[Any, bool]:
+    if isinstance(value, dict):
+        changed = False
+        normalized: dict[str, Any] = {}
+        for key, item in value.items():
+            if key == "namespace" and isinstance(item, str) and item != namespace:
+                normalized[key] = namespace
+                changed = True
+                continue
+            normalized_item, item_changed = _normalize_namespace_payload(
+                item,
+                namespace=namespace,
+            )
+            normalized[key] = normalized_item
+            changed = changed or item_changed
+        return normalized, changed
+
+    if isinstance(value, list):
+        changed = False
+        normalized_list: list[Any] = []
+        for item in value:
+            normalized_item, item_changed = _normalize_namespace_payload(
+                item,
+                namespace=namespace,
+            )
+            normalized_list.append(normalized_item)
+            changed = changed or item_changed
+        return normalized_list, changed
+
+    if isinstance(value, str):
+        rewritten = _rewrite_docetl_namespace_segment(value, namespace)
+        return rewritten, rewritten != value
+
+    return value, False
+
+
+def _normalize_pipeline_payload(
+    payload: dict[str, Any],
+    *,
+    namespace: str,
+) -> tuple[dict[str, Any], bool]:
+    changed = False
+    normalized = dict(payload)
+    if normalized.get("namespace") != namespace:
+        normalized["namespace"] = namespace
+        changed = True
+
+    normalized_state, state_changed = _normalize_namespace_payload(
+        normalized.get("state"),
+        namespace=namespace,
+    )
+    if state_changed:
+        normalized["state"] = normalized_state
+        changed = True
+
+    return normalized, changed
+
+
+def _read_pipeline(path: Path, *, namespace: str | None = None) -> tuple[PipelineRecord, bool]:
+    with path.open("r", encoding="utf-8") as handle:
         data = json.load(handle)
-    return PipelineRecord.model_validate(data)
+
+    changed = False
+    if namespace is not None:
+        data, changed = _normalize_pipeline_payload(data, namespace=namespace)
+
+    return PipelineRecord.model_validate(data), changed
+
+
+def _write_pipeline_to_path(path: Path, record: PipelineRecord) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(record.model_dump(mode="json"), handle, indent=2)
 
 
 def _write_pipeline(record: PipelineRecord) -> None:
-    path = _get_pipeline_path(record.namespace, record.id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as handle:
-        json.dump(record.model_dump(mode="json"), handle, indent=2)
+    _write_pipeline_to_path(_get_pipeline_path(record.namespace, record.id), record)
 
 
 def _ensure_unique_name(namespace: str, name: str, ignore_id: str | None = None) -> None:
@@ -63,7 +145,10 @@ def list_pipelines(namespace: str) -> list[PipelineRecord]:
 
     for path in store_dir.glob("*.json"):
         try:
-            records.append(_read_pipeline(path))
+            record, changed = _read_pipeline(path, namespace=namespace)
+            if changed:
+                _write_pipeline_to_path(path, record)
+            records.append(record)
         except Exception:
             # Skip unreadable pipeline blobs but keep others available
             continue
@@ -76,7 +161,10 @@ def load_pipeline(namespace: str, pipeline_id: str) -> PipelineRecord:
     path = _get_pipeline_path(namespace, pipeline_id)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Pipeline not found")
-    return _read_pipeline(path)
+    record, changed = _read_pipeline(path, namespace=namespace)
+    if changed:
+        _write_pipeline_to_path(path, record)
+    return record
 
 
 def create_pipeline(

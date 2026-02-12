@@ -162,12 +162,16 @@ export const PipelineStoreProvider: React.FC<{
 
   const applyPipelineRecord = useCallback(
     (record: PipelineRecord) => {
-      loadPipelineSnapshot(record.state, { markSaved: true });
+      const normalizedSnapshot = {
+        ...record.state,
+        namespace: namespace ?? record.state.namespace ?? null,
+      };
+      loadPipelineSnapshot(normalizedSnapshot, { markSaved: true });
       setActivePipelineId(record.id);
       persistActivePipelineId(record.id);
       setPipelineCache((prev) => ({ ...prev, [record.id]: record }));
     },
-    [loadPipelineSnapshot, persistActivePipelineId]
+    [loadPipelineSnapshot, namespace, persistActivePipelineId]
   );
 
   const saveActivePipeline = useCallback(async () => {

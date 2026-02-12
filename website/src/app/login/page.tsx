@@ -122,7 +122,10 @@ export default function LoginPage() {
           const meData = (await meResponse.json()) as {
             memberships?: Array<{ namespace: string }>;
           };
-          const defaultNamespace = meData.memberships?.[0]?.namespace;
+          const defaultNamespace =
+            meData.memberships?.find(
+              (membership) => membership.namespace === "public_business"
+            )?.namespace ?? meData.memberships?.[0]?.namespace;
           if (defaultNamespace) {
             window.localStorage.setItem(
               localStorageKeys.NAMESPACE_KEY,

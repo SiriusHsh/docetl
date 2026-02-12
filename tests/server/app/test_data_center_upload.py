@@ -208,3 +208,28 @@ def test_dataset_detail_includes_lineage(client: TestClient) -> None:
     assert payload["lineage"]["pipeline_id"] == lineage["pipeline_id"]
     assert payload["lineage"]["pipeline_name"] == lineage["pipeline_name"]
     assert payload["lineage"]["run_id"] == lineage["run_id"]
+
+
+def test_legacy_username_namespace_aliases_to_public_business_for_reads(
+    client: TestClient,
+) -> None:
+    token, namespace = _register_user(client, "hsh")
+    assert namespace == "public_business"
+
+    dataset_id = _create_dataset(
+        namespace,
+        lineage={"pipeline_id": "p", "pipeline_name": "p", "run_id": "r"},
+    )
+
+    legacy_list = client.get(
+        "/data-center/datasets?namespace=hsh",
+        headers=_auth_headers(token),
+    )
+    assert legacy_list.status_code == 200, legacy_list.text
+    assert any(item["id"] == dataset_id for item in legacy_list.json())
+
+    unrelated = client.get(
+        "/data-center/datasets?namespace=someone_else",
+        headers=_auth_headers(token),
+    )
+    assert unrelated.status_code == 403, unrelated.text

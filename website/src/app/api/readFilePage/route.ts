@@ -21,7 +21,11 @@ export async function GET(req: NextRequest) {
     );
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text();
+      return NextResponse.json(
+        { error: text || "Failed to read file" },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();

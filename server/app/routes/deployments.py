@@ -20,6 +20,7 @@ from server.app.security import (
     get_current_user,
     get_request_meta,
     require_namespace_role,
+    resolve_namespace_for_read,
 )
 from server.app.storage import metadata_db
 from server.app.storage.pipeline_store import load_pipeline
@@ -144,12 +145,15 @@ def _build_temp_row(
 @router.get("", response_model=list[DeploymentRecord])
 def list_deployments(
     namespace: str,
-    ctx: tuple[CurrentUser, str, NamespaceRole] = Depends(
-        require_namespace_role(min_role=NamespaceRole.VIEWER)
-    ),
+    current_user: CurrentUser = Depends(get_current_user),
     conn=Depends(get_db),
 ) -> list[DeploymentRecord]:
-    _, namespace_value, _ = ctx
+    namespace_value = resolve_namespace_for_read(
+        conn=conn,
+        current_user=current_user,
+        namespace=namespace,
+        min_role=NamespaceRole.VIEWER,
+    )
     rows = metadata_db.list_deployments(conn, namespace=namespace_value)
     return [_to_record(row) for row in rows]
 

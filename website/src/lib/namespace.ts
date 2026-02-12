@@ -1,6 +1,6 @@
 import * as localStorageKeys from "@/app/localStorageKeys";
 
-const DEFAULT_NAMESPACE = "default";
+const DEFAULT_NAMESPACE = "public_business";
 
 export const readNamespace = (): string | null => {
   if (typeof window === "undefined") {

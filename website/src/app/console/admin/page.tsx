@@ -41,6 +41,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type PlatformRole = "platform_admin" | "user";
+type ScenarioRole = "editor";
 
 type UserRecord = {
   id: string;
@@ -53,25 +54,27 @@ type UserRecord = {
   last_login_at?: number | null;
 };
 
-
-type GroupRecord = {
-  id: string;
-  name: string;
+type ScenarioRecord = {
+  namespace: string;
+  display_name: string;
   description?: string | null;
+  is_active: boolean;
+  created_by_user_id?: string | null;
   created_at: number;
   updated_at: number;
 };
 
-type GroupMemberRecord = {
-  group_id: string;
+type ScenarioUserAssignmentRecord = {
   user_id: string;
   username: string;
   email?: string | null;
   is_active: boolean;
   platform_role: PlatformRole;
-  joined_at: number;
+  namespace: string;
+  role: ScenarioRole;
+  created_at: number;
+  updated_at: number;
 };
-
 
 type AuditLogEntry = {
   id: string;
@@ -140,23 +143,24 @@ export default function AdminPage() {
   const [auditAction, setAuditAction] = useState("");
   const [auditActorUserId, setAuditActorUserId] = useState("");
 
-  const [groups, setGroups] = useState<GroupRecord[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [groupsError, setGroupsError] = useState<string | null>(null);
-  const [groupSearch, setGroupSearch] = useState("");
-  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
-  const [groupFormName, setGroupFormName] = useState("");
-  const [groupFormDescription, setGroupFormDescription] = useState("");
-  const [groupFormLoading, setGroupFormLoading] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<GroupRecord | null>(null);
+  const [scenarios, setScenarios] = useState<ScenarioRecord[]>([]);
+  const [scenariosLoading, setScenariosLoading] = useState(false);
+  const [scenariosError, setScenariosError] = useState<string | null>(null);
+  const [scenarioSearch, setScenarioSearch] = useState("");
+  const [scenarioDialogOpen, setScenarioDialogOpen] = useState(false);
+  const [editingScenario, setEditingScenario] = useState<ScenarioRecord | null>(null);
+  const [scenarioFormName, setScenarioFormName] = useState("");
+  const [scenarioFormDescription, setScenarioFormDescription] = useState("");
+  const [scenarioFormActive, setScenarioFormActive] = useState(true);
+  const [scenarioFormLoading, setScenarioFormLoading] = useState(false);
 
-  const [manageGroupOpen, setManageGroupOpen] = useState(false);
-  const [activeGroup, setActiveGroup] = useState<GroupRecord | null>(null);
-  const [groupMembers, setGroupMembers] = useState<GroupMemberRecord[]>([]);
-  const [groupMembersLoading, setGroupMembersLoading] = useState(false);
-  const [groupMembersError, setGroupMembersError] = useState<string | null>(null);
-  const [memberToAdd, setMemberToAdd] = useState("");
-  const [memberSaving, setMemberSaving] = useState(false);
+  const [manageScenarioOpen, setManageScenarioOpen] = useState(false);
+  const [activeScenario, setActiveScenario] = useState<ScenarioRecord | null>(null);
+  const [scenarioUsers, setScenarioUsers] = useState<ScenarioUserAssignmentRecord[]>([]);
+  const [scenarioUsersLoading, setScenarioUsersLoading] = useState(false);
+  const [scenarioAssignmentsError, setScenarioAssignmentsError] = useState<string | null>(null);
+  const [scenarioUserToAssign, setScenarioUserToAssign] = useState("");
+  const [scenarioAssignLoading, setScenarioAssignLoading] = useState(false);
 
 
   useEffect(() => {
@@ -213,23 +217,25 @@ export default function AdminPage() {
     }
   }, [auditAction, auditActorUserId, backendUrl]);
 
-  const loadGroups = useCallback(async () => {
-    setGroupsLoading(true);
-    setGroupsError(null);
+  const loadScenarios = useCallback(async () => {
+    setScenariosLoading(true);
+    setScenariosError(null);
     try {
-      const response = await backendFetch(`${backendUrl}/groups?limit=200`);
+      const response = await backendFetch(
+        `${backendUrl}/scenarios?include_inactive=true&limit=500`
+      );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "加载分组失败");
+        throw new Error(detail || "加载业务场景失败");
       }
-      const data = (await response.json()) as GroupRecord[];
-      setGroups(data);
+      const data = (await response.json()) as ScenarioRecord[];
+      setScenarios(data);
     } catch (error) {
-      setGroupsError(
-        error instanceof Error ? error.message : "加载分组失败"
+      setScenariosError(
+        error instanceof Error ? error.message : "加载业务场景失败"
       );
     } finally {
-      setGroupsLoading(false);
+      setScenariosLoading(false);
     }
   }, [backendUrl]);
 
@@ -237,8 +243,8 @@ export default function AdminPage() {
     if (!isAdmin) return;
     void loadUsers();
     void loadAuditLogs();
-    void loadGroups();
-  }, [isAdmin, loadAuditLogs, loadGroups, loadUsers]);
+    void loadScenarios();
+  }, [isAdmin, loadAuditLogs, loadScenarios, loadUsers]);
 
   const filteredUsers = useMemo(() => {
     const query = userSearch.trim().toLowerCase();
@@ -259,22 +265,23 @@ export default function AdminPage() {
     [users]
   );
 
-  const filteredGroups = useMemo(() => {
-    const query = groupSearch.trim().toLowerCase();
-    if (!query) return groups;
-    return groups.filter((group) => {
-      const description = group.description || "";
+  const filteredScenarios = useMemo(() => {
+    const query = scenarioSearch.trim().toLowerCase();
+    if (!query) return scenarios;
+    return scenarios.filter((scenario) => {
+      const description = scenario.description || "";
       return (
-        group.name.toLowerCase().includes(query) ||
+        scenario.display_name.toLowerCase().includes(query) ||
+        scenario.namespace.toLowerCase().includes(query) ||
         description.toLowerCase().includes(query)
       );
     });
-  }, [groupSearch, groups]);
+  }, [scenarioSearch, scenarios]);
 
-  const availableMemberOptions = useMemo(() => {
-    const memberIds = new Set(groupMembers.map((member) => member.user_id));
-    return users.filter((user) => !memberIds.has(user.id));
-  }, [groupMembers, users]);
+  const availableScenarioUsers = useMemo(() => {
+    const assigned = new Set(scenarioUsers.map((item) => item.user_id));
+    return users.filter((user) => !assigned.has(user.id));
+  }, [scenarioUsers, users]);
 
   const updateUser = async (userId: string, payload: Partial<UserRecord>) => {
     setPendingUsers((prev) => ({ ...prev, [userId]: true }));
@@ -397,182 +404,145 @@ export default function AdminPage() {
     }
   };
 
-  const handleOpenGroupForm = (group?: GroupRecord) => {
-    if (group) {
-      setEditingGroup(group);
-      setGroupFormName(group.name);
-      setGroupFormDescription(group.description || "");
+  const handleOpenScenarioForm = (scenario?: ScenarioRecord) => {
+    if (scenario) {
+      setEditingScenario(scenario);
+      setScenarioFormName(scenario.display_name);
+      setScenarioFormDescription(scenario.description || "");
+      setScenarioFormActive(scenario.is_active);
     } else {
-      setEditingGroup(null);
-      setGroupFormName("");
-      setGroupFormDescription("");
+      setEditingScenario(null);
+      setScenarioFormName("");
+      setScenarioFormDescription("");
+      setScenarioFormActive(true);
     }
-    setGroupDialogOpen(true);
+    setScenarioDialogOpen(true);
   };
 
-  const handleSaveGroup = async () => {
-    if (!groupFormName.trim()) {
+  const handleSaveScenario = async () => {
+    if (!scenarioFormName.trim()) {
       toast({
         variant: "destructive",
-        title: "需要分组名称",
+        title: "需要业务场景名称",
       });
       return;
     }
-    setGroupFormLoading(true);
+    setScenarioFormLoading(true);
     try {
-      const payload = {
-        name: groupFormName.trim(),
-        description: groupFormDescription.trim() || null,
-      };
-      const response = editingGroup
-        ? await backendFetch(`${backendUrl}/groups/${editingGroup.id}`, {
+      const payload = editingScenario
+        ? {
+            display_name: scenarioFormName.trim(),
+            description: scenarioFormDescription.trim() || null,
+            is_active: scenarioFormActive,
+          }
+        : {
+            display_name: scenarioFormName.trim(),
+            description: scenarioFormDescription.trim() || null,
+          };
+
+      const response = editingScenario
+        ? await backendFetch(`${backendUrl}/scenarios/${editingScenario.namespace}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           })
-        : await backendFetch(`${backendUrl}/groups`, {
+        : await backendFetch(`${backendUrl}/scenarios`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
-
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "保存分组失败");
+        throw new Error(detail || "保存业务场景失败");
       }
-      const saved = (await response.json()) as GroupRecord;
-      setGroups((prev) => {
-        if (editingGroup) {
-          return prev.map((group) => (group.id === saved.id ? saved : group));
-        }
-        return [saved, ...prev];
-      });
-      if (activeGroup?.id === saved.id) {
-        setActiveGroup(saved);
-      }
-      setGroupDialogOpen(false);
-      setEditingGroup(null);
-      toast({ title: "分组已保存" });
+      setScenarioDialogOpen(false);
+      setEditingScenario(null);
+      await loadScenarios();
+      toast({ title: "业务场景已保存" });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "保存失败",
-        description:
-          error instanceof Error ? error.message : "保存分组失败",
+        description: error instanceof Error ? error.message : "保存业务场景失败",
       });
     } finally {
-      setGroupFormLoading(false);
+      setScenarioFormLoading(false);
     }
   };
 
-  const handleDeleteGroup = async (group: GroupRecord) => {
-    const confirmed = window.confirm(
-      `Delete group "${group.name}"? This will remove all memberships.`
-    );
-    if (!confirmed) {
-      return;
-    }
+  const loadScenarioUsers = async (namespace: string) => {
+    setScenarioUsersLoading(true);
+    setScenarioAssignmentsError(null);
     try {
-      const response = await backendFetch(`${backendUrl}/groups/${group.id}`, {
-        method: "DELETE",
-      });
+      const response = await backendFetch(`${backendUrl}/scenarios/${namespace}/users`);
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "删除分组失败");
+        throw new Error(detail || "加载业务场景用户失败");
       }
-      setGroups((prev) => prev.filter((item) => item.id !== group.id));
-      if (activeGroup?.id === group.id) {
-        setActiveGroup(null);
-        setManageGroupOpen(false);
-      }
-      toast({ title: "分组已删除" });
+      const data = (await response.json()) as ScenarioUserAssignmentRecord[];
+      setScenarioUsers(data);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "删除失败",
-        description:
-          error instanceof Error ? error.message : "删除分组失败",
-      });
-    }
-  };
-
-  const loadGroupMembers = async (groupId: string) => {
-    setGroupMembersLoading(true);
-    setGroupMembersError(null);
-    try {
-      const response = await backendFetch(`${backendUrl}/groups/${groupId}/members`);
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || "加载成员失败");
-      }
-      const data = (await response.json()) as GroupMemberRecord[];
-      setGroupMembers(data);
-    } catch (error) {
-      setGroupMembersError(
-        error instanceof Error ? error.message : "加载成员失败"
+      setScenarioAssignmentsError(
+        error instanceof Error ? error.message : "加载业务场景用户失败"
       );
     } finally {
-      setGroupMembersLoading(false);
+      setScenarioUsersLoading(false);
     }
   };
 
-  const handleOpenManageGroup = async (group: GroupRecord) => {
-    setActiveGroup(group);
-    setMemberToAdd("");
-    setManageGroupOpen(true);
-    await loadGroupMembers(group.id);
+  const handleOpenManageScenario = async (scenario: ScenarioRecord) => {
+    setActiveScenario(scenario);
+    setManageScenarioOpen(true);
+    setScenarioUserToAssign("");
+    await loadScenarioUsers(scenario.namespace);
   };
 
-  const handleAddMember = async () => {
-    if (!activeGroup || !memberToAdd) return;
-    setMemberSaving(true);
+  const handleAssignScenarioUser = async () => {
+    if (!activeScenario || !scenarioUserToAssign) return;
+    setScenarioAssignLoading(true);
     try {
       const response = await backendFetch(
-        `${backendUrl}/groups/${activeGroup.id}/members`,
+        `${backendUrl}/scenarios/${activeScenario.namespace}/users/${scenarioUserToAssign}`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: memberToAdd }),
+          method: "PUT",
         }
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "添加成员失败");
+        throw new Error(detail || "分配用户失败");
       }
-      setMemberToAdd("");
-      await loadGroupMembers(activeGroup.id);
-      toast({ title: "成员已添加" });
+      setScenarioUserToAssign("");
+      await loadScenarioUsers(activeScenario.namespace);
+      toast({ title: "用户已分配到业务场景" });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "添加失败",
-        description:
-          error instanceof Error ? error.message : "添加成员失败",
+        title: "分配失败",
+        description: error instanceof Error ? error.message : "分配用户失败",
       });
     } finally {
-      setMemberSaving(false);
+      setScenarioAssignLoading(false);
     }
   };
 
-  const handleRemoveMember = async (userId: string) => {
-    if (!activeGroup) return;
+  const handleRemoveScenarioUser = async (userId: string) => {
+    if (!activeScenario) return;
     try {
       const response = await backendFetch(
-        `${backendUrl}/groups/${activeGroup.id}/members/${userId}`,
+        `${backendUrl}/scenarios/${activeScenario.namespace}/users/${userId}`,
         { method: "DELETE" }
       );
       if (!response.ok) {
         const detail = await response.text();
-        throw new Error(detail || "移除成员失败");
+        throw new Error(detail || "移除用户失败");
       }
-      await loadGroupMembers(activeGroup.id);
-      toast({ title: "成员已移除" });
+      await loadScenarioUsers(activeScenario.namespace);
+      toast({ title: "用户已移除" });
     } catch (error) {
       toast({
         variant: "destructive",
         title: "移除失败",
-        description:
-          error instanceof Error ? error.message : "移除成员失败",
+        description: error instanceof Error ? error.message : "移除用户失败",
       });
     }
   };
@@ -620,7 +590,7 @@ export default function AdminPage() {
             <h1 className="text-2xl font-semibold text-slate-900">管理后台</h1>
           </div>
           <p className="mt-2 text-sm text-slate-400">
-            管理用户、分组与审计日志。
+            管理用户、业务场景与审计日志。
           </p>
         </div>
         <Button
@@ -630,11 +600,11 @@ export default function AdminPage() {
           onClick={() => {
             void loadUsers();
             void loadAuditLogs();
-            void loadGroups();
+            void loadScenarios();
           }}
-          disabled={usersLoading || auditLoading || groupsLoading}
+          disabled={usersLoading || auditLoading || scenariosLoading}
         >
-          {usersLoading || auditLoading || groupsLoading ? (
+          {usersLoading || auditLoading || scenariosLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -658,10 +628,10 @@ export default function AdminPage() {
             审计日志
           </TabsTrigger>
           <TabsTrigger
-            value="groups"
+            value="scenarios"
             className="data-[state=active]:bg-white data-[state=active]:text-slate-900"
           >
-            分组
+            业务场景
           </TabsTrigger>
         </TabsList>
 
@@ -892,61 +862,69 @@ export default function AdminPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="groups" className="space-y-4">
+        <TabsContent value="scenarios" className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <Shield className="h-4 w-4" />
-              共 {groups.length} 个分组
+              共 {scenarios.length} 个业务场景
             </div>
             <div className="flex items-center gap-3">
               <Input
-                placeholder="搜索分组"
-                value={groupSearch}
-                onChange={(event) => setGroupSearch(event.target.value)}
+                placeholder="搜索业务场景"
+                value={scenarioSearch}
+                onChange={(event) => setScenarioSearch(event.target.value)}
                 className="w-64 bg-white border-slate-200 text-slate-700"
               />
               <Button
                 type="button"
-                onClick={() => handleOpenGroupForm()}
+                onClick={() => handleOpenScenarioForm()}
                 className="bg-blue-600 hover:bg-blue-500"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                新建分组
+                新建业务场景
               </Button>
             </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white">
-            {groupsError ? (
-              <div className="p-6 text-sm text-red-400">{groupsError}</div>
-            ) : groupsLoading ? (
+            {scenariosError ? (
+              <div className="p-6 text-sm text-red-400">{scenariosError}</div>
+            ) : scenariosLoading ? (
               <div className="p-6 flex items-center gap-2 text-sm text-slate-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> 正在加载分组...
+                <Loader2 className="h-4 w-4 animate-spin" /> 正在加载业务场景...
               </div>
-            ) : filteredGroups.length === 0 ? (
-              <div className="p-6 text-sm text-slate-400">暂无分组。</div>
+            ) : filteredScenarios.length === 0 ? (
+              <div className="p-6 text-sm text-slate-400">暂无业务场景。</div>
             ) : (
               <Table>
                 <TableHeader className="bg-slate-50">
                   <TableRow className="border-slate-200">
-                    <TableHead className="text-slate-600">分组</TableHead>
-                    <TableHead className="text-slate-600">描述</TableHead>
+                    <TableHead className="text-slate-600">场景名称</TableHead>
+                    <TableHead className="text-slate-600">场景标识</TableHead>
+                    <TableHead className="text-slate-600">状态</TableHead>
                     <TableHead className="text-slate-600">更新时间</TableHead>
                     <TableHead className="text-slate-600">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredGroups.map((group) => (
-                    <TableRow key={group.id} className="border-slate-200">
+                  {filteredScenarios.map((scenario) => (
+                    <TableRow key={scenario.namespace} className="border-slate-200">
                       <TableCell>
-                        <div className="font-medium text-slate-900">{group.name}</div>
-                        <div className="text-xs text-slate-500">{group.id}</div>
+                        <div className="font-medium text-slate-900">
+                          {scenario.display_name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {scenario.description || "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-600 font-mono">
+                        {scenario.namespace}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
-                        {group.description || "-"}
+                        {scenario.is_active ? "启用" : "停用"}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600">
-                        {formatTimestamp(group.updated_at)}
+                        {formatTimestamp(scenario.updated_at)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -954,25 +932,17 @@ export default function AdminPage() {
                             size="sm"
                             variant="outline"
                             className="border-slate-200 text-slate-700 hover:bg-slate-50"
-                            onClick={() => handleOpenManageGroup(group)}
+                            onClick={() => handleOpenManageScenario(scenario)}
                           >
-                            管理
+                            授权管理
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             className="border-slate-200 text-slate-700 hover:bg-slate-50"
-                            onClick={() => handleOpenGroupForm(group)}
+                            onClick={() => handleOpenScenarioForm(scenario)}
                           >
                             编辑
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-red-500/40 text-red-300 hover:bg-red-500/10"
-                            onClick={() => handleDeleteGroup(group)}
-                          >
-                            删除
                           </Button>
                         </div>
                       </TableCell>
@@ -1098,88 +1068,103 @@ export default function AdminPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={groupDialogOpen} onOpenChange={setGroupDialogOpen}>
+      <Dialog open={scenarioDialogOpen} onOpenChange={setScenarioDialogOpen}>
         <DialogContent className="bg-white border border-slate-200 text-slate-900">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-900">
-              {editingGroup ? "编辑分组" : "创建分组"}
+              {editingScenario ? "编辑业务场景" : "创建业务场景"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">分组名称</Label>
+              <Label className="text-xs text-slate-400">业务场景名称</Label>
               <Input
-                value={groupFormName}
-                onChange={(event) => setGroupFormName(event.target.value)}
-                placeholder="分组名称"
+                value={scenarioFormName}
+                onChange={(event) => setScenarioFormName(event.target.value)}
+                placeholder="例如：可信数字人"
                 className="bg-white border-slate-200 text-slate-700"
               />
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-slate-400">描述</Label>
               <Input
-                value={groupFormDescription}
-                onChange={(event) => setGroupFormDescription(event.target.value)}
+                value={scenarioFormDescription}
+                onChange={(event) => setScenarioFormDescription(event.target.value)}
                 placeholder="可选描述"
                 className="bg-white border-slate-200 text-slate-700"
               />
             </div>
+            {editingScenario ? (
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={scenarioFormActive}
+                  onCheckedChange={setScenarioFormActive}
+                />
+                <span className="text-sm text-slate-700">启用业务场景</span>
+              </div>
+            ) : null}
             <Button
               type="button"
-              onClick={handleSaveGroup}
-              disabled={groupFormLoading}
+              onClick={handleSaveScenario}
+              disabled={scenarioFormLoading}
               className="w-full bg-blue-600 hover:bg-blue-500"
             >
-              {groupFormLoading ? (
+              {scenarioFormLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              {editingGroup ? "保存更改" : "创建分组"}
+              {editingScenario ? "保存更改" : "创建业务场景"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog
-        open={manageGroupOpen}
+        open={manageScenarioOpen}
         onOpenChange={(open) => {
-          setManageGroupOpen(open);
+          setManageScenarioOpen(open);
           if (!open) {
-            setActiveGroup(null);
+            setActiveScenario(null);
           }
         }}
       >
-        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[880px]">
+        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[980px]">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold text-slate-900">
-              管理分组
+              业务场景授权管理
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm text-slate-600">
-              分组：{" "}
+              场景：{" "}
               <span className="font-semibold text-slate-900">
-                {activeGroup?.name || "-"}
+                {activeScenario?.display_name || "-"}
+              </span>
+              <span className="ml-2 text-xs text-slate-500 font-mono">
+                {activeScenario?.namespace || ""}
               </span>
             </div>
+
+            {scenarioAssignmentsError ? (
+              <div className="text-sm text-red-400">{scenarioAssignmentsError}</div>
+            ) : null}
+
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-3">
                 <div className="text-xs uppercase tracking-wider text-slate-400">
-                  成员
+                  用户授权
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white p-4">
-                  {groupMembersError ? (
-                    <div className="text-sm text-red-400">{groupMembersError}</div>
-                  ) : groupMembersLoading ? (
+                  {scenarioUsersLoading ? (
                     <div className="text-sm text-slate-400 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> 正在加载成员...
+                      <Loader2 className="h-4 w-4 animate-spin" /> 正在加载用户授权...
                     </div>
-                  ) : groupMembers.length === 0 ? (
-                    <div className="text-sm text-slate-500">暂无成员。</div>
+                  ) : scenarioUsers.length === 0 ? (
+                    <div className="text-sm text-slate-500">暂无用户授权。</div>
                   ) : (
                     <div className="space-y-2">
-                      {groupMembers.map((member) => (
+                      {scenarioUsers.map((member) => (
                         <div
                           key={member.user_id}
                           className="flex items-center justify-between text-sm text-slate-700"
@@ -1189,13 +1174,13 @@ export default function AdminPage() {
                               {member.username}
                             </span>
                             <span className="ml-2 text-xs text-slate-500">
-                              {member.email || member.user_id}
+                              编辑者
                             </span>
                           </div>
                           <button
                             type="button"
                             className="text-xs text-red-300 hover:text-red-200"
-                            onClick={() => handleRemoveMember(member.user_id)}
+                            onClick={() => handleRemoveScenarioUser(member.user_id)}
                           >
                             移除
                           </button>
@@ -1205,17 +1190,20 @@ export default function AdminPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Select value={memberToAdd} onValueChange={setMemberToAdd}>
+                  <Select
+                    value={scenarioUserToAssign}
+                    onValueChange={setScenarioUserToAssign}
+                  >
                     <SelectTrigger className="bg-white border-slate-200 text-slate-700">
                       <SelectValue placeholder="选择用户" />
                     </SelectTrigger>
                     <SelectContent className="bg-white border-slate-200 text-slate-900">
-                      {availableMemberOptions.length === 0 ? (
-                        <SelectItem value="__none" disabled>
+                      {availableScenarioUsers.length === 0 ? (
+                        <SelectItem value="__none_user" disabled>
                           暂无可添加用户
                         </SelectItem>
                       ) : (
-                        availableMemberOptions.map((user) => (
+                        availableScenarioUsers.map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.username}
                           </SelectItem>
@@ -1225,15 +1213,10 @@ export default function AdminPage() {
                   </Select>
                   <Button
                     type="button"
-                    onClick={handleAddMember}
-                    disabled={!memberToAdd || memberSaving}
+                    onClick={handleAssignScenarioUser}
+                    disabled={!scenarioUserToAssign || scenarioAssignLoading}
                     className="bg-blue-600 hover:bg-blue-500"
                   >
-                    {memberSaving ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="mr-2 h-4 w-4" />
-                    )}
                     添加
                   </Button>
                 </div>

@@ -5,7 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from server.app.deps import get_db
 from server.app.models import NamespaceRole, RunRecord, RunStatus, RunSummary
 from server.app.run_manager import cancel_run as cancel_active_run
-from server.app.security import CurrentUser, assert_namespace_role, get_current_user, get_request_meta, require_namespace_role
+from server.app.security import (
+    CurrentUser,
+    assert_namespace_role,
+    get_current_user,
+    get_request_meta,
+    resolve_namespace_for_read,
+)
 from server.app.storage import metadata_db
 
 
@@ -41,12 +47,15 @@ def list_runs(
     namespace: str,
     status: RunStatus | None = None,
     pipeline_id: str | None = None,
-    ctx: tuple[CurrentUser, str, NamespaceRole] = Depends(
-        require_namespace_role(min_role=NamespaceRole.VIEWER)
-    ),
+    current_user: CurrentUser = Depends(get_current_user),
     conn=Depends(get_db),
 ) -> list[RunRecord]:
-    _, namespace_value, _ = ctx
+    namespace_value = resolve_namespace_for_read(
+        conn=conn,
+        current_user=current_user,
+        namespace=namespace,
+        min_role=NamespaceRole.VIEWER,
+    )
     rows = metadata_db.list_runs(
         conn,
         namespace=namespace_value,
@@ -59,12 +68,15 @@ def list_runs(
 @router.get("/summary", response_model=RunSummary)
 def run_summary(
     namespace: str,
-    ctx: tuple[CurrentUser, str, NamespaceRole] = Depends(
-        require_namespace_role(min_role=NamespaceRole.VIEWER)
-    ),
+    current_user: CurrentUser = Depends(get_current_user),
     conn=Depends(get_db),
 ) -> RunSummary:
-    _, namespace_value, _ = ctx
+    namespace_value = resolve_namespace_for_read(
+        conn=conn,
+        current_user=current_user,
+        namespace=namespace,
+        min_role=NamespaceRole.VIEWER,
+    )
     summary = metadata_db.get_run_summary(conn, namespace=namespace_value)
     return RunSummary(**summary)
 

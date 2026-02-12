@@ -52,13 +52,15 @@ def create_app() -> FastAPI:
     from server.app.routes import auth as auth_routes
     from server.app.routes import data_center as data_center_routes
     from server.app.routes import deployments as deployments_routes
-    from server.app.routes import groups as groups_routes
+    from server.app.routes import model_registry as model_registry_routes
     from server.app.routes import runs as runs_routes
+    from server.app.routes import scenarios as scenarios_routes
     from server.app.routes import users as users_routes
 
     app.include_router(auth_routes.router)
     app.include_router(users_routes.router)
-    app.include_router(groups_routes.router)
+    app.include_router(scenarios_routes.router)
+    app.include_router(model_registry_routes.router)
     app.include_router(audit_routes.router)
     app.include_router(deployments_routes.router)
     app.include_router(runs_routes.router)

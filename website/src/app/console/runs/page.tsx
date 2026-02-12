@@ -168,7 +168,7 @@ function StatCard({ label, value, helper, icon: Icon, highlight }: StatCardProps
 export default function RunsPage() {
   const { toast } = useToast();
   const backendUrl = useMemo(() => getBackendUrl(), []);
-  const namespace = readNamespace() || "default";
+  const namespace = readNamespace() || "public_business";
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [overviewRuns, setOverviewRuns] = useState<RunRecord[]>([]);
   const [summary, setSummary] = useState<RunSummary | null>(null);

@@ -15,6 +15,7 @@ def client(tmp_path, monkeypatch) -> TestClient:
     monkeypatch.setenv("DOCETL_AUTH_SECRET", "test-secret")
     monkeypatch.setenv("DOCETL_BOOTSTRAP_ADMIN_USERNAME", "admin")
     monkeypatch.setenv("DOCETL_BOOTSTRAP_ADMIN_PASSWORD", "adminpass123")
+    monkeypatch.setenv("DOCETL_DISABLE_SCHEDULER", "true")
 
     app = create_app()
     with TestClient(app) as test_client:
@@ -25,62 +26,41 @@ def _auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_group_access_grants_namespace_role(client: TestClient) -> None:
-    admin_login = client.post(
+def _login_admin(client: TestClient) -> str:
+    response = client.post(
         "/auth/login",
         json={"username": "admin", "password": "adminpass123"},
     )
-    assert admin_login.status_code == 200, admin_login.text
-    admin_token = admin_login.json()["token"]
+    assert response.status_code == 200, response.text
+    return response.json()["token"]
 
-    user_register = client.post(
-        "/auth/register",
-        json={"username": "bob", "password": "password123"},
-    )
-    assert user_register.status_code == 201, user_register.text
-    bob_token = user_register.json()["token"]
-    bob_id = user_register.json()["user"]["id"]
+
+def test_groups_endpoints_are_disabled(client: TestClient) -> None:
+    admin_token = _login_admin(client)
+
+    list_groups = client.get("/groups", headers=_auth_headers(admin_token))
+    assert list_groups.status_code == 404, list_groups.text
 
     create_group = client.post(
         "/groups",
         headers=_auth_headers(admin_token),
         json={"name": "Core Devs", "description": "Core developers"},
     )
-    assert create_group.status_code == 201, create_group.text
-    group_id = create_group.json()["id"]
+    assert create_group.status_code == 404, create_group.text
 
-    add_member = client.post(
-        f"/groups/{group_id}/members",
-        headers=_auth_headers(admin_token),
-        json={"user_id": bob_id},
-    )
-    assert add_member.status_code == 204, add_member.text
 
-    set_access = client.put(
-        f"/groups/{group_id}/namespace-access/project_x",
-        headers=_auth_headers(admin_token),
-        json={"role": "viewer"},
-    )
-    assert set_access.status_code == 204, set_access.text
+def test_scenario_group_assignment_endpoints_are_disabled(client: TestClient) -> None:
+    admin_token = _login_admin(client)
 
-    bob_me = client.get("/auth/me", headers=_auth_headers(bob_token))
-    assert bob_me.status_code == 200, bob_me.text
-    assert any(m["namespace"] == "project_x" for m in bob_me.json()["memberships"])
-
-    list_pipelines = client.get(
-        "/pipelines?namespace=project_x",
-        headers=_auth_headers(bob_token),
-    )
-    assert list_pipelines.status_code == 200, list_pipelines.text
-
-    remove_member = client.delete(
-        f"/groups/{group_id}/members/{bob_id}",
+    list_groups = client.get(
+        "/scenarios/public_business/groups",
         headers=_auth_headers(admin_token),
     )
-    assert remove_member.status_code == 204, remove_member.text
+    assert list_groups.status_code == 404, list_groups.text
 
-    forbidden = client.get(
-        "/pipelines?namespace=project_x",
-        headers=_auth_headers(bob_token),
+    assign_group = client.put(
+        "/scenarios/public_business/groups/any-group",
+        headers=_auth_headers(admin_token),
+        json={"role": "editor"},
     )
-    assert forbidden.status_code == 403, forbidden.text
+    assert assign_group.status_code == 404, assign_group.text

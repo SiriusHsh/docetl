@@ -16,6 +16,7 @@ def client(tmp_path, monkeypatch) -> TestClient:
 
     monkeypatch.setenv("DOCETL_HOME_DIR", str(home_dir))
     monkeypatch.setenv("DOCETL_AUTH_SECRET", "test-secret")
+    monkeypatch.setenv("DOCETL_DISABLE_SCHEDULER", "true")
 
     app = create_app()
     with TestClient(app) as test_client:
@@ -88,8 +89,8 @@ def test_run_access_and_cancel(client: TestClient) -> None:
 
     run_id = _create_run(namespace, user_id)
 
-    forbidden = client.get(f"/runs/{run_id}", headers=_auth_headers(token_bob))
-    assert forbidden.status_code == 403
+    shared_read = client.get(f"/runs/{run_id}", headers=_auth_headers(token_bob))
+    assert shared_read.status_code == 200
 
     not_cancellable = client.post(
         f"/runs/{run_id}/cancel",
