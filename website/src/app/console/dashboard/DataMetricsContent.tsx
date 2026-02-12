@@ -337,7 +337,7 @@ export default function DataMetricsPage() {
 
   return (
     <div
-      className="relative min-h-screen overflow-x-hidden bg-slate-50"
+      className="relative min-h-screen overflow-hidden bg-slate-50"
       style={THEME_STYLE}
     >
       <div className="pointer-events-none absolute inset-0">
