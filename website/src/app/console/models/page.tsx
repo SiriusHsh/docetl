@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Database,
   Loader2,
   Play,
   Plus,
@@ -16,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -30,12 +30,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { ModelRegistryEntry } from "@/lib/model-registry";
 import { getBackendUrl } from "@/lib/api-config";
 import { backendFetch } from "@/lib/backendFetch";
 import { getStoredAuthUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 type ModelFormState = {
   name: string;
@@ -67,6 +76,9 @@ const commonPrompts = [
   "请解释一下人工智能的基本概念",
   "写一个简单的 Python Hello World 程序",
 ];
+
+const surfaceCardClass =
+  "rounded-2xl border border-slate-200/80 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur";
 
 const createEmptyForm = (): ModelFormState => ({
   name: "",
@@ -416,41 +428,62 @@ export default function ModelRegistryPage() {
     return `${key.slice(0, 3)}...${key.slice(-3)}`;
   };
 
-  return (
-    <div className="px-6 py-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">模型配置中心</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            统一管理平台可用的大模型配置，并用于模型选择与测试。
-          </p>
-        </div>
-        {isAdmin ? (
-          <Button onClick={openCreateDialog} className="gap-2">
-            <Plus className="h-4 w-4" />
-            添加模型
-          </Button>
-        ) : (
-          <div className="text-xs text-slate-500">当前为只读模式</div>
-        )}
-      </div>
+  const formatTime = (value: number) => new Date(value * 1000).toLocaleString();
+  const fieldClass = "h-10 rounded-lg border-slate-200 bg-white text-slate-700";
 
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+  return (
+    <main className="min-h-screen space-y-6 bg-slate-50/40 px-4 py-6 md:px-6">
+      <section
+        className={cn(
+          surfaceCardClass,
+          "flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-white via-slate-50/80 to-blue-50/40 p-5"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-blue-200 bg-blue-50">
+            <Database className="h-5 w-5 text-blue-600" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">模型资源池</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              统一管理可用模型、协议参数与联调测试。
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin ? (
+            <Button
+              onClick={openCreateDialog}
+              className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              添加模型
+            </Button>
+          ) : null}
+        </div>
+      </section>
+
+      <section
+        className={cn(
+          surfaceCardClass,
+          "bg-gradient-to-r from-white via-slate-50/70 to-white p-4"
+        )}
+      >
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_160px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="搜索模型名称 / ID / 标签"
-              className="pl-9"
+              className="h-11 rounded-lg border-slate-200 bg-white pl-9 text-slate-700"
             />
           </div>
           <Select value={protocolFilter} onValueChange={setProtocolFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="h-11 rounded-lg border-slate-200 bg-white text-slate-700">
               <SelectValue placeholder="所有协议" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="border-slate-200 bg-white text-slate-900">
               <SelectItem value="all">所有协议</SelectItem>
               {Object.entries(protocolLabels).map(([key, label]) => (
                 <SelectItem key={key} value={key}>
@@ -460,10 +493,10 @@ export default function ModelRegistryPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 rounded-lg border-slate-200 bg-white text-slate-700">
               <SelectValue placeholder="所有状态" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="border-slate-200 bg-white text-slate-900">
               <SelectItem value="all">所有状态</SelectItem>
               {Object.entries(statusLabels).map(([key, label]) => (
                 <SelectItem key={key} value={key}>
@@ -473,228 +506,322 @@ export default function ModelRegistryPage() {
             </SelectContent>
           </Select>
         </div>
+      </section>
 
-        <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden">
-          <div className="grid grid-cols-[1.4fr_1.2fr_0.8fr_0.6fr_0.8fr] bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
-            <div>模型名称</div>
-            <div>模型 ID</div>
-            <div>API 协议</div>
-            <div>状态</div>
-            <div className="text-right">操作</div>
-          </div>
-          {filteredModels.length === 0 ? (
-            <div className="px-4 py-10 text-sm text-slate-500 text-center">
-              {modelsLoading
-                ? "模型加载中..."
-                : models.length === 0
-                ? "暂无模型配置，点击右上角添加。"
-                : "没有匹配的模型。"}
+      <section className={cn(surfaceCardClass, "overflow-hidden bg-white")}>
+        <div className="border-b border-slate-200/80 bg-gradient-to-r from-white to-slate-50/70 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Database className="h-4 w-4" />
+              <span>模型列表</span>
+              <Badge variant="outline" className="border-slate-300 text-slate-600">
+                {filteredModels.length} 条
+              </Badge>
             </div>
-          ) : (
-            filteredModels.map((model) => (
-              <div
-                key={model.id}
-                className="grid grid-cols-[1.4fr_1.2fr_0.8fr_0.6fr_0.8fr] items-center px-4 py-3 border-t border-slate-100 text-sm"
-              >
-                <div>
-                  <div className="font-medium text-slate-900">{model.name}</div>
-                  {model.tags.length > 0 ? (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {model.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-[10px]">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="text-slate-600 font-mono text-xs">
-                  <div>{model.modelId}</div>
-                  <div className="mt-1 text-[10px] text-slate-400">
-                    {maskedKey(model.apiKey)}
-                  </div>
-                </div>
-                <div className="text-slate-600">{protocolLabels[model.protocol]}</div>
-                <div>
-                  <Badge
-                    variant={model.status === "active" ? "default" : "secondary"}
-                  >
-                    {statusLabels[model.status]}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => openTestDialog(model)}
-                    disabled={
-                      model.protocol !== "openai" &&
-                      model.protocol !== "openai-compatible"
-                    }
-                  >
-                    <Play className="h-4 w-4" />
-                  </Button>
-                  {isAdmin ? (
-                    <>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => openEditDialog(model)}
-                      >
-                        <Settings className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDelete(model)}
-                      >
-                        <Trash2 className="h-4 w-4 text-rose-500" />
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            ))
-          )}
+            <div className="text-xs text-slate-500">
+              API 密钥仅展示掩码（{maskedKey("example_key")}）
+            </div>
+          </div>
         </div>
-      </div>
+        <div className="overflow-x-auto p-2">
+          <Table>
+            <TableHeader className="bg-gradient-to-r from-slate-50 to-white">
+              <TableRow className="border-slate-200">
+                <TableHead className="text-slate-600">模型</TableHead>
+                <TableHead className="text-slate-600">协议与地址</TableHead>
+                <TableHead className="text-slate-600">状态</TableHead>
+                <TableHead className="text-slate-600">更新时间</TableHead>
+                <TableHead className="text-right text-slate-600">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {modelsLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-8 text-center text-slate-500">
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      模型加载中...
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ) : filteredModels.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-10 text-center text-slate-500">
+                    {models.length === 0
+                      ? "暂无模型配置，点击右上角添加。"
+                      : "没有匹配的模型。"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredModels.map((model) => {
+                  const canTest =
+                    model.protocol === "openai" || model.protocol === "openai-compatible";
+                  return (
+                    <TableRow
+                      key={model.id}
+                      className="border-slate-200 transition-colors hover:bg-slate-50/70"
+                    >
+                      <TableCell>
+                        <div className="font-medium text-slate-800">{model.name}</div>
+                        <div className="mt-0.5 font-mono text-xs text-slate-500">
+                          {model.modelId}
+                        </div>
+                        {model.tags.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {model.tags.map((tag) => (
+                              <Badge
+                                key={tag}
+                                variant="outline"
+                                className="border-slate-300 bg-white text-[11px] text-slate-600"
+                              >
+                                <Tag className="mr-1 h-3 w-3" />
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="border-slate-300 bg-white text-slate-700"
+                        >
+                          {protocolLabels[model.protocol]}
+                        </Badge>
+                        <div className="mt-2 text-xs text-slate-500">{model.baseUrl}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={cn(
+                            model.status === "active"
+                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                              : "bg-slate-200 text-slate-700 hover:bg-slate-200"
+                          )}
+                        >
+                          {statusLabels[model.status]}
+                        </Badge>
+                        <div className="mt-2 text-xs text-slate-500">
+                          密钥 {maskedKey(model.apiKey)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-600">
+                        <div>{formatTime(model.updatedAt)}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          创建 {formatTime(model.createdAt)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
+                            onClick={() => openTestDialog(model)}
+                            disabled={!canTest}
+                          >
+                            <Play className="mr-1.5 h-3.5 w-3.5" />
+                            测试
+                          </Button>
+                          {isAdmin ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 rounded-md border-slate-200 text-slate-700 hover:bg-slate-50"
+                                onClick={() => openEditDialog(model)}
+                              >
+                                <Settings className="mr-1.5 h-3.5 w-3.5" />
+                                编辑
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 rounded-md border-rose-200 text-rose-600 hover:bg-rose-50"
+                                onClick={() => handleDelete(model)}
+                              >
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                                删除
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-h-[88vh] max-w-4xl overflow-y-auto border-slate-200 bg-white p-0">
+          <DialogHeader className="border-b border-slate-200/80 bg-gradient-to-r from-white to-slate-50/70 px-5 py-4">
+            <DialogTitle className="text-base font-semibold text-slate-900">
               {editingModel ? "编辑模型" : "添加新模型"}
             </DialogTitle>
+            <p className="text-xs text-slate-500">
+              维护模型连接信息、参数默认值与可见状态。
+            </p>
           </DialogHeader>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>模型名称</Label>
-              <Input
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="例如：通用大模型 v3"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>API 协议</Label>
-              <Select
-                value={formState.protocol}
-                onValueChange={(value) =>
-                  handleProtocolChange(value as ModelRegistryEntry["protocol"])
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(protocolLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>模型 ID</Label>
-              <Input
-                value={formState.modelId}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    modelId: event.target.value,
-                  }))
-                }
-                placeholder="例如：gpt-4o-mini"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>API 密钥</Label>
-              <Input
-                type="password"
-                value={formState.apiKey}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    apiKey: event.target.value,
-                  }))
-                }
-                placeholder="sk-****"
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>基础服务地址</Label>
-              <Input
-                value={formState.baseUrl}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    baseUrl: event.target.value,
-                  }))
-                }
-                placeholder="https://api.openai.com/v1"
-              />
-              <p className="text-xs text-slate-400">
-                API 密钥仅保存在浏览器本地，刷新或清理缓存后需重新配置。
-              </p>
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>标签</Label>
-              <div className="flex flex-wrap gap-2">
-                {formState.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1">
-                    <Tag className="h-3 w-3" />
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-1 text-[10px]"
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                ))}
+          <div className="space-y-4 p-5">
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+              <div>
+                <div className="text-sm font-medium text-slate-800">基础配置</div>
+                <div className="text-xs text-slate-500">模型标识与接入地址</div>
               </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={tagInput}
-                  onChange={(event) => setTagInput(event.target.value)}
-                  placeholder="输入标签后回车"
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      handleAddTag();
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" onClick={handleAddTag}>
-                  添加
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>描述</Label>
-              <Textarea
-                value={formState.description}
-                onChange={(event) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    description: event.target.value,
-                  }))
-                }
-                placeholder="填写模型用途说明"
-              />
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-              <div className="text-sm font-medium text-slate-700">
-                模型参数配置
-              </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs">Temperature</Label>
+                  <Label className="text-xs text-slate-500">模型名称</Label>
+                  <Input
+                    value={formState.name}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    placeholder="例如：通用大模型 v3"
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500">API 协议</Label>
+                  <Select
+                    value={formState.protocol}
+                    onValueChange={(value) =>
+                      handleProtocolChange(value as ModelRegistryEntry["protocol"])
+                    }
+                  >
+                    <SelectTrigger className={fieldClass}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-slate-200 bg-white text-slate-900">
+                      {Object.entries(protocolLabels).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500">模型 ID</Label>
+                  <Input
+                    value={formState.modelId}
+                    onChange={(event) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        modelId: event.target.value,
+                      }))
+                    }
+                    placeholder="例如：gpt-4o-mini"
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500">API 密钥</Label>
+                  <Input
+                    type="password"
+                    value={formState.apiKey}
+                    onChange={(event) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        apiKey: event.target.value,
+                      }))
+                    }
+                    placeholder="sk-****"
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-xs text-slate-500">基础服务地址</Label>
+                  <Input
+                    value={formState.baseUrl}
+                    onChange={(event) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        baseUrl: event.target.value,
+                      }))
+                    }
+                    placeholder="https://api.openai.com/v1"
+                    className={fieldClass}
+                  />
+                  <p className="text-xs text-slate-500">
+                    API 密钥仅保存在浏览器本地，刷新或清理缓存后需重新配置。
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+              <div>
+                <div className="text-sm font-medium text-slate-800">描述与标签</div>
+                <div className="text-xs text-slate-500">方便在模型选择时快速识别用途</div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500">标签</Label>
+                <div className="flex flex-wrap gap-2">
+                  {formState.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1">
+                      <Tag className="h-3 w-3" />
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-1 text-[10px]"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    value={tagInput}
+                    onChange={(event) => setTagInput(event.target.value)}
+                    placeholder="输入标签后回车"
+                    className="h-10 rounded-lg border-slate-200 bg-white text-slate-700"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleAddTag();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50"
+                    onClick={handleAddTag}
+                  >
+                    添加
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-500">描述</Label>
+                <Textarea
+                  value={formState.description}
+                  onChange={(event) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder="填写模型用途说明"
+                  className="min-h-[96px] rounded-lg border-slate-200 bg-white text-slate-700"
+                />
+              </div>
+            </section>
+
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+              <div>
+                <div className="text-sm font-medium text-slate-800">参数默认值</div>
+                <div className="text-xs text-slate-500">可选参数，不填则按服务默认配置</div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500">Temperature</Label>
                   <Input
                     value={formState.temperature}
                     onChange={(event) =>
@@ -704,10 +831,11 @@ export default function ModelRegistryPage() {
                       }))
                     }
                     placeholder="0.2"
+                    className={fieldClass}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Top P</Label>
+                  <Label className="text-xs text-slate-500">Top P</Label>
                   <Input
                     value={formState.topP}
                     onChange={(event) =>
@@ -717,10 +845,11 @@ export default function ModelRegistryPage() {
                       }))
                     }
                     placeholder="0.9"
+                    className={fieldClass}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Max Tokens</Label>
+                  <Label className="text-xs text-slate-500">Max Tokens</Label>
                   <Input
                     value={formState.maxTokens}
                     onChange={(event) =>
@@ -730,61 +859,78 @@ export default function ModelRegistryPage() {
                       }))
                     }
                     placeholder="2048"
+                    className={fieldClass}
                   />
                 </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 md:col-span-2">
-              <div>
-                <div className="text-sm font-medium text-slate-700">启用模型</div>
-                <div className="text-xs text-slate-400">
-                  关闭后模型不会出现在选择列表中。
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+                <div>
+                  <div className="text-sm font-medium text-slate-700">启用模型</div>
+                  <div className="text-xs text-slate-500">
+                    关闭后模型不会出现在选择列表中。
+                  </div>
                 </div>
+                <Switch
+                  checked={formState.status === "active"}
+                  onCheckedChange={(checked) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      status: checked ? "active" : "inactive",
+                    }))
+                  }
+                />
               </div>
-              <Switch
-                checked={formState.status === "active"}
-                onCheckedChange={(checked) =>
-                  setFormState((prev) => ({
-                    ...prev,
-                    status: checked ? "active" : "inactive",
-                  }))
-                }
-              />
+            </section>
+
+            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setFormOpen(false)}
+                className="h-10 rounded-lg text-slate-600 hover:bg-slate-100"
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saveLoading}
+                className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500"
+              >
+                {saveLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    保存中
+                  </>
+                ) : (
+                  "保存模型"
+                )}
+              </Button>
             </div>
           </div>
-
-          <DialogFooter className="mt-2">
-            <Button variant="ghost" onClick={() => setFormOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSave} disabled={saveLoading}>
-              {saveLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  保存中
-                </>
-              ) : (
-                "保存模型"
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={testOpen} onOpenChange={setTestOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-slate-200 bg-white p-0">
+          <DialogHeader className="border-b border-slate-200/80 bg-gradient-to-r from-white to-slate-50/70 px-5 py-4">
+            <DialogTitle className="text-base font-semibold text-slate-900">
               测试模型：{testModel?.name || "-"}
             </DialogTitle>
+            <p className="text-xs text-slate-500">
+              发送一段提示词，快速验证模型连通性与返回质量。
+            </p>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 p-5">
             <div className="flex flex-wrap gap-2">
               {commonPrompts.map((prompt) => (
                 <Button
                   key={prompt}
                   size="sm"
                   variant={prompt === testPrompt ? "default" : "outline"}
+                  className={
+                    prompt === testPrompt
+                      ? "bg-blue-600 text-white hover:bg-blue-500"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                  }
                   onClick={() => setTestPrompt(prompt)}
                 >
                   {prompt}
@@ -792,18 +938,23 @@ export default function ModelRegistryPage() {
               ))}
             </div>
             <div className="space-y-2">
-              <Label>测试提示词</Label>
+              <Label className="text-xs text-slate-500">测试提示词</Label>
               <Textarea
                 value={testPrompt}
                 onChange={(event) => setTestPrompt(event.target.value)}
                 rows={4}
+                className="rounded-lg border-slate-200 bg-white text-slate-700"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={handleRunTest} disabled={testLoading}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                onClick={handleRunTest}
+                disabled={testLoading}
+                className="h-10 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-500"
+              >
                 {testLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     测试中
                   </>
                 ) : (
@@ -811,7 +962,8 @@ export default function ModelRegistryPage() {
                 )}
               </Button>
               <Button
-                variant="ghost"
+                variant="outline"
+                className="h-10 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50"
                 onClick={() => setTestOpen(false)}
                 disabled={testLoading}
               >
@@ -823,15 +975,15 @@ export default function ModelRegistryPage() {
                 {testError}
               </div>
             ) : null}
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 min-h-[140px]">
-              <div className="text-xs text-slate-500 mb-2">模型响应</div>
-              <div className="text-sm text-slate-700 whitespace-pre-wrap">
+            <div className="min-h-[160px] rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+              <div className="mb-2 text-xs text-slate-500">模型响应</div>
+              <div className="whitespace-pre-wrap text-sm text-slate-700">
                 {testResult || "等待模型返回结果..."}
               </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </main>
   );
 }
