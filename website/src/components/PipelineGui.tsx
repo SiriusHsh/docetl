@@ -861,74 +861,87 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
                 {unsavedChanges ? "待保存" : "已同步"}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200/45 bg-white/75 p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
               <AddOperationDropdown
                 onAddOperation={handleAddOperation}
                 trigger={
-                  <button
+                  <Button
                     type="button"
-                    className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-md border-slate-200/55 bg-white/80 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50/70"
                   >
                     添加操作
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
+                    <Plus className="ml-1 h-3.5 w-3.5" />
+                  </Button>
                 }
               />
-              <button
+              <Button
                 type="button"
-                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                size="sm"
+                variant="outline"
+                className={cn(
+                  "h-8 rounded-md px-3 text-xs font-medium",
                   unsavedChanges
-                    ? "text-amber-700 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
+                    ? "border-amber-200/65 bg-amber-50/55 text-amber-700 hover:bg-amber-100/60"
+                    : "border-slate-200/55 bg-white/80 text-slate-600 hover:bg-slate-50/70 hover:text-slate-900"
+                )}
                 onClick={handleManualSave}
                 disabled={isSavingPipeline}
               >
                 {isSavingPipeline ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Save className="w-3.5 h-3.5" />
+                  <Save className="mr-1 h-3.5 w-3.5" />
                 )}
                 {isSavingPipeline ? "保存中" : "保存"}
                 {unsavedChanges && !isSavingPipeline ? (
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <span className="ml-1 h-1.5 w-1.5 rounded-full bg-amber-400" />
                 ) : null}
-              </button>
-              <button
+              </Button>
+
+              <div className="mx-0.5 hidden h-5 w-px bg-slate-200 sm:block" />
+
+              <Button
                 type="button"
-                className="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                size="sm"
+                variant="outline"
+                className="h-8 rounded-md border-rose-200/55 bg-rose-50/30 px-3 text-xs font-medium text-rose-600 hover:bg-rose-50/50 disabled:border-rose-100/80 disabled:bg-rose-50/15 disabled:text-rose-300"
                 onClick={handleStop}
                 disabled={!isLoadingOutputs}
               >
-                <Square className="w-3 h-3 fill-current" />
+                <Square className="mr-1 h-3 w-3 fill-current" />
                 停止
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50"
+                size="sm"
+                variant="outline"
+                className="h-8 rounded-md border-slate-200/55 bg-white/80 px-3 text-xs font-medium text-slate-600 hover:bg-slate-50/70 hover:text-slate-900"
                 onClick={() => onRunAll(true)}
                 disabled={isLoadingOutputs}
               >
                 {isLoadingOutputs ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />
                 )}
                 重新运行
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm transition-all hover:bg-blue-500 disabled:bg-slate-300 disabled:opacity-50"
+                size="sm"
+                className="h-8 rounded-md border border-blue-400/35 bg-blue-500 px-3.5 text-xs font-semibold text-white shadow-[0_1px_2px_rgba(37,99,235,0.2)] transition-colors hover:border-blue-400/40 hover:bg-blue-500/95 disabled:border-slate-300/80 disabled:bg-slate-300"
                 onClick={() => onRunAll(false)}
                 disabled={isLoadingOutputs}
               >
                 {isLoadingOutputs ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <Play className="mr-1 h-3.5 w-3.5 fill-current" />
                 )}
                 运行
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
