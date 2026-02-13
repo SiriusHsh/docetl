@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Trash2, Plus, ChevronDown, Info } from "lucide-react";
+import { Trash2, Plus, ChevronDown, Info, Maximize2 } from "lucide-react";
 import { SchemaItem, SchemaType } from "@/app/types";
 import {
   Tooltip,
@@ -20,6 +20,12 @@ import {
 import { Label } from "../ui/label";
 import Editor from "@monaco-editor/react";
 import PropTypes from "prop-types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import {
   HoverCard,
   HoverCardContent,
@@ -596,6 +602,8 @@ interface CodeInputProps {
 
 export const CodeInput: React.FC<CodeInputProps> = React.memo(
   ({ code, operationType, onChange }) => {
+    const [isExpanded, setIsExpanded] = React.useState(false);
+
     const getPlaceholder = () => {
       switch (operationType) {
         case "code_map":
@@ -624,6 +632,8 @@ export const CodeInput: React.FC<CodeInputProps> = React.memo(
       return value.includes("def transform") && value.includes("return");
     };
 
+    const editorValue = code || getPlaceholder();
+
     const getTooltipContent = () => {
       switch (operationType) {
         case "code_map":
@@ -637,42 +647,55 @@ export const CodeInput: React.FC<CodeInputProps> = React.memo(
 
     return (
       <div className="space-y-2">
-        <div className="flex items-center gap-2 mb-1">
-          <Label>Python 代码</Label>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Info className="h-4 w-4 text-gray-500" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-md">
-                <p className="text-sm">{getTooltipContent()}</p>
-                <p className="text-sm mt-2">
-                  代码操作可用于：
-                  <ul className="list-disc ml-4 mt-1">
-                    <li>确定性处理</li>
-                    <li>复杂计算</li>
-                    <li>与 Python 库集成</li>
-                    <li>结构化数据转换</li>
-                  </ul>
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Label>Python 代码</Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-4 w-4 text-gray-500" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-md">
+                  <p className="text-sm">{getTooltipContent()}</p>
+                  <p className="text-sm mt-2">
+                    代码操作可用于：
+                    <ul className="list-disc ml-4 mt-1">
+                      <li>确定性处理</li>
+                      <li>复杂计算</li>
+                      <li>与 Python 库集成</li>
+                      <li>结构化数据转换</li>
+                    </ul>
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            onClick={() => setIsExpanded(true)}
+          >
+            <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+            放大编辑
+          </Button>
         </div>
         <div
-          className="border"
+          className="group relative overflow-hidden rounded-md border border-slate-200 bg-white focus-within:border-blue-300 focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.12)]"
+          onDoubleClick={() => setIsExpanded(true)}
+          title="双击可放大编辑"
           style={{
             resize: "vertical",
             overflow: "auto",
             minHeight: "200px",
-            height: "200px", // Set initial height explicitly
-            backgroundColor: "var(--background)", // Match editor background
+            height: "220px",
           }}
         >
           <Editor
             height="100%"
             defaultLanguage="python"
-            value={code || getPlaceholder()}
+            value={editorValue}
             onChange={(value) => onChange(value || "")}
             options={{
               minimap: { enabled: false },
@@ -696,6 +719,41 @@ export const CodeInput: React.FC<CodeInputProps> = React.memo(
             代码必须定义包含 return 的 transform 函数
           </div>
         )}
+
+        <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+          <DialogContent className="h-[86vh] w-[min(92vw,1080px)] max-w-[1080px] overflow-hidden border border-slate-200 bg-white p-0 text-slate-900">
+            <DialogHeader className="border-b border-slate-100 px-5 py-4">
+              <DialogTitle className="flex items-center justify-between text-sm font-semibold">
+                <span>Python 代码（放大编辑）</span>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="h-[calc(86vh-68px)] p-4">
+              <div className="h-full overflow-hidden rounded-md border border-slate-200 bg-white">
+                <Editor
+                  height="100%"
+                  defaultLanguage="python"
+                  value={editorValue}
+                  onChange={(value) => onChange(value || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    lineNumbers: "on",
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    wrappingIndent: "indent",
+                    automaticLayout: true,
+                    tabSize: 4,
+                    fontSize: 15,
+                    fontFamily: "monospace",
+                    suggest: {
+                      showKeywords: true,
+                      showSnippets: true,
+                    },
+                  }}
+                />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

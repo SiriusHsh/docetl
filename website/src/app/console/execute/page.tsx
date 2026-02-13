@@ -9,6 +9,7 @@ import {
   CircleDashed,
   Copy,
   Database,
+  Factory,
   FileJson,
   FileText,
   MoreVertical,
@@ -17,6 +18,7 @@ import {
   Plus,
   Table2,
   Trash,
+  Upload,
   X,
   ChevronLeft,
   ChevronRight,
@@ -104,10 +106,26 @@ type DataSourceItem = {
   id: string;
   name: string;
   type: "json" | "csv" | "sql" | "text" | "excel";
+  sourceType: "pipeline_generated" | "user_upload" | "other";
   displayFormat: string;
   recordCount: string;
   sourceLabel: string;
   file: File;
+};
+
+type DataSourceGroupKey = "all" | DataSourceItem["sourceType"];
+
+type DataSourceGroup = {
+  key: DataSourceItem["sourceType"];
+  title: string;
+  description: string;
+  icon: React.ComponentType<{
+    className?: string;
+    "aria-hidden"?: React.AriaAttributes["aria-hidden"];
+  }>;
+  toneClass: string;
+  emptyLabel: string;
+  items: DataSourceItem[];
 };
 
 type DataCenterDataset = {
@@ -129,6 +147,14 @@ const formatDatasetSource = (source: string) => {
     return "用户上传";
   }
   return "数据货架";
+};
+
+const resolveDatasetSourceType = (
+  source: string
+): DataSourceItem["sourceType"] => {
+  if (source === "pipeline_generated") return "pipeline_generated";
+  if (source === "user_upload") return "user_upload";
+  return "other";
 };
 
 const resolveDisplayFormat = (dataset: DataCenterDataset) => {
@@ -193,10 +219,82 @@ const ExecuteLeftPanel: React.FC<{
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [dataSourceDialogOpen, setDataSourceDialogOpen] = useState(false);
+  const [activeDataSourceGroup, setActiveDataSourceGroup] =
+    useState<DataSourceGroupKey>("all");
   const [pinnedPipelineIds, setPinnedPipelineIds] = useState<Set<string>>(
     new Set()
   );
   const menuRef = useRef<HTMLDivElement>(null);
+  const groupedDataSources = useMemo<DataSourceGroup[]>(() => {
+    const pipelineGenerated: DataSourceItem[] = [];
+    const userUploaded: DataSourceItem[] = [];
+    const otherSources: DataSourceItem[] = [];
+
+    availableDataSources.forEach((item) => {
+      if (item.sourceType === "pipeline_generated") {
+        pipelineGenerated.push(item);
+        return;
+      }
+      if (item.sourceType === "user_upload") {
+        userUploaded.push(item);
+        return;
+      }
+      otherSources.push(item);
+    });
+
+    return [
+      {
+        key: "user_upload" as const,
+        title: "用户上传",
+        description: "来自手动上传并规范化入架的数据集",
+        icon: Upload,
+        toneClass: "text-blue-700 bg-blue-50 border-blue-200",
+        emptyLabel: "暂无用户上传数据集",
+        items: userUploaded,
+      },
+      {
+        key: "pipeline_generated" as const,
+        title: "流水线产出",
+        description: "来自执行流程自动生成的数据集",
+        icon: Factory,
+        toneClass: "text-emerald-700 bg-emerald-50 border-emerald-200",
+        emptyLabel: "暂无流水线产出数据集",
+        items: pipelineGenerated,
+      },
+      {
+        key: "other" as const,
+        title: "其他来源",
+        description: "来自其它已接入来源的数据集",
+        icon: Database,
+        toneClass: "text-slate-700 bg-slate-50 border-slate-200",
+        emptyLabel: "暂无其他来源数据集",
+        items: otherSources,
+      },
+    ].filter((group) => group.key !== "other" || group.items.length > 0);
+  }, [availableDataSources]);
+  const dataSourceGroupFilters = useMemo<
+    Array<{ key: DataSourceGroupKey; label: string; count: number }>
+  >(
+    () => [
+      {
+        key: "all" as const,
+        label: "全部数据集",
+        count: availableDataSources.length,
+      },
+      ...groupedDataSources.map((group) => ({
+        key: group.key,
+        label: group.title,
+        count: group.items.length,
+      })),
+    ],
+    [availableDataSources.length, groupedDataSources]
+  );
+  const visibleDataSourceGroups = useMemo(() => {
+    if (activeDataSourceGroup === "all") return groupedDataSources;
+    return groupedDataSources.filter(
+      (group) => group.key === activeDataSourceGroup
+    );
+  }, [activeDataSourceGroup, groupedDataSources]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -240,6 +338,16 @@ const ExecuteLeftPanel: React.FC<{
       return next.size === prev.size ? prev : next;
     });
   }, [pipelines]);
+
+  useEffect(() => {
+    if (activeDataSourceGroup === "all") return;
+    const exists = groupedDataSources.some(
+      (group) => group.key === activeDataSourceGroup
+    );
+    if (!exists) {
+      setActiveDataSourceGroup("all");
+    }
+  }, [activeDataSourceGroup, groupedDataSources]);
 
   const startRenaming = (pipelineId: string, name: string) => {
     setActiveMenuId(null);
@@ -556,65 +664,161 @@ const ExecuteLeftPanel: React.FC<{
         </div>
       </div>
       <Dialog open={dataSourceDialogOpen} onOpenChange={setDataSourceDialogOpen}>
-        <DialogContent className="bg-white border border-slate-200 text-slate-900 max-w-[560px]">
-          <DialogHeader>
+        <DialogContent className="max-w-[720px] border border-slate-200 bg-white p-0 text-slate-900">
+          <DialogHeader className="border-b border-slate-100 px-5 pb-4 pt-5">
             <DialogTitle className="text-sm font-semibold text-slate-900">
               选择数据源
             </DialogTitle>
+            <p className="mt-1 text-xs text-slate-500">
+              按来源分组浏览，先选来源再选择具体数据集。
+            </p>
           </DialogHeader>
-          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+          <div className="max-h-[70vh] space-y-4 overflow-y-auto overscroll-contain px-5 pb-5 pt-4">
             {availableDataSources.length === 0 ? (
               <div className="text-center py-8 text-slate-500 italic text-sm border border-dashed border-slate-200 rounded-lg">
                 数据货架暂无可用数据集
               </div>
             ) : (
-              availableDataSources.map((ds) => {
-                const isSelected = selectedDataSource?.id === ds.id;
-                return (
-                  <button
-                    key={ds.id}
-                    type="button"
-                    onClick={() => {
-                      onSelectDataSource(ds);
-                      setDataSourceDialogOpen(false);
-                    }}
-                    className={`w-full flex items-center p-3 border rounded-md transition-all text-left ${
-                      isSelected
-                        ? "bg-blue-50 border-blue-200 shadow-sm"
-                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                    }`}
-                  >
-                    <div
-                      className={`p-2 rounded border mr-3 ${
-                        isSelected
-                          ? "bg-blue-100 border-blue-200"
-                          : "bg-slate-100 border-slate-200"
-                      }`}
-                    >
-                      <DataSourceIcon type={ds.type} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span
-                          className={`text-sm font-bold truncate ${
-                            isSelected ? "text-blue-700" : "text-slate-800"
+              <>
+                <div className="rounded-xl border border-slate-200/90 bg-slate-50/80 p-1.5">
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+                    {dataSourceGroupFilters.map((filterItem) => {
+                      const isActive = activeDataSourceGroup === filterItem.key;
+                      return (
+                        <button
+                          key={filterItem.key}
+                          type="button"
+                          onClick={() => setActiveDataSourceGroup(filterItem.key)}
+                          className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                            isActive
+                              ? "border-blue-200 bg-blue-50 text-blue-700"
+                              : "border-transparent bg-white text-slate-600 hover:border-slate-200 hover:bg-slate-50"
                           }`}
+                          aria-pressed={isActive}
                         >
-                          {ds.name}
-                        </span>
-                        <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200">
-                          {ds.displayFormat}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <span>{formatRecordCount(ds.recordCount)}</span>
-                        <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                        <span>{ds.sourceLabel}</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
+                          <span className="truncate">{filterItem.label}</span>
+                          <span
+                            className={`ml-2 rounded-full px-2 py-0.5 text-[10px] ${
+                              isActive
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {filterItem.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {visibleDataSourceGroups.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-slate-200 bg-white/80 px-3 py-6 text-center text-xs text-slate-500">
+                    当前分组暂无可用数据集
+                  </div>
+                ) : (
+                  visibleDataSourceGroups.map((group) => {
+                    const GroupIcon = group.icon;
+                    return (
+                      <section
+                        key={group.key}
+                        className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-2"
+                      >
+                        <div className="mb-2 flex items-center justify-between px-2 py-1">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className={`inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border ${group.toneClass}`}
+                            >
+                              <GroupIcon
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold text-slate-800">
+                                {group.title}
+                              </div>
+                              <div className="truncate text-[11px] text-slate-500">
+                                {group.description}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                            {group.items.length} 个
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {group.items.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-slate-200 bg-white/80 px-3 py-4 text-center text-xs text-slate-500">
+                              {group.emptyLabel}
+                            </div>
+                          ) : (
+                            group.items.map((ds) => {
+                              const isSelected = selectedDataSource?.id === ds.id;
+                              return (
+                                <button
+                                  key={ds.id}
+                                  type="button"
+                                  onClick={() => {
+                                    onSelectDataSource(ds);
+                                    setDataSourceDialogOpen(false);
+                                  }}
+                                  className={`group flex w-full items-center rounded-lg border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 ${
+                                    isSelected
+                                      ? "border-blue-200 bg-blue-50/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]"
+                                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                                  }`}
+                                >
+                                  <div
+                                    className={`mr-3 rounded-md border p-2 ${
+                                      isSelected
+                                        ? "border-blue-200 bg-blue-100/80"
+                                        : "border-slate-200 bg-slate-100"
+                                    }`}
+                                  >
+                                    <DataSourceIcon type={ds.type} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="mb-1 flex items-center justify-between gap-2">
+                                      <span
+                                        className={`truncate text-sm font-semibold ${
+                                          isSelected
+                                            ? "text-blue-700"
+                                            : "text-slate-800 group-hover:text-slate-900"
+                                        }`}
+                                      >
+                                        {ds.name}
+                                      </span>
+                                      <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                                        {ds.displayFormat}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                      <span>{formatRecordCount(ds.recordCount)}</span>
+                                      {isSelected ? (
+                                        <>
+                                          <span className="h-1 w-1 rounded-full bg-blue-400" />
+                                          <span className="text-blue-600">已选中</span>
+                                        </>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  {isSelected ? (
+                                    <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-200 bg-blue-100 text-blue-600">
+                                      <Check className="h-3 w-3" aria-hidden="true" />
+                                    </span>
+                                  ) : null}
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </section>
+                    );
+                  })
+                )}
+              </>
             )}
           </div>
         </DialogContent>
@@ -821,6 +1025,7 @@ const ExecuteWorkspace: React.FC = () => {
         id: dataset.path,
         name: dataset.name,
         type: resolveDisplayType(dataset),
+        sourceType: resolveDatasetSourceType(dataset.source),
         displayFormat: resolveDisplayFormat(dataset),
         recordCount: dataset.row_count != null ? String(dataset.row_count) : "-",
         sourceLabel: formatDatasetSource(dataset.source),
