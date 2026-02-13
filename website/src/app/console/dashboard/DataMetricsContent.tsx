@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import {
   Area,
@@ -103,11 +103,11 @@ const qualityTrend = [
 ];
 
 const QUICK_METRICS = [
+  { label: "数据货架总量", value: "3.42M", note: "累计入架样本" },
+  { label: "生成高质量数据总量", value: "1.18M", note: "质量阈值以上" },
+  { label: "数据新鲜度", value: "2.4 天", note: "端到端链路" },
   { label: "流水线条数", value: "10", note: "已登记流水线" },
   { label: "流水线执行次数", value: "124", note: "近7天" },
-  { label: "数据清洗量", value: "2.71M", note: "规则版本 v2.4" },
-  { label: "投入产出比", value: "0.79", note: "输出/输入" },
-  { label: "进入训练池", value: "920K", note: "近7天" },
 ];
 
 const benchmarkDelta = [
@@ -122,6 +122,72 @@ const toneClass: Record<ToneKey, string> = {
   efficiency: "text-[hsl(var(--tone-efficiency))]",
   result: "text-[hsl(var(--tone-result))]",
 };
+
+const PANEL_OPTIONS: Array<{ key: ToneKey; label: string; hint: string }> = [
+  { key: "quantity", label: "数量总览", hint: "规模结构" },
+  { key: "efficiency", label: "效率链路", hint: "耗时与吞吐" },
+  { key: "result", label: "效果验证", hint: "质量沉淀" },
+];
+
+type BarLabelProps = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  value?: number | string;
+};
+
+function StackValueLabel({ x, y, width, height, value }: BarLabelProps) {
+  if (
+    typeof x !== "number" ||
+    typeof y !== "number" ||
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    width < 34 ||
+    value == null
+  ) {
+    return null;
+  }
+  return (
+    <text
+      x={x + width / 2}
+      y={y + height / 2}
+      dy={4}
+      textAnchor="middle"
+      fill="#ffffff"
+      fontSize={11}
+      fontWeight={600}
+      style={{ pointerEvents: "none" }}
+    >
+      {value}
+    </text>
+  );
+}
+
+function StackTotalLabel({ x, y, width, height, value }: BarLabelProps) {
+  if (
+    typeof x !== "number" ||
+    typeof y !== "number" ||
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    value == null
+  ) {
+    return null;
+  }
+  return (
+    <text
+      x={x + width + 10}
+      y={y + height / 2}
+      dy={4}
+      fill="#64748b"
+      fontSize={11}
+      fontWeight={600}
+      style={{ pointerEvents: "none" }}
+    >
+      {value}
+    </text>
+  );
+}
 
 const efficiencyStages = [
   { label: "数据获取", detail: "采集与校验", hours: 6.5 },
@@ -318,6 +384,7 @@ function EfficiencyFlow() {
 
 export default function DataMetricsPage() {
   const numberFormat = useMemo(() => new Intl.NumberFormat("zh-CN"), []);
+  const [activePanel, setActivePanel] = useState<ToneKey>("quantity");
   const pipelineOutputData = useMemo(() => {
     return pipelineLevels
       .map((row) => {
@@ -334,6 +401,30 @@ export default function DataMetricsPage() {
       })
       .sort((a, b) => b.total - a.total);
   }, []);
+  const totalStageHours = useMemo(
+    () => efficiencyStages.reduce((sum, stage) => sum + stage.hours, 0),
+    []
+  );
+  const bottleneckStage = useMemo(
+    () =>
+      efficiencyStages.reduce((prev, stage) =>
+        stage.hours > prev.hours ? stage : prev
+      ),
+    []
+  );
+  const totalInterceptCount = useMemo(
+    () => interceptReasons.reduce((sum, item) => sum + item.value, 0),
+    []
+  );
+  const totalGeneratedSamples = useMemo(
+    () => pipelineOutputData.reduce((sum, item) => sum + item.total, 0),
+    [pipelineOutputData]
+  );
+  const l5Share = useMemo(() => {
+    if (!totalGeneratedSamples) return 0;
+    const l5Total = pipelineOutputData.reduce((sum, item) => sum + item.L5, 0);
+    return Math.round((l5Total / totalGeneratedSamples) * 100);
+  }, [pipelineOutputData, totalGeneratedSamples]);
 
   return (
     <div
@@ -347,134 +438,294 @@ export default function DataMetricsPage() {
       </div>
 
       <div
-        className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-8"
+        className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-4 px-5 py-5"
         style={{ fontFamily: "var(--font-geist-sans)" }}
       >
-        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-3">
-            <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
-              端到端数据指标可视化
-            </h1>
-            <p className="max-w-2xl text-sm text-slate-600">
-              从数量、效率、结果三维度反向拆解目标，追踪数据清洗、质量筛选与训练池落地的全链路表现。
-            </p>
-          </div>
+        <header>
+          <h1 className="text-[24px] font-semibold leading-tight text-slate-900">
+            端到端数据指标可视化
+          </h1>
         </header>
 
-        <SectionHeader title="数量" description="规模结构与质量分布" tone="quantity" />
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {QUICK_METRICS.map((metric) => (
+            <MiniMetricCard key={metric.label} {...metric} />
+          ))}
+        </section>
 
-        <section
-          className="animate-slide-in space-y-4"
-          style={{ animationDelay: "0.1s" }}
-        >
-          <div className="grid gap-4 lg:grid-cols-[1.05fr_1.05fr_1.2fr]">
-            <SummaryLineCard
-              title="输入原始样本总数"
-              value="3.42M"
-              dataKey="raw"
-              stroke="#38bdf8"
-              gradientId="rawSummaryFill"
-            />
-            <SummaryLineCard
-              title="产出高质量数据总数"
-              value="1.18M"
-              dataKey="hq"
-              stroke="#f59e0b"
-              gradientId="hqSummaryFill"
-            />
-            <div className="rounded-3xl border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur">
-              <div className="flex items-center justify-between">
+        <section className="rounded-2xl border border-white/80 bg-white/75 p-2 shadow-sm backdrop-blur">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {PANEL_OPTIONS.map((option) => {
+              const active = activePanel === option.key;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setActivePanel(option.key)}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-left transition-all",
+                    active
+                      ? "border-slate-300 bg-white shadow-sm"
+                      : "border-transparent bg-slate-100/70 hover:bg-slate-100"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "text-[11px] font-semibold uppercase tracking-[0.2em]",
+                      toneClass[option.key],
+                      !active && "opacity-70"
+                    )}
+                  >
+                    {option.hint}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {option.label}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {activePanel === "quantity" ? (
+          <section className="animate-slide-in grid gap-4 xl:grid-cols-[1.12fr_1fr]">
+            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+              <SectionHeader
+                title="数量"
+                description="规模结构与质量分布"
+                tone="quantity"
+              />
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <SummaryLineCard
+                  title="输入原始样本总数"
+                  value="3.42M"
+                  dataKey="raw"
+                  stroke="#38bdf8"
+                  gradientId="rawSummaryFillCompact"
+                />
+                <SummaryLineCard
+                  title="产出高质量数据总数"
+                  value="1.18M"
+                  dataKey="hq"
+                  stroke="#f59e0b"
+                  gradientId="hqSummaryFillCompact"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-                    数据生成分布
+                  <div className="text-base font-semibold text-slate-900">数据生成分布</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    分层结构与各流水线产出总量
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3 text-xs text-slate-500">
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-sky-400" />
-                    L1/L2
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    L3/L4
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-amber-400" />
-                    L5
+                <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">
+                    L5 占比 {l5Share}%
                   </span>
                 </div>
               </div>
-              <div className="mt-4 h-56">
+
+              <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-2 py-1 text-sky-700">
+                  <span className="h-2 w-2 rounded-full bg-sky-400" />
+                  L1/L2
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-emerald-700">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  L3/L4
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-100 bg-amber-50 px-2 py-1 text-amber-700">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" />
+                  L5
+                </span>
+              </div>
+
+              <div className="mt-3 h-[320px] rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/70 via-white to-sky-50/50 p-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={pipelineOutputData}
                     layout="vertical"
-                    margin={{ left: 12, right: 16 }}
+                    margin={{ left: 10, right: 28, top: 8, bottom: 8 }}
+                    barCategoryGap="28%"
                   >
-                    <XAxis type="number" hide />
+                    <defs>
+                      <linearGradient id="l12BarGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.85} />
+                      </linearGradient>
+                      <linearGradient id="l34BarGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#34d399" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.82} />
+                      </linearGradient>
+                      <linearGradient id="l5BarGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.92} />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.9} />
+                      </linearGradient>
+                    </defs>
                     <YAxis
                       type="category"
                       dataKey="name"
-                      tick={{ fontSize: 10 }}
-                      stroke="#94a3b8"
+                      tick={{ fontSize: 12, fill: "#64748b", fontWeight: 500 }}
                       width={70}
                       axisLine={false}
                       tickLine={false}
                     />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }}
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 10, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                    <Bar dataKey="L12" stackId="a" fill="#93c5fd">
-                      <LabelList
-                        dataKey="L12"
-                        position="center"
-                        fill="#ffffff"
-                        fontSize={10}
-                      />
+                    <Tooltip
+                      cursor={{ fill: "rgba(148,163,184,0.08)" }}
+                      contentStyle={{
+                        borderRadius: 12,
+                        borderColor: "#e2e8f0",
+                        backgroundColor: "rgba(255,255,255,0.96)",
+                        boxShadow: "0 8px 24px rgba(15,23,42,0.08)",
+                      }}
+                      labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                    />
+                    <Bar
+                      dataKey="L12"
+                      name="L1/L2"
+                      stackId="a"
+                      fill="url(#l12BarGradient)"
+                      radius={[8, 0, 0, 8]}
+                      barSize={24}
+                    >
+                      <LabelList dataKey="L12" content={StackValueLabel} />
                     </Bar>
-                    <Bar dataKey="L34" stackId="a" fill="#6ee7b7">
-                      <LabelList
-                        dataKey="L34"
-                        position="center"
-                        fill="#ffffff"
-                        fontSize={10}
-                      />
+                    <Bar
+                      dataKey="L34"
+                      name="L3/L4"
+                      stackId="a"
+                      fill="url(#l34BarGradient)"
+                      barSize={24}
+                    >
+                      <LabelList dataKey="L34" content={StackValueLabel} />
                     </Bar>
-                    <Bar dataKey="L5" stackId="a" fill="#fbbf24">
-                      <LabelList
-                        dataKey="L5"
-                        position="center"
-                        fill="#ffffff"
-                        fontSize={10}
-                      />
+                    <Bar
+                      dataKey="L5"
+                      name="L5"
+                      stackId="a"
+                      fill="url(#l5BarGradient)"
+                      radius={[0, 8, 8, 0]}
+                      barSize={24}
+                    >
+                      <LabelList dataKey="L5" content={StackValueLabel} />
+                      <LabelList dataKey="total" content={StackTotalLabel} />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
-          </div>
+          </section>
+        ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {QUICK_METRICS.map((metric) => (
-              <MiniMetricCard key={metric.label} {...metric} />
-            ))}
-          </div>
-        </section>
+        {activePanel === "efficiency" ? (
+          <section className="animate-slide-in grid gap-4 xl:grid-cols-[1.12fr_1fr]">
+            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+              <SectionHeader
+                title="效率"
+                description="新鲜度与执行效率"
+                tone="efficiency"
+              />
+              <div className="mt-4 h-[286px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={efficiencyTrend} margin={{ left: -10, right: 14 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                    <YAxis yAxisId="left" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                    <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }} />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="freshness"
+                      name="新鲜度(天)"
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="latency"
+                      name="延迟(h)"
+                      stroke="#3b82f6"
+                      strokeWidth={2.5}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-        {/* 端到端链路区域暂不展示 */}
+            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+              <div className="flex items-center justify-between">
+                <div className="text-base font-semibold text-slate-900">链路耗时拆解</div>
+                <div className="text-xs text-slate-500">
+                  总计 {(totalStageHours / 24).toFixed(1)} 天
+                </div>
+              </div>
+              <div className="mt-4 space-y-3">
+                {efficiencyStages.map((stage) => {
+                  const percent = Math.round((stage.hours / totalStageHours) * 100);
+                  const isBottleneck = stage.label === bottleneckStage.label;
+                  return (
+                    <Fragment key={stage.label}>
+                      <div className="rounded-xl border border-slate-200/80 bg-white/90 p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-slate-800">{stage.label}</div>
+                          <div className="text-xs font-semibold text-slate-500">{stage.hours}h</div>
+                        </div>
+                        <div className="mt-2 h-1.5 rounded-full bg-slate-100">
+                          <div
+                            className={cn(
+                              "h-1.5 rounded-full",
+                              isBottleneck ? "bg-amber-400" : "bg-emerald-400"
+                            )}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </Fragment>
+                  );
+                })}
+              </div>
+              <div className="mt-4 h-[98px] rounded-2xl border border-slate-200/70 bg-white/90 p-2.5">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={throughputTrend} margin={{ left: -10, right: 12 }}>
+                    <defs>
+                      <linearGradient id="throughputFillCompact" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#34d399" stopOpacity={0.45} />
+                        <stop offset="100%" stopColor="#34d399" stopOpacity={0.06} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                    <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" width={24} />
+                    <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }} />
+                    <Area type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} fill="url(#throughputFillCompact)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
-        <section className="space-y-5">
-          <SectionHeader title="效率" description="新鲜度与执行效率" tone="efficiency" />
-          <EfficiencyFlow />
-        </section>
-
-        <section className="space-y-5">
-          <SectionHeader title="结果" description="高质量沉淀与效果验证" tone="result" />
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr_1fr]">
-            <div className="rounded-3xl border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur">
-              <div className="text-lg font-semibold text-slate-900">质量结构趋势</div>
-              <div className="text-xs text-slate-500">高/中/低质量占比</div>
-              <div className="mt-4 h-44">
+        {activePanel === "result" ? (
+          <section className="animate-slide-in grid gap-4 xl:grid-cols-[1.12fr_1fr]">
+            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+              <SectionHeader
+                title="结果"
+                description="高质量沉淀与效果验证"
+                tone="result"
+              />
+              <div className="mt-4 h-[286px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={qualityTrend} margin={{ left: -12, right: 16 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -489,51 +740,44 @@ export default function DataMetricsPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur">
-              <div className="text-lg font-semibold text-slate-900">规则拦截原因</div>
-              <div className="text-xs text-slate-500">Top 5 原因</div>
-              <div className="mt-4 h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={interceptReasons} margin={{ left: -12, right: 16 }} layout="vertical">
-                    <XAxis type="number" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fontSize: 10 }}
-                      stroke="#94a3b8"
-                      width={72}
-                    />
-                    <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }} />
-                    <Bar dataKey="value" fill="#f97316" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+            <div className="grid gap-4">
+              <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+                <div className="text-base font-semibold text-slate-900">规则拦截原因</div>
+                <div className="mt-3 h-[150px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={interceptReasons} margin={{ left: -12, right: 16 }} layout="vertical">
+                      <XAxis type="number" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} stroke="#94a3b8" width={72} />
+                      <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }} />
+                      <Bar dataKey="value" fill="#f97316" radius={[0, 6, 6, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 text-xs text-slate-500">
+                  近7天累计拦截 {numberFormat.format(totalInterceptCount)} 条
+                </div>
               </div>
-              <div className="mt-3 text-xs text-slate-500">
-                规则总数：128 / 启用：94
+
+              <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+                <div className="text-base font-semibold text-slate-900">Benchmark 提升</div>
+                <div className="mt-3 h-[150px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={benchmarkDelta} margin={{ left: -12, right: 16 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                      <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" />
+                      <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }} />
+                      <Bar dataKey="value" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                  <span>训练池样本：{numberFormat.format(920000)}</span>
+                  <span>质量阈值：0.82</span>
+                </div>
               </div>
             </div>
-
-            <div className="rounded-3xl border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur">
-              <div className="text-lg font-semibold text-slate-900">Benchmark 提升</div>
-              <div className="text-xs text-slate-500">对比基线 v0.31</div>
-              <div className="mt-4 h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={benchmarkDelta} margin={{ left: -12, right: 16 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-                    <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" />
-                    <Tooltip contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0" }} />
-                    <Bar dataKey="value" fill="#22c55e" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                <span>训练池样本：{numberFormat.format(920000)}</span>
-                <span>质量阈值：0.82</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
+          </section>
+        ) : null}
       </div>
     </div>
   );
