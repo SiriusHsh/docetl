@@ -242,12 +242,12 @@ function SummaryLineCard({
   gradientId: string;
 }) {
   return (
-    <div className="rounded-3xl border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur">
+    <div className="h-full rounded-3xl border border-white/80 bg-white/70 p-6 shadow-sm backdrop-blur">
       <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
         {title}
       </div>
       <div className="mt-3 text-3xl font-semibold text-slate-900">{value}</div>
-      <div className="mt-5 h-44">
+      <div className="mt-5 h-[clamp(180px,22vh,320px)]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={monthlySummaryTrend} margin={{ left: -8, right: 12 }}>
             <defs>
@@ -438,7 +438,7 @@ export default function DataMetricsPage() {
       </div>
 
       <div
-        className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-4 px-5 py-5"
+        className="relative z-10 flex min-h-[calc(100vh-1rem)] w-full min-w-0 flex-col gap-4 px-4 py-5 sm:px-6 xl:px-8 2xl:px-10"
         style={{ fontFamily: "var(--font-geist-sans)" }}
       >
         <header>
@@ -488,14 +488,14 @@ export default function DataMetricsPage() {
         </section>
 
         {activePanel === "quantity" ? (
-          <section className="animate-slide-in grid gap-4 xl:grid-cols-[1.12fr_1fr]">
-            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+          <section className="animate-slide-in grid gap-4 xl:min-h-[calc(100vh-15rem)] xl:grid-cols-[1.12fr_1fr]">
+            <div className="h-full rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
               <SectionHeader
                 title="数量"
                 description="规模结构与质量分布"
                 tone="quantity"
               />
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 sm:auto-rows-fr">
                 <SummaryLineCard
                   title="输入原始样本总数"
                   value="3.42M"
@@ -513,7 +513,7 @@ export default function DataMetricsPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+            <div className="h-full rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <div className="text-base font-semibold text-slate-900">数据生成分布</div>
@@ -543,7 +543,7 @@ export default function DataMetricsPage() {
                 </span>
               </div>
 
-              <div className="mt-3 h-[320px] rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/70 via-white to-sky-50/50 p-3">
+              <div className="mt-3 h-[clamp(320px,48vh,640px)] rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50/70 via-white to-sky-50/50 p-3">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={pipelineOutputData}
@@ -627,14 +627,14 @@ export default function DataMetricsPage() {
         ) : null}
 
         {activePanel === "efficiency" ? (
-          <section className="animate-slide-in grid gap-4 xl:grid-cols-[1.12fr_1fr]">
-            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+          <section className="animate-slide-in grid gap-4 xl:min-h-[calc(100vh-15rem)] xl:grid-cols-[1.12fr_1fr]">
+            <div className="h-full rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
               <SectionHeader
                 title="效率"
                 description="新鲜度与执行效率"
                 tone="efficiency"
               />
-              <div className="mt-4 h-[286px]">
+              <div className="mt-4 h-[clamp(260px,40vh,520px)]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={efficiencyTrend} margin={{ left: -10, right: 14 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -665,7 +665,7 @@ export default function DataMetricsPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+            <div className="h-full rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
               <div className="flex items-center justify-between">
                 <div className="text-base font-semibold text-slate-900">链路耗时拆解</div>
                 <div className="text-xs text-slate-500">
@@ -697,7 +697,7 @@ export default function DataMetricsPage() {
                   );
                 })}
               </div>
-              <div className="mt-4 h-[98px] rounded-2xl border border-slate-200/70 bg-white/90 p-2.5">
+              <div className="mt-4 h-[clamp(98px,14vh,160px)] rounded-2xl border border-slate-200/70 bg-white/90 p-2.5">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={throughputTrend} margin={{ left: -10, right: 12 }}>
                     <defs>
@@ -718,14 +718,14 @@ export default function DataMetricsPage() {
         ) : null}
 
         {activePanel === "result" ? (
-          <section className="animate-slide-in grid gap-4 xl:grid-cols-[1.12fr_1fr]">
-            <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+          <section className="animate-slide-in grid gap-4 xl:min-h-[calc(100vh-15rem)] xl:grid-cols-[1.12fr_1fr]">
+            <div className="h-full rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
               <SectionHeader
                 title="结果"
                 description="高质量沉淀与效果验证"
                 tone="result"
               />
-              <div className="mt-4 h-[286px]">
+              <div className="mt-4 h-[clamp(260px,40vh,520px)]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={qualityTrend} margin={{ left: -12, right: 16 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -740,10 +740,10 @@ export default function DataMetricsPage() {
               </div>
             </div>
 
-            <div className="grid gap-4">
-              <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+            <div className="grid h-full gap-4">
+              <div className="h-full rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
                 <div className="text-base font-semibold text-slate-900">规则拦截原因</div>
-                <div className="mt-3 h-[150px]">
+                <div className="mt-3 h-[clamp(140px,22vh,280px)]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={interceptReasons} margin={{ left: -12, right: 16 }} layout="vertical">
                       <XAxis type="number" tick={{ fontSize: 10 }} stroke="#94a3b8" />
@@ -758,9 +758,9 @@ export default function DataMetricsPage() {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
+              <div className="h-full rounded-3xl border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
                 <div className="text-base font-semibold text-slate-900">Benchmark 提升</div>
-                <div className="mt-3 h-[150px]">
+                <div className="mt-3 h-[clamp(140px,22vh,280px)]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={benchmarkDelta} margin={{ left: -12, right: 16 }}>
                       <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="#94a3b8" />
