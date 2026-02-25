@@ -15,6 +15,8 @@ export async function POST(request: Request) {
       name,
       sample_size,
       namespace,
+      check_output = true,
+      include_input_count = false,
     } = await request.json();
 
     if (!name) {
@@ -75,6 +77,38 @@ export async function POST(request: Request) {
       );
     }
 
+    let inputCount: number | null = null;
+    if (include_input_count) {
+      try {
+        const readInputResponse = await fetch(
+          `${FASTAPI_URL}/fs/read-file?path=${encodeURIComponent(inputPath)}`,
+          {
+            method: "GET",
+            headers: buildFastApiProxyHeaders(request),
+          }
+        );
+
+        if (readInputResponse.ok) {
+          const inputContent = await readInputResponse.text();
+          const parsedInput = JSON.parse(inputContent);
+          if (Array.isArray(parsedInput)) {
+            inputCount = parsedInput.length;
+          } else if (parsedInput && typeof parsedInput === "object") {
+            inputCount = 1;
+          } else {
+            inputCount = 0;
+          }
+        }
+      } catch (error) {
+        console.warn("Failed to read or parse input file for input count:", error);
+        inputCount = null;
+      }
+    }
+
+    if (!check_output) {
+      return NextResponse.json({ inputPath, outputPath, inputCount });
+    }
+
     const checkOutputResponse = await fetch(
       `${FASTAPI_URL}/fs/check-file?path=${encodeURIComponent(outputPath)}`,
       {
@@ -100,7 +134,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ inputPath, outputPath });
+    return NextResponse.json({ inputPath, outputPath, inputCount });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

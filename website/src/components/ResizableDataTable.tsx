@@ -58,6 +58,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import clsx from "clsx";
 import { ColumnDialog } from "@/components/ColumnDialog";
 import { SearchableCell } from "@/components/SearchableCell";
 import { PrettyJSON } from "@/components/PrettyJSON";
@@ -411,7 +412,8 @@ interface ColumnHeaderProps {
   filterValue: string;
   onSort: () => void;
   sortDirection: false | "asc" | "desc";
-  onExpand: () => void;
+  onExpand?: () => void;
+  showExpandAction?: boolean;
   variant?: "default" | "execute";
 }
 
@@ -425,6 +427,7 @@ const ColumnHeader = memo(
     onSort,
     sortDirection,
     onExpand,
+    showExpandAction = true,
     variant = "default",
   }: ColumnHeaderProps) => {
     const isExecute = variant === "execute";
@@ -487,31 +490,28 @@ const ColumnHeader = memo(
     }, [stats]);
 
     return (
-      <div className="space-y-1">
-        <div
-          className={`${
-            isBold ? "font-bold" : ""
-          } text-sm px-1 flex items-center`}
-        >
-          <div className="flex items-center">
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1 px-1">
+          <div className="flex items-center gap-0.5">
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 rounded-md p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-1"
               onClick={onSort}
+              aria-label={`按 ${header} 排序`}
             >
               {sortDirection === false && (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="text-primary"
+                  className="text-blue-600"
                 >
                   <path d="m3 16 4 4 4-4" />
                   <path d="M7 20V4" />
@@ -522,15 +522,15 @@ const ColumnHeader = memo(
               {sortDirection === "asc" && (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="text-primary"
+                  className="text-blue-600"
                 >
                   <path d="m3 8 4-4 4 4" />
                   <path d="M7 4v16" />
@@ -539,48 +539,53 @@ const ColumnHeader = memo(
               {sortDirection === "desc" && (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="text-primary"
+                  className="text-blue-600"
                 >
                   <path d="m3 16 4 4 4-4" />
                   <path d="M7 20V4" />
                 </svg>
               )}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={onExpand}
-            >
-              <Maximize2 className="h-3 w-3 text-primary" />
-            </Button>
+            {showExpandAction && onExpand && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 rounded-md p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-1"
+                onClick={onExpand}
+                aria-label={`展开查看 ${header} 列`}
+              >
+                <Maximize2 className="h-3 w-3 text-blue-600" />
+              </Button>
+            )}
           </div>
-          <span className="ml-2">{header}</span>
+          <span
+            className={clsx(
+              "truncate text-sm font-medium text-slate-700",
+              isBold && "font-semibold text-slate-900"
+            )}
+          >
+            {header}
+          </span>
         </div>
-        <div
-          className={`${isBold ? "font-bold" : ""} space-y-2 ${
-            filterValue ? "bg-primary/5 rounded-md" : ""
-          }`}
-        >
-          <div className="flex items-center h-6">
-            <div className="flex items-center w-6">
-              <Search className="h-3 w-3 text-muted-foreground ml-1.5" />
-            </div>
+        <div className={clsx("rounded-md", filterValue && "bg-blue-50/50")}>
+          <div className="flex h-7 items-center rounded-md border border-transparent px-1.5 focus-within:border-blue-200 focus-within:bg-blue-50/40">
+            <Search className="mr-1.5 h-3.5 w-3.5 text-slate-400" />
             <Input
-              placeholder="筛选..."
+              placeholder="筛选…"
               value={filterValue}
               onChange={(e) => onFilter(e.target.value)}
-              className={`h-6 text-xs border-none shadow-none focus-visible:ring-0 ${
-                filterValue ? "bg-primary/5" : ""
-              }`}
+              className={clsx(
+                "h-6 border-none bg-transparent px-0 text-xs text-slate-700 shadow-none placeholder:text-slate-400 focus-visible:ring-0",
+                isBold && "font-medium"
+              )}
             />
           </div>
         </div>
@@ -945,12 +950,12 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
     enableSorting: true,
     enableColumnResizing: true,
     defaultColumn: {
-      minSize: 30,
-      size: 150,
+      minSize: isExecute ? 24 : 30,
+      size: isExecute ? 120 : 150,
     },
     initialState: {
       pagination: {
-        pageSize: 5,
+        pageSize: isExecute ? 10 : 5,
       },
     },
     filterFns: {
@@ -980,8 +985,8 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
 
         // Estimate width: ~8px per character, with min 150px and max 400px
         const estimatedWidth = Math.min(
-          Math.max(maxContentLength * 8, 150),
-          400
+          Math.max(maxContentLength * 8, isExecute ? 110 : 150),
+          isExecute ? 320 : 400
         );
 
         initialSizing[column.id as string] = estimatedWidth;
@@ -994,21 +999,51 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
     // Update our local state and save settings
     setColumnSizing(initialSizing);
     saveSettings();
-  }, [columns, data, saveSettings, table]);
+  }, [columns, data, isExecute, saveSettings, table]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeColumn, setActiveColumn] = useState<string | null>(null);
   const [currentValueIndex, setCurrentValueIndex] = useState(0);
 
-  const handleColumnExpand = (columnId: string) => {
-    setActiveColumn(columnId);
+  const dialogColumns = table
+    .getVisibleLeafColumns()
+    .filter((column) => !column.id.startsWith("_observability_"))
+    .map((column) => ({
+      id: column.id,
+      header: String(column.columnDef.header ?? column.id),
+    }));
+
+  const handleColumnExpand = (columnId?: string) => {
+    const fallbackColumnId = dialogColumns[0]?.id;
+    const nextColumnId =
+      columnId && dialogColumns.some((column) => column.id === columnId)
+        ? columnId
+        : activeColumn && dialogColumns.some((column) => column.id === activeColumn)
+        ? activeColumn
+        : fallbackColumnId;
+
+    if (!nextColumnId) return;
+    setActiveColumn(nextColumnId);
     setCurrentValueIndex(0);
     setDialogOpen(true);
   };
 
+  useEffect(() => {
+    if (!activeColumn) return;
+    if (dialogColumns.some((column) => column.id === activeColumn)) return;
+    setActiveColumn(dialogColumns[0]?.id ?? null);
+  }, [activeColumn, dialogColumns]);
+
   const pageIndex = table.getState().pagination.pageIndex;
   const pageCount = table.getPageCount();
   const [pageInput, setPageInput] = useState("");
+  const visibleColumnCount = table.getVisibleLeafColumns().length;
+  const activeFilterCount = columnFilters.filter((filter) => {
+    if (Array.isArray(filter.value)) {
+      return filter.value.length > 0;
+    }
+    return String(filter.value ?? "").trim().length > 0;
+  }).length;
 
   useEffect(() => {
     if (pageCount > 0) {
@@ -1032,122 +1067,161 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
   return (
-    <div className={isExecute ? "flex flex-col h-full min-h-0" : "w-full overflow-auto"}>
+    <div
+      className={
+        isExecute ? "flex h-full min-h-0 flex-col bg-white" : "w-full overflow-auto"
+      }
+    >
       {isExecute ? (
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-slate-200 bg-slate-50 text-xs">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+        <div className="space-y-1.5 border-b border-slate-200 bg-slate-50/70 px-3 py-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200/80 bg-white px-2 py-1.5">
+            <span className="inline-flex items-center rounded-sm border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+              记录数 {data.length}
+            </span>
+            <span className="inline-flex items-center rounded-sm border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+              可见列 {visibleColumnCount}
+            </span>
+            <span
+              className={clsx(
+                "inline-flex items-center rounded-sm border px-2 py-0.5 text-[11px] font-medium",
+                activeFilterCount > 0
+                  ? "border-blue-200 bg-blue-50 text-blue-700"
+                  : "border-slate-200 bg-slate-50 text-slate-600"
+              )}
+            >
+              已筛选列 {activeFilterCount}
+            </span>
+            <div className="ml-auto flex items-center gap-2">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="flex items-center h-7 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                className="h-7 gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                onClick={() => handleColumnExpand()}
+                disabled={dialogColumns.length === 0}
+                aria-label="打开放大查看弹窗"
               >
-                显示/隐藏列
-                <ChevronDown className="ml-1 h-3 w-3" />
+                <Maximize2 className="h-3.5 w-3.5" />
+                放大查看
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-white border-slate-200 text-slate-700">
-              {table.getAllLeafColumns().map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
+              {onStoreToDataCenter && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  onClick={onStoreToDataCenter}
+                  disabled={
+                    storeToDataCenterDisabled || isStoreToDataCenterLoading
+                  }
+                >
+                  <Database className="h-3.5 w-3.5" />
+                  {isStoreToDataCenterLoading ? "存储中…" : "存储至数据货架"}
+                </Button>
+              )}
+              {onDownload && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  onClick={onDownload}
+                  disabled={data.length === 0}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  下载至本地
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200/80 bg-white px-2 py-1.5">
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  >
+                    显示/隐藏列
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 border-slate-200 bg-white text-slate-700">
+                  {table.getAllLeafColumns().map((column) => {
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) =>
+                          column.toggleVisibility(!!value)
+                        }
+                      >
+                        {column.id}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                onClick={resetColumnWidths}
+              >
+                重置宽度
+              </Button>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              <div className="inline-flex items-center gap-1 rounded-sm border border-slate-200 bg-slate-50 px-1 py-0.5 text-slate-700">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 rounded-sm p-0 text-slate-600 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  aria-label="上一页"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <span className="px-1 text-xs font-medium">
+                  第 {pageIndex + 1} 页 / 共 {pageCount || 1} 页
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 rounded-sm p-0 text-slate-600 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  aria-label="下一页"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="inline-flex items-center gap-1 rounded-sm border border-slate-200 bg-slate-50 px-2 py-0.5">
+                <span className="text-[10px] text-slate-500">跳转</span>
+                <Input
+                  type="number"
+                  min={1}
+                  max={Math.max(pageCount, 1)}
+                  value={pageInput}
+                  onChange={(event) => setPageInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      handlePageJump();
                     }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            onClick={resetColumnWidths}
-          >
-            重置宽度
-          </Button>
-          <div className="flex-1" />
-          <div className="flex items-center gap-2">
-            {onStoreToDataCenter && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 gap-1 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-white"
-                onClick={onStoreToDataCenter}
-                disabled={storeToDataCenterDisabled || isStoreToDataCenterLoading}
-              >
-                <Database className="h-3.5 w-3.5" />
-                {isStoreToDataCenterLoading ? "存储中..." : "存储至数据货架"}
-              </Button>
-            )}
-            {onDownload && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 gap-1 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-white"
-                onClick={onDownload}
-                disabled={data.length === 0}
-              >
-                <Download className="h-3.5 w-3.5" />
-                下载至本地
-              </Button>
-            )}
-            {data.length > 0 && (
-              <>
-                <div className="h-4 w-px bg-slate-200 mx-1" />
-                <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-600">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </Button>
-                  <span className="text-xs">
-                    第 {pageIndex + 1} 页 / 共 {pageCount} 页
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1">
-                  <span className="text-[10px] text-slate-500">跳转</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={pageCount}
-                    value={pageInput}
-                    onChange={(event) => setPageInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        handlePageJump();
-                      }
-                    }}
-                    className="h-6 w-14 text-center text-xs"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={handlePageJump}
-                  >
-                    前往
-                  </Button>
-                </div>
-              </>
-            )}
+                  }}
+                  className="h-6 w-14 border-slate-200 bg-white px-1 text-center text-xs focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-slate-700 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                  onClick={handlePageJump}
+                >
+                  前往
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -1228,15 +1302,27 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
             minWidth: "100%",
           }}
         >
-          <TableHeader>
+          <TableHeader className={isExecute ? "sticky top-0 z-20" : undefined}>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                <TableHead style={{ width: "30px", minWidth: "30px" }}>
+                <TableHead
+                  className={
+                    isExecute
+                      ? "sticky top-0 z-20 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90"
+                      : undefined
+                  }
+                  style={{ width: "30px", minWidth: "30px" }}
+                >
                   #
                 </TableHead>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
+                    className={
+                      isExecute
+                        ? "sticky top-0 z-20 bg-white/95 align-top backdrop-blur supports-[backdrop-filter]:bg-white/90"
+                        : undefined
+                    }
                     style={{
                       width: header.getSize(),
                       position: "relative",
@@ -1277,6 +1363,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                         }}
                         sortDirection={header.column.getIsSorted()}
                         onExpand={() => handleColumnExpand(header.column.id)}
+                        showExpandAction={!isExecute}
                         variant={variant}
                       />
                     )}
@@ -1299,7 +1386,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                   data-state={isSelected ? "selected" : undefined}
                   className={
                     isExecute
-                      ? "cursor-pointer border-slate-200 hover:bg-slate-50 data-[state=selected]:bg-blue-50 data-[state=selected]:ring-1 data-[state=selected]:ring-blue-200 data-[state=selected]:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.18)]"
+                      ? "cursor-pointer border-slate-200/80 transition-colors hover:bg-slate-50/70 data-[state=selected]:bg-sky-50/50 data-[state=selected]:shadow-[inset_0_0_0_1px_rgba(14,116,144,0.22)]"
                       : undefined
                   }
                 >
@@ -1342,10 +1429,10 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
                               style={{
                                 height: "100%",
                                 overflowY: "auto",
-                                padding: "0.75rem 0.5rem",
+                                padding: "0.4rem 0.45rem",
                                 fontWeight: "normal",
                               }}
-                              className="text-sm text-slate-700 whitespace-pre-wrap break-words"
+                              className="text-xs leading-5 text-slate-700 whitespace-pre-wrap break-words"
                             >
                               {typeof value === "object" && value !== null
                                 ? JSON.stringify(value, null, 2)
@@ -1444,18 +1531,15 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
         </div>
       )}
 
-      {activeColumn && (
+      {activeColumn && dialogColumns.length > 0 && (
         <ColumnDialog
           isOpen={dialogOpen}
           onClose={() => {
             setDialogOpen(false);
-            setActiveColumn(null);
           }}
-          columnId={activeColumn}
-          columnHeader={
-            columns.find((col) => (col.accessorKey || col.id) === activeColumn)
-              ?.header as string
-          }
+          availableColumns={dialogColumns}
+          selectedColumnId={activeColumn}
+          onSelectColumn={setActiveColumn}
           data={data}
           currentIndex={currentValueIndex}
           onNavigate={(direction) => {
@@ -1469,7 +1553,7 @@ export default function ResizableDataTable<T extends Record<string, unknown>>({
           }}
           onJumpToRow={(index) => setCurrentValueIndex(index)}
           currentOperation={currentOperation}
-          columnStats={columnStats[activeColumn]}
+          columnStats={columnStats[activeColumn] ?? null}
         />
       )}
     </div>

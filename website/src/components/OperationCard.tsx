@@ -41,7 +41,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { debounce } from "lodash";
 import { Guardrails, GleaningConfig } from "./operations/args";
 import { backendFetch } from "@/lib/backendFetch";
-import createOperationComponent from "./operations/components";
+import createOperationComponent, {
+  type SampleInputMeta,
+} from "./operations/components";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
@@ -135,7 +137,7 @@ const OPERATION_TYPE_LABELS: Record<Operation["type"], string> = {
   unnest: "展开",
   split: "拆分",
   gather: "汇聚",
-  sample: "抽样",
+  sample: "数据抽样",
   code_map: "代码映射",
   code_reduce: "代码归约",
   code_filter: "代码过滤",
@@ -885,12 +887,29 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
   const isExecute = variant === "execute";
 
   const operationRef = useRef(operation);
+  const operationsRef = useRef(operations);
   const { connect, sendMessage, lastMessage, readyState, disconnect } =
     useWebSocket();
+  const [sampleInputMeta, setSampleInputMeta] = useState<SampleInputMeta>({
+    loading: false,
+    inputCount: null,
+    unavailableReason: "先运行到该节点后可查看输入总量",
+  });
+  const lastSampleMetaRequestRef = useRef<string>("");
 
   useEffect(() => {
     operationRef.current = operation;
   }, [operation]);
+
+  useEffect(() => {
+    operationsRef.current = operations;
+  }, [operations]);
+
+  useEffect(() => {
+    if (!isExpanded) {
+      lastSampleMetaRequestRef.current = "";
+    }
+  }, [isExpanded]);
 
   useEffect(() => {
     dispatch({ type: "SET_OPERATION", payload: operations[index] });
@@ -1072,6 +1091,114 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
     sampleSize,
     setOutput,
     toast,
+  ]);
+
+  useEffect(() => {
+    if (!operation || operation.type !== "sample") {
+      return;
+    }
+
+    if (!isExpanded || operation.visibility === false) {
+      return;
+    }
+
+    const requestSignature = [
+      operation.id,
+      operation.name,
+      currentFile?.path || "",
+      pipelineName,
+      sampleSize ?? "null",
+      namespace,
+      numOpRun,
+    ].join("|");
+
+    if (lastSampleMetaRequestRef.current === requestSignature) {
+      return;
+    }
+    lastSampleMetaRequestRef.current = requestSignature;
+
+    let cancelled = false;
+
+    const fetchSampleInputMeta = async () => {
+      setSampleInputMeta({
+        loading: true,
+        inputCount: null,
+        unavailableReason: undefined,
+      });
+
+      try {
+        const response = await backendFetch("/api/getInputOutput", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            default_model: defaultModel,
+            data: { path: currentFile?.path || "" },
+            operations: operationsRef.current,
+            operation_id: operation.id,
+            name: pipelineName,
+            sample_size: sampleSize,
+            namespace,
+            check_output: false,
+            include_input_count: true,
+          }),
+        });
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setSampleInputMeta({
+              loading: false,
+              inputCount: null,
+              unavailableReason: "先运行到该节点后可查看输入总量",
+            });
+          }
+          return;
+        }
+
+        const result = await response.json();
+        const rawCount =
+          typeof result.inputCount === "number" ? result.inputCount : null;
+        const effectiveInputCount =
+          rawCount !== null && index === 0 && sampleSize !== null
+            ? Math.min(rawCount, sampleSize)
+            : rawCount;
+
+        if (!cancelled) {
+          setSampleInputMeta({
+            loading: false,
+            inputCount: effectiveInputCount,
+            unavailableReason:
+              effectiveInputCount === null ? "暂无法获取输入总量" : undefined,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching sample input metadata:", error);
+        if (!cancelled) {
+          setSampleInputMeta({
+            loading: false,
+            inputCount: null,
+            unavailableReason: "暂无法获取输入总量",
+          });
+        }
+      }
+    };
+
+    void fetchSampleInputMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isExpanded,
+    operation,
+    defaultModel,
+    currentFile?.path,
+    pipelineName,
+    sampleSize,
+    namespace,
+    index,
+    numOpRun,
   ]);
 
   const handleAIEdit = useCallback(
@@ -1380,7 +1507,8 @@ export const OperationCard: React.FC<Props> = ({ index, id, variant }) => {
               operation,
               handleOperationUpdate,
               isSchemaExpanded,
-              () => dispatch({ type: "TOGGLE_SCHEMA" })
+              () => dispatch({ type: "TOGGLE_SCHEMA" }),
+              sampleInputMeta
             )}
           </CardContent>
 

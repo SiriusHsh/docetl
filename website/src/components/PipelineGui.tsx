@@ -128,7 +128,7 @@ const OPERATION_TYPE_LABELS: Record<string, string> = {
   unnest: "展开",
   split: "拆分",
   gather: "汇聚",
-  sample: "抽样",
+  sample: "数据抽样",
   code_map: "代码映射",
   code_reduce: "代码归约",
   code_filter: "代码过滤",
@@ -149,6 +149,15 @@ const AddOperationDropdown: React.FC<AddOperationDropdownProps> = ({
           maxHeight: "min(70vh, var(--radix-dropdown-menu-content-available-height))",
         }}
       >
+        <DropdownMenuLabel className="font-bold text-sm bg-muted/50 py-2">
+          数据操作
+        </DropdownMenuLabel>
+        <OperationMenuItem
+          name="数据抽样"
+          description="从当前节点输入数据中按随机或顺序抽取一部分数据，便于快速调试与验证。"
+          onClick={() => onAddOperation("non-LLM", "sample", "未命名数据抽样")}
+        />
+        <DropdownMenuSeparator />
         <DropdownMenuLabel className="font-bold text-sm bg-muted/50 py-2">
           代码操作
         </DropdownMenuLabel>
@@ -717,6 +726,12 @@ const PipelineGUI: React.FC<PipelineGUIProps> = ({
       llmType,
       type: type as Operation["type"],
       name: `${name} ${operations.length}`,
+      ...(type === "sample" && {
+        otherKwargs: {
+          method: "uniform",
+          samples: "10",
+        },
+      }),
       visibility: true,
     };
     setOperations([...operations, newOperation]);

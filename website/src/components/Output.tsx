@@ -137,20 +137,26 @@ const TableContent = memo(
     isStoreToDataCenterLoading,
     storeToDataCenterDisabled,
   }: TableContentProps) => {
+    const isExecute = variant === "execute";
     const emptyTextClass =
-      variant === "execute" ? "text-slate-400" : "text-muted-foreground";
+      isExecute ? "text-slate-500" : "text-muted-foreground";
+    const stateCardClass = isExecute
+      ? "mx-3 my-2 rounded-md border border-slate-200/80 bg-white p-6 text-center"
+      : "";
     return (
       <div className="flex-1 min-h-0">
         {!opName ? (
-          <div className="flex items-center justify-center h-full">
-            <p className={emptyTextClass}>未选择操作。</p>
+          <div className="flex h-full items-center justify-center">
+            <div className={stateCardClass || undefined}>
+              <p className={clsx("text-sm", emptyTextClass)}>未选择操作。</p>
+            </div>
           </div>
         ) : isLoadingOutputs ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className={`ml-2 ${emptyTextClass}`}>
-              正在加载输出...
-            </span>
+          <div className="flex h-full items-center justify-center">
+            <div className={clsx("flex items-center gap-2", stateCardClass)}>
+              <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+              <span className={emptyTextClass}>正在加载输出…</span>
+            </div>
           </div>
         ) : outputs.length > 0 ? (
           <div className="h-full">
@@ -162,7 +168,7 @@ const TableContent = memo(
                   ? operation.output.schema.map((field) => field.key)
                   : []
               }
-              startingRowHeight={180}
+              startingRowHeight={variant === "execute" ? 76 : 180}
               currentOperation={opName}
               variant={variant}
               onDownload={onDownload}
@@ -172,8 +178,10 @@ const TableContent = memo(
             />
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <p className={emptyTextClass}>暂无输出。</p>
+          <div className="flex h-full items-center justify-center">
+            <div className={stateCardClass || undefined}>
+              <p className={clsx("text-sm", emptyTextClass)}>暂无输出。</p>
+            </div>
           </div>
         )}
       </div>
@@ -751,7 +759,7 @@ export const Output = memo(({ variant = "default" }: OutputProps) => {
 
   if (isExecute) {
     return (
-      <div className="flex flex-col h-full bg-white">
+      <div className="flex h-full flex-col bg-gradient-to-b from-white via-white to-slate-50/40">
         <TableContent
           opName={opName}
           isLoadingOutputs={isLoadingOutputs}

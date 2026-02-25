@@ -87,11 +87,18 @@ interface OtherKwargs {
   pdf_url_key?: string;
 }
 
+export interface SampleInputMeta {
+  loading: boolean;
+  inputCount: number | null;
+  unavailableReason?: string;
+}
+
 interface OperationComponentProps {
   operation: Operation;
   isSchemaExpanded: boolean;
   onUpdate: (updatedOperation: Operation) => void;
   onToggleSchema: () => void;
+  sampleInputMeta?: SampleInputMeta;
 }
 
 export const MapFilterOperationComponent: React.FC<OperationComponentProps> = ({
@@ -1203,7 +1210,53 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
   onUpdate,
   isSchemaExpanded,
   onToggleSchema,
+  sampleInputMeta,
 }) => {
+  const currentMethod = operation.otherKwargs?.method || "";
+  const isLegacyMethod =
+    currentMethod !== "" &&
+    currentMethod !== "uniform" &&
+    currentMethod !== "first";
+
+  const normalizedMethodKwargs = useMemo(() => {
+    const rawMethodKwargs = operation.otherKwargs?.method_kwargs as
+      | MethodKwargs
+      | string
+      | undefined;
+    if (!rawMethodKwargs) {
+      return {};
+    }
+
+    if (typeof rawMethodKwargs === "string") {
+      try {
+        const parsed = JSON.parse(rawMethodKwargs);
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    return rawMethodKwargs;
+  }, [operation.otherKwargs?.method_kwargs]);
+
+  const integerSampleSize = useMemo(() => {
+    const rawSamples = operation.otherKwargs?.samples;
+    if (rawSamples === undefined || rawSamples === null) {
+      return null;
+    }
+    const value = String(rawSamples).trim();
+    if (!/^\d+$/.test(value)) {
+      return null;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [operation.otherKwargs?.samples]);
+
+  const exceedsInputLimit =
+    typeof sampleInputMeta?.inputCount === "number" &&
+    integerSampleSize !== null &&
+    integerSampleSize > sampleInputMeta.inputCount;
+
   const handleChange = (field: string, value: string | number | boolean) => {
     onUpdate({
       ...operation,
@@ -1223,57 +1276,80 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
       otherKwargs: {
         ...operation.otherKwargs,
         method_kwargs: {
-          ...operation.otherKwargs?.method_kwargs,
+          ...normalizedMethodKwargs,
           [field]: value,
         },
       },
     });
   };
 
+  const customSamplesHasError =
+    currentMethod === "custom" &&
+    (() => {
+      try {
+        const value = operation.otherKwargs?.samples;
+        if (!value) return false;
+        const parsed = JSON.parse(String(value));
+        return (
+          !Array.isArray(parsed) ||
+          !parsed.every((item) => typeof item === "object")
+        );
+      } catch {
+        return true;
+      }
+    })();
+
   return (
     <div className="space-y-4 mb-2">
+      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="text-sm font-medium text-slate-700">
+          当前节点输入总量
+        </div>
+        <div className="mt-1 text-xs text-slate-600">
+          {sampleInputMeta?.loading
+            ? "正在获取..."
+            : typeof sampleInputMeta?.inputCount === "number"
+            ? `${sampleInputMeta.inputCount} 条`
+            : sampleInputMeta?.unavailableReason || "暂无法获取输入总量"}
+        </div>
+      </div>
+
+      {isLegacyMethod ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          当前使用兼容策略 “{currentMethod}”。首版推荐使用“随机抽样”或“顺序抽样”。
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="method">方法</Label>
           <Select
-            value={operation.otherKwargs?.method || ""}
+            value={currentMethod}
             onValueChange={(value) => handleChange("method", value)}
           >
             <SelectTrigger id="method">
               <SelectValue placeholder="选择方法" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="uniform">均匀</SelectItem>
-              <SelectItem value="stratify">分层</SelectItem>
-              <SelectItem value="outliers">异常值</SelectItem>
-              <SelectItem value="custom">自定义</SelectItem>
+              <SelectItem value="uniform">随机抽样</SelectItem>
+              <SelectItem value="first">顺序抽样</SelectItem>
+              {isLegacyMethod ? (
+                <SelectItem value={currentMethod}>
+                  {currentMethod}（兼容）
+                </SelectItem>
+              ) : null}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label htmlFor="samples">样本数</Label>
-          {operation.otherKwargs?.method === "custom" ? (
+          {currentMethod === "custom" ? (
             <Textarea
               id="samples"
               value={operation.otherKwargs?.samples || ""}
               onChange={(e) => handleChange("samples", e.target.value)}
               placeholder="请输入 JSON 键值对"
-              className={`font-mono ${(() => {
-                try {
-                  const value = operation.otherKwargs?.samples;
-                  if (!value) return "";
-                  const parsed = JSON.parse(value);
-                  if (
-                    !Array.isArray(parsed) ||
-                    !parsed.every((item) => typeof item === "object")
-                  ) {
-                    return "border-red-500";
-                  }
-                  return "";
-                } catch {
-                  return "border-red-500";
-                }
-              })()}`}
+              className={`font-mono ${customSamplesHasError ? "border-red-500" : ""}`}
             />
           ) : (
             <Input
@@ -1281,18 +1357,23 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
               type="text"
               value={operation.otherKwargs?.samples || ""}
               onChange={(e) => handleChange("samples", e.target.value)}
-              placeholder="样本数量或比例"
+              placeholder="样本数量（如 100）或比例（如 0.2）"
             />
           )}
         </div>
       </div>
-      {operation.otherKwargs?.method === "stratify" && (
+      {exceedsInputLimit ? (
+        <div className="text-xs text-red-600">
+          当前最多可抽取 {sampleInputMeta?.inputCount} 条，请调整样本数。
+        </div>
+      ) : null}
+      {currentMethod === "stratify" && (
         <div>
           <Label htmlFor="stratify_key">分层字段</Label>
           <Input
             id="stratify_key"
             type="text"
-            value={operation.otherKwargs?.method_kwargs?.stratify_key || ""}
+            value={normalizedMethodKwargs?.stratify_key || ""}
             onChange={(e) =>
               handleMethodKwargsChange("stratify_key", e.target.value)
             }
@@ -1300,7 +1381,7 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
           />
         </div>
       )}
-      {operation.otherKwargs?.method === "outliers" && (
+      {currentMethod === "outliers" && (
         <>
           <div>
             <Label htmlFor="embedding_keys">嵌入字段</Label>
@@ -1308,7 +1389,7 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
               id="embedding_keys"
               type="text"
               value={
-                operation.otherKwargs?.method_kwargs?.embedding_keys?.join(
+                normalizedMethodKwargs?.embedding_keys?.join(
                   ", "
                 ) || ""
               }
@@ -1327,7 +1408,7 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
               <Input
                 id="std"
                 type="number"
-                value={operation.otherKwargs?.method_kwargs?.std || ""}
+                value={normalizedMethodKwargs?.std || ""}
                 onChange={(e) =>
                   handleMethodKwargsChange("std", parseFloat(e.target.value))
                 }
@@ -1337,9 +1418,7 @@ export const SampleOperationComponent: React.FC<OperationComponentProps> = ({
             <div>
               <Label htmlFor="keep">保留异常值</Label>
               <Select
-                value={
-                  operation.otherKwargs?.method_kwargs?.keep?.toString() || ""
-                }
+                value={normalizedMethodKwargs?.keep?.toString() || ""}
                 onValueChange={(value) =>
                   handleMethodKwargsChange("keep", value === "true")
                 }
@@ -1954,7 +2033,8 @@ export default function createOperationComponent(
   operation: Operation,
   onUpdate: (updatedOperation: Operation) => void,
   isSchemaExpanded: boolean,
-  onToggleSchema: () => void
+  onToggleSchema: () => void,
+  sampleInputMeta?: SampleInputMeta
 ) {
   switch (operation.type) {
     case "reduce":
@@ -2028,6 +2108,7 @@ export default function createOperationComponent(
           onUpdate={onUpdate}
           isSchemaExpanded={isSchemaExpanded}
           onToggleSchema={onToggleSchema}
+          sampleInputMeta={sampleInputMeta}
         />
       );
     case "rank":
